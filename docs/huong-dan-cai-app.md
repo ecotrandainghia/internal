@@ -1,6 +1,6 @@
-# Cài ECOBoard, ECODesk lên điện thoại và bật đăng nhập Google
+# Cài app eco lên điện thoại và bật đăng nhập Google
 
-Hai app chạy trên Google Apps Script. Để cài được lên màn hình chính điện thoại như một app thật, và để ECODesk đăng nhập được bằng Google, cần một "trang vỏ" nhỏ (thư mục `pwa/`) đặt trên GitHub Pages. Trang vỏ chỉ là khung hiển thị app, không chứa dữ liệu hay mật khẩu nào.
+App eco chạy trên Google Apps Script. Để cài được lên màn hình chính điện thoại như một app thật, và để app eco đăng nhập được bằng Google, cần một "trang vỏ" nhỏ (thư mục `pwa/`) đặt trên GitHub Pages. Trang vỏ chỉ là khung hiển thị app, không chứa dữ liệu hay mật khẩu nào.
 
 ## 1. Bật GitHub Pages (làm một lần)
 
@@ -11,8 +11,7 @@ Hai app chạy trên Google Apps Script. Để cài được lên màn hình ch�
 
 Link cho mọi người:
 
-- ECOBoard: `https://<tên-tài-khoản-github>.github.io/eco-clb/board/`
-- ECODesk: `https://<tên-tài-khoản-github>.github.io/eco-clb/desk/`
+- App eco: `https://ecotdn.github.io/home/` (link cũ `/board/`, `/desk/` tự chuyển sang đây)
 
 ## 2. Cài lên điện thoại
 
@@ -20,17 +19,17 @@ Link cho mọi người:
 - **Android:** mở link bằng Chrome → menu ⋮ → **Cài đặt ứng dụng** (hoặc **Thêm vào màn hình chính**).
 - **Máy tính:** mở link bằng Chrome hoặc Edge → biểu tượng cài đặt ở thanh địa chỉ.
 
-## 3. Bật đăng nhập ECODesk bằng Google (làm một lần)
+## 3. Bật đăng nhập app eco bằng Google (làm một lần)
 
 Đăng nhập bằng email và mật khẩu luôn dùng được. Đăng nhập bằng Google là thêm cho tiện.
 
 1. Đăng nhập tài khoản Google của CLB, mở https://console.cloud.google.com
 2. Tạo dự án mới, đặt tên `ECO`.
-3. Vào **APIs & Services → OAuth consent screen** (Màn hình xin phép OAuth): chọn **External**, điền tên app `ECODesk`, email hỗ trợ là email CLB, lưu. Ở mục **Publishing status** bấm **Publish app** để mọi tài khoản Google đều đăng nhập được (chỉ dùng thông tin cơ bản là email nên không cần Google xét duyệt).
+3. Vào **APIs & Services → OAuth consent screen** (Màn hình xin phép OAuth): chọn **External**, điền tên app `app eco`, email hỗ trợ là email CLB, lưu. Ở mục **Publishing status** bấm **Publish app** để mọi tài khoản Google đều đăng nhập được (chỉ dùng thông tin cơ bản là email nên không cần Google xét duyệt).
 4. Vào **APIs & Services → Credentials → Create credentials → OAuth client ID**: loại **Web application**, mục **Authorized JavaScript origins** thêm `https://<tên-tài-khoản-github>.github.io`, bấm **Create**.
-5. Chép **Client ID** (kết thúc bằng `.apps.googleusercontent.com`), mở ECODesk → **Cài đặt → Người dùng → Đăng nhập bằng Google**, dán vào và **Lưu**.
+5. Chép **Client ID** (kết thúc bằng `.apps.googleusercontent.com`), mở app eco → **Cài đặt → Người dùng → Đăng nhập bằng Google**, dán vào và **Lưu**.
 
-Từ đó, khi mở ECODesk qua app đã cài, màn hình đăng nhập có thêm nút **Đăng nhập bằng Google**. Email Google phải trùng email tài khoản ECODesk (email trong danh sách thành viên).
+Từ đó, khi mở app eco qua app đã cài, màn hình đăng nhập có thêm nút **Đăng nhập bằng Google**. Email Google phải trùng email tài khoản app eco (email trong danh sách thành viên).
 
 ## Khi chuyển kho mã sang tài khoản GitHub của CLB
 

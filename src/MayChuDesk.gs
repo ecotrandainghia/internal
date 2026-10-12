@@ -1,9 +1,9 @@
 /**
- * Máy chủ ECODesk: đăng nhập, phân quyền và các chức năng cho BOD, ban nhân sự, UCV.
+ * Máy chủ app eco: đăng nhập, phân quyền và các chức năng cho BOD, ban nhân sự, UCV.
  * Mọi hàm gọi từ giao diện đều nhận "phien" (mã phiên đăng nhập) làm tham số đầu tiên.
  */
 
-var THOI_HAN_PHIEN_NGAY = 60; // Ghi nhớ đăng nhập: mỗi lần mở ECODesk, hạn được kéo dài thêm 60 ngày.
+var THOI_HAN_PHIEN_NGAY = 60; // Ghi nhớ đăng nhập: mỗi lần mở app eco, hạn được kéo dài thêm 60 ngày.
 var GIOI_HAN_SAI_MAT_KHAU = 8;
 
 /* ===================== Đăng nhập ===================== */
@@ -16,7 +16,7 @@ function dangNhap(email, matKhau) {
   if (soLanSai >= GIOI_HAN_SAI_MAT_KHAU) throw new Error('Sai mật khẩu quá nhiều lần. Bạn thử lại sau 15 phút.');
 
   var tk = timTaiKhoan_(email);
-  if (!tk || bamMatKhau_(String(matKhau || ''), String(tk.Muoi)) !== String(tk.MatKhau)) {
+  if (!tk || !dungMatKhau_(tk, matKhau)) {
     cache.put(khoaDem, String(soLanSai + 1), 900);
     throw new Error('Email hoặc mật khẩu không đúng.');
   }
@@ -34,7 +34,7 @@ function taoPhien_(tk) {
 }
 
 /**
- * Đăng nhập bằng Google (chỉ có khi mở ECODesk qua trang vỏ cài trên điện thoại/máy tính).
+ * Đăng nhập bằng Google (chỉ có khi mở app eco qua trang vỏ cài trên điện thoại/máy tính).
  * Trang vỏ lấy mã xác nhận (ID token) từ Google; ở đây hỏi lại Google để chắc mã thật, đúng ứng dụng của CLB.
  */
 function dangNhapGoogle(idToken) {
@@ -46,7 +46,7 @@ function dangNhapGoogle(idToken) {
   var loi = kiemTraTokenGoogle_(res.getResponseCode() === 200 ? info : null, clientId, Math.floor(Date.now() / 1000));
   if (loi) throw new Error(loi);
   var tk = timTaiKhoan_(info.email);
-  if (!tk) throw new Error('Email ' + info.email + ' chưa có tài khoản ECODesk.');
+  if (!tk) throw new Error('Email ' + info.email + ' chưa có tài khoản app eco. Bạn đăng nhập bằng email đã ghi trong danh sách thành viên nhé.');
   return taoPhien_(tk);
 }
 
@@ -79,11 +79,18 @@ function layNguoiDung_(phien) {
 
 function doiMatKhau(phien, matKhauCu, matKhauMoi) {
   var tk = canDangNhap_(phien);
-  if (bamMatKhau_(String(matKhauCu || ''), String(tk.Muoi)) !== String(tk.MatKhau)) throw new Error('Mật khẩu hiện tại không đúng.');
+  if (!dungMatKhau_(tk, matKhauCu)) throw new Error('Mật khẩu hiện tại không đúng.');
   var loi = kiemTraMatKhauMoi_(matKhauMoi);
   if (loi) throw new Error(loi);
   ghiMatKhau_(tk.Email, matKhauMoi);
   return true;
+}
+
+/** Mật khẩu có đúng không. Tài khoản chưa đổi mật khẩu thì so với mật khẩu mặc định của CLB. */
+function dungMatKhau_(tk, matKhau) {
+  var bam = String(tk.MatKhau || ''), muoi = String(tk.Muoi || '');
+  if (!bam) { bam = String(layCaiDat_('MatKhauMacDinh') || ''); muoi = String(layCaiDat_('MuoiMacDinh') || ''); }
+  return !!bam && bamMatKhau_(String(matKhau || ''), muoi) === bam;
 }
 
 function thongTinNguoiDung_(tk) {
@@ -273,7 +280,7 @@ function luuLoaiHoatDong(phien, ds) {
   return true;
 }
 
-/** Giao diện theo mùa hoặc ngày lễ cho cả ECOBoard và ECODesk. Trống là giao diện mặc định. */
+/** Giao diện theo mùa hoặc ngày lễ cho cả app. Trống là giao diện mặc định. */
 function luuChuDe(phien, ma) {
   canDangNhap_(phien, 'caidat');
   var m = chuDeHopLe_(ma);
@@ -310,8 +317,8 @@ function thongBaoGopYMoi_(noiDung) {
   var cache = CacheService.getScriptCache();
   if (cache.get('daBaoGopY')) return;
   cache.put('daBaoGopY', '1', 600);
-  baoChoBod_('Góp ý mới', 'ECOBoard có góp ý ẩn danh mới:\n\n' + String(noiDung).slice(0, 1500) +
-    '\n\nMở ECODesk, mục Góp ý để xem tất cả. Trong 10 phút tới nếu có thêm góp ý thì sẽ không báo nữa.');
+  baoChoBod_('Góp ý mới', 'Có góp ý ẩn danh mới trong app eco:\n\n' + String(noiDung).slice(0, 1500) +
+    '\n\nMở app eco, mục Góp ý để xem tất cả. Trong 10 phút tới nếu có thêm góp ý thì sẽ không báo nữa.');
 }
 
 function luuGhim(phien, ds) {
@@ -331,7 +338,10 @@ function luuSapDenHan_(phien, soNgay) {
   return true;
 }
 
-/** Cho một thành viên vào ECODesk với vai trò ban nhân sự (HR) hoặc UCV (UCV). */
+/**
+ * Nâng quyền một thành viên lên ban nhân sự (HR) hoặc UCV. Thành viên đã có tài khoản thì giữ mật khẩu cũ;
+ * chưa có thì tạo, dùng mật khẩu ban đầu (nếu nhập) hoặc mật khẩu mặc định của CLB.
+ */
 function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro, maHr) {
   vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
   canDangNhap_(phien, 'caidat');
@@ -339,16 +349,24 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro, maHr) {
   if (!tv) throw new Error('Không có "' + hoVaTen + '" trong danh sách thành viên.');
   var email = String(tv.Email || '').trim().toLowerCase();
   if (!email) throw new Error(hoVaTen + ' chưa có email trong danh sách thành viên.');
-  if (timTaiKhoan_(email)) throw new Error(hoVaTen + ' đã có tài khoản ECODesk.');
-  var loi = kiemTraMatKhauMoi_(matKhau);
-  if (loi) throw new Error(loi);
-  var muoi = Utilities.getUuid();
+  if (nhomBan_(tv.Ban) === 'BOD') throw new Error(hoVaTen + ' là BOD, đã có mọi quyền.');
+  matKhau = String(matKhau || '');
+  if (matKhau) { var loi = kiemTraMatKhauMoi_(matKhau); if (loi) throw new Error(loi); }
   return voiKhoa_(function () {
-    if (timTaiKhoan_(email)) throw new Error(hoVaTen + ' đã có tài khoản ECODesk.'); // kiểm lại trong khoá: có thể ai đó vừa thêm
+    bangDuLieu_('TaiKhoan'); // thêm cột MaHr nếu sheet còn bản cũ
     var ma = vaiTro === 'HR' ? kiemTraMaHr_(maHr, docBang_('TaiKhoan'), email) : { ma: '', loi: '' };
     if (ma.loi) throw new Error(ma.loi);
-    bangDuLieu_('TaiKhoan'); // thêm cột MaHr nếu sheet còn bản cũ
-    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: bamMatKhau_(String(matKhau), muoi), Muoi: muoi, NgayTao: new Date(), MaHr: ma.ma }]);
+    var tk = timTaiKhoan_(email);
+    if (tk && String(tk.VaiTro) === vaiTro) throw new Error(hoVaTen + ' đã là ' + vaiTro + '.');
+    if (tk) {
+      ghiCotTaiKhoan_(email, 'VaiTro', vaiTro);
+      if (vaiTro === 'HR') ghiCotTaiKhoan_(email, 'MaHr', ma.ma);
+      if (matKhau) ghiMatKhau_(email, matKhau);
+      return true;
+    }
+    if (!matKhau && !layCaiDat_('MatKhauMacDinh')) throw new Error('CLB chưa có mật khẩu mặc định. Nhập mật khẩu ban đầu cho ' + hoVaTen + '.');
+    var muoi = matKhau ? Utilities.getUuid() : '';
+    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: matKhau ? bamMatKhau_(matKhau, muoi) : '', Muoi: muoi, NgayTao: new Date(), MaHr: ma.ma }]);
     return true;
   });
 }
@@ -368,15 +386,14 @@ function luuBanQuanLy(phien, email, dsBan, maHr) {
   return true;
 }
 
-/** Gỡ tài khoản ban nhân sự hoặc UCV. Tài khoản BOD đi theo danh sách thành viên nên không gỡ ở đây. */
+/** Gỡ quyền HR hoặc UCV: người đó về lại thành viên thường (vẫn đăng nhập được). BOD đi theo cột Ban của danh sách thành viên. */
 function goTaiKhoan(phien, email) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk) throw new Error('Không tìm thấy tài khoản.');
-  if (tk.VaiTro === 'BOD') throw new Error('Tài khoản BOD được cấp theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại.');
-  voiKhoa_(function () {
-    ghiDeBang_('TaiKhoan', docBang_('TaiKhoan').filter(function (t) { return String(t.Email).toLowerCase() !== String(email).toLowerCase(); }));
-  });
+  if (tk.VaiTro === 'BOD') throw new Error('Quyền BOD đi theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại.');
+  ghiCotTaiKhoan_(String(tk.Email), 'VaiTro', 'TV');
+  ghiCotTaiKhoan_(String(tk.Email), 'BanQuanLy', '');
   return true;
 }
 
@@ -571,7 +588,7 @@ function luuAnhNen(phien, base64) {
 function thuMucAnhNen_() {
   var id = layCaiDat_('ThuMucAnhNenId');
   if (id) { try { return DriveApp.getFolderById(String(id)); } catch (e) { /* bị xoá thì tạo lại */ } }
-  var f = DriveApp.createFolder('ECO - Ảnh nền ECODesk');
+  var f = DriveApp.createFolder('ECO - Ảnh nền app eco');
   datCaiDat_('ThuMucAnhNenId', f.getId());
   return f;
 }
@@ -591,7 +608,19 @@ function layAnhNen(phienBanCo) {
 function layTrangChu(phien) {
   var tk = canDangNhap_(phien);
   var vaiTro = String(tk.VaiTro), ten = String(tk.HoVaTen);
-  var kq = { vaiTro: vaiTro };
+  var kq = {
+    vaiTro: vaiTro,
+    ghim: docBang_('BangGhim').filter(function (g) { return linkHopLe_(g.DuongDan); })
+      .map(function (g) { return { tieuDe: String(g.TieuDe || g.DuongDan), link: String(g.DuongDan).trim() }; }),
+    quyChe: String(layCaiDat_('QuyChe') || ''),
+    loaiHoatDong: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, tuDong: !loaiCongTay_(l) }; })
+  };
+  if (vaiTro !== 'BOD') {
+    // Điểm và hạng của chính mình (BOD không tham gia cộng điểm).
+    var xh = layDuLieuBoard().thanhVien;
+    var toi = xh.filter(function (p) { return String(p.ten).toLowerCase() === ten.toLowerCase(); })[0];
+    if (toi) kq.diemCuaToi = { diem: toi.diem, hang: 1 + xh.filter(function (p) { return p.diem > toi.diem; }).length, tong: xh.length };
+  }
   if (vaiTro === 'BOD' || vaiTro === 'HR') {
     var dsTask = docTask_().filter(function (t) { return t.trangThai !== TRANG_THAI_TASK.XONG && t.trangThai !== TRANG_THAI_TASK.HUY && t.trangThai !== TRANG_THAI_TASK.KHT; });
     var dem = function (ds) {

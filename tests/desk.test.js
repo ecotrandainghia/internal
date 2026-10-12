@@ -53,7 +53,7 @@ test('kiemTraTokenGoogle', () => {
   const id = '123-abc.apps.googleusercontent.com';
   const ok = { email: 'a@gmail.com', aud: id, iss: 'https://accounts.google.com', email_verified: 'true', exp: '2000' };
   assert.strictEqual(L.kiemTraTokenGoogle(ok, id, 1000), '');
-  assert.match(L.kiemTraTokenGoogle({ ...ok, aud: 'khac' }, id, 1000), /không phải của ECODesk/);
+  assert.match(L.kiemTraTokenGoogle({ ...ok, aud: 'khac' }, id, 1000), /không phải của app eco/);
   assert.match(L.kiemTraTokenGoogle({ ...ok, iss: 'evil' }, id, 1000), /Google cấp/);
   assert.match(L.kiemTraTokenGoogle({ ...ok, email_verified: 'false' }, id, 1000), /xác minh/);
   assert.match(L.kiemTraTokenGoogle({ ...ok, exp: '999' }, id, 1000), /hết hạn/);
@@ -93,4 +93,39 @@ test('capNhatThanhVienCu giữ hồ sơ người rời và bỏ người quay l�
   assert.deepStrictEqual(kq.ds.map(d => d.HoVaTen), ['Phạm D', 'Nguyễn A']);
   assert.strictEqual(kq.ds[1].Email, 'a@x.com');
   assert.strictEqual(kq.ds[1].NgayRoi, t);
+});
+
+test('dongBoTaiKhoan: mọi thành viên có email đều có tài khoản, BOD theo cột Ban, người rời CLB bị bỏ', () => {
+  const tv = [
+    { HoVaTen: 'An', Ban: 'PG', Email: 'An@x.com' },
+    { HoVaTen: 'Bình', Ban: 'BOD', Email: 'binh@x.com' },
+    { HoVaTen: 'Chi', Ban: 'HR', Email: 'chi@x.com' },
+    { HoVaTen: 'Dũng', Ban: 'AD', Email: '' },
+    { HoVaTen: 'Em', Ban: 'PR CAP', Email: 'em@x.com' }
+  ];
+  const tk = [
+    { Email: 'binh@x.com', HoVaTen: 'Bình', VaiTro: 'TV', MatKhau: 'h', Muoi: 'm' },
+    { Email: 'chi@x.com', HoVaTen: 'Chi cũ', VaiTro: 'HR', MatKhau: 'h2', Muoi: 'm2', MaHr: 'HR01' },
+    { Email: 'em@x.com', HoVaTen: 'Em', VaiTro: 'BOD', MatKhau: 'h3', Muoi: 'm3' },
+    { Email: 'giang@x.com', HoVaTen: 'Giang', VaiTro: 'UCV', MatKhau: 'h4', Muoi: 'm4' }
+  ];
+  const kq = L.dongBoTaiKhoan(tk, tv);
+  const theo = {};
+  kq.ds.forEach((t) => { theo[t.Email] = t; });
+  assert.strictEqual(theo['binh@x.com'].VaiTro, 'BOD');
+  assert.strictEqual(theo['binh@x.com'].MatKhau, 'h');
+  assert.strictEqual(theo['chi@x.com'].VaiTro, 'HR');
+  assert.strictEqual(theo['chi@x.com'].HoVaTen, 'Chi');
+  assert.strictEqual(theo['chi@x.com'].MaHr, 'HR01');
+  assert.strictEqual(theo['em@x.com'].VaiTro, 'TV');
+  assert.strictEqual(theo['giang@x.com'], undefined);
+  assert.deepStrictEqual(kq.moi, [{ Email: 'an@x.com', HoVaTen: 'An', VaiTro: 'TV' }]);
+});
+
+test('thành viên thường chỉ được gửi góp ý', () => {
+  assert.strictEqual(L.coQuyen('TV', 'guigopy'), true);
+  assert.strictEqual(L.coQuyen('TV', 'task'), false);
+  assert.strictEqual(L.coQuyen('TV', 'lichsudiem'), false);
+  assert.strictEqual(L.coQuyen('BOD', 'lichsudiem'), true);
+  assert.strictEqual(L.coQuyen('BOD', 'guigopy'), false);
 });

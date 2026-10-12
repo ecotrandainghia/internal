@@ -1,10 +1,11 @@
-# Hệ thống quản lý CLB: ECOBoard và ECODesk
+# Hệ thống quản lý CLB: app eco
 
-Mã nguồn của hai ứng dụng chạy trên Google Apps Script, dữ liệu lưu trong Google Sheet của tài khoản CLB.
+Mã nguồn của app eco (trước đây là hai app ECOBoard và ECODesk), chạy trên Google Apps Script, dữ liệu lưu trong Google Sheet của tài khoản CLB.
 
-- **ECOBoard**: trang công khai cho thành viên xem điểm cộng, bảng ghim, quy chế và gửi góp ý ẩn danh. Không cần đăng nhập.
-- **ECODesk**: trang làm việc cho BOD, ban nhân sự và UCV. Có đăng nhập (mật khẩu hoặc Google). Gồm cộng điểm, task và nhắc việc qua Zalo, mail, báo cáo, file đăng ký log, góp ý, cài đặt.
-- Cả hai cài được lên điện thoại như app nhờ trang vỏ trong `pwa/`.
+- Mở app không cần đăng nhập thì chỉ xem được bảng xếp hạng điểm.
+- Mọi thành viên có email trong danh sách đều đăng nhập được (mật khẩu chung của CLB, mật khẩu riêng, hoặc Google). Quyền theo bậc thang: thành viên < HR < UCV < BOD, người bậc trên có cả chức năng của bậc dưới.
+- Thành viên: trang chủ (điểm của mình, link ghim, quy chế), xếp hạng và lịch sử điểm của mình, góp ý ẩn danh, cài đặt. HR thêm task; UCV thêm mail; BOD thêm cộng điểm, duyệt mail, báo cáo, file log, đọc góp ý, cài đặt chung.
+- Cài được lên điện thoại như app nhờ trang vỏ trong `pwa/` (địa chỉ ecotdn.github.io/home).
 
 ## Tài liệu
 
@@ -21,14 +22,13 @@ Mã nguồn của hai ứng dụng chạy trên Google Apps Script, dữ liệu 
 src/            Mã chạy trên Google Apps Script (chép nguyên vào trình soạn Apps Script)
   Code.gs       Máy chủ: trang web, menu hậu kỳ, đọc ghi dữ liệu
   Logic.gs      Các hàm tính toán thuần (có kiểm thử)
-  Board.html    Giao diện ECOBoard
   HauKy.html    Hộp thoại tải danh sách trong Google Sheet
-  MayChuDesk.gs Máy chủ ECODesk: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
+  MayChuDesk.gs Máy chủ app eco: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
   Zalo.gs       Nhắc việc qua bot Zalo
   ThongBao.gs   Gửi thông báo theo cách mỗi người chọn: Zalo, app trên điện thoại (Web Push), mail
   Mail.gs       Mail: hộp thư UCV, BOD duyệt, thư mẫu, gửi hàng loạt, hẹn giờ
   BaoCao.gs     Báo cáo, xuất Excel và tạo file đăng ký log
-  Desk.html     Giao diện ECODesk
+  Eco.html      Khung giao diện app eco (gồm các file Desk*.html, EcoXepHang.html)
   appsscript.json  Cấu hình dự án Apps Script
 pwa/            Trang vỏ trên GitHub Pages để cài app và đăng nhập Google
 tests/          Kiểm thử tự động cho Logic.gs (chạy: npm test)

@@ -268,7 +268,7 @@ function cungKy_(dong, nhiemKy, hocKy) {
 }
 
 /**
- * Dữ liệu công khai cho ECOBoard. Chỉ có họ tên, lớp, ban và điểm.
+ * Dữ liệu công khai cho app eco. Chỉ có họ tên, lớp, ban và điểm.
  * @param {Array<Object>} thanhVien
  * @param {Array<Object>} lichSu các dòng LichSuDiem
  * @param {?Object} ky kỳ hiện tại
@@ -339,13 +339,46 @@ function taiKhoanBodCanCo_(thanhVien) {
   }).map(function (tv) { return { Email: tv.Email, HoVaTen: tv.HoVaTen }; });
 }
 
-/* ===================== ECODesk ===================== */
+/**
+ * Tài khoản cần có theo danh sách thành viên mới: thành viên nào có email cũng đăng nhập được.
+ * Ban BOD là BOD; HR, UCV do BOD nâng quyền thì giữ nguyên; còn lại là thành viên (TV).
+ * Người không còn trong danh sách thì bỏ tài khoản. Tài khoản mới chưa có mật khẩu riêng (dùng mật khẩu mặc định).
+ * @return {{ds:Array<Object>, moi:Array<Object>}} ds: tài khoản giữ lại (đã cập nhật vai trò, họ tên); moi: cần tạo
+ */
+function dongBoTaiKhoan_(taiKhoan, thanhVien) {
+  var theoEmail = {};
+  thanhVien.forEach(function (tv) {
+    var e = String(tv.Email || '').trim().toLowerCase();
+    if (e && !theoEmail[e]) theoEmail[e] = tv;
+  });
+  var daCo = {}, ds = [];
+  taiKhoan.forEach(function (tk) {
+    var e = String(tk.Email || '').trim().toLowerCase();
+    var tv = theoEmail[e];
+    if (!tv || daCo[e]) return;
+    daCo[e] = true;
+    var vaiTro = String(tk.VaiTro || '');
+    if (nhomBan_(tv.Ban) === 'BOD') vaiTro = 'BOD';
+    else if (vaiTro !== 'HR' && vaiTro !== 'UCV') vaiTro = 'TV';
+    var moi = {};
+    Object.keys(tk).forEach(function (k) { moi[k] = tk[k]; });
+    moi.VaiTro = vaiTro; moi.HoVaTen = tv.HoVaTen;
+    ds.push(moi);
+  });
+  var moi = Object.keys(theoEmail).filter(function (e) { return !daCo[e]; }).map(function (e) {
+    return { Email: e, HoVaTen: theoEmail[e].HoVaTen, VaiTro: nhomBan_(theoEmail[e].Ban) === 'BOD' ? 'BOD' : 'TV' };
+  });
+  return { ds: ds, moi: moi };
+}
 
-/** Chức năng mỗi vai trò được dùng. */
+/* ===================== Phân quyền ===================== */
+
+/** Chức năng mỗi vai trò được dùng. TV là thành viên thường: xem xếp hạng, lịch sử điểm của mình, gửi góp ý. */
 var QUYEN = {
-  BOD: ['congdiem', 'task', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat'],
-  HR: ['task'],
-  UCV: ['mail', 'hopthu']
+  BOD: ['congdiem', 'task', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
+  HR: ['task', 'guigopy'],
+  UCV: ['mail', 'hopthu', 'guigopy'],
+  TV: ['guigopy']
 };
 
 function coQuyen_(vaiTro, chucNang) {
@@ -450,7 +483,7 @@ function chuanHoaLoaiHoatDong_(ds) {
     if (daCo[ten.toLowerCase()]) return { ds: [], loi: 'Loại "' + ten + '" bị trùng.' };
     if (!isFinite(diem) || diem < 0) return { ds: [], loi: 'Điểm của "' + ten + '" phải là số không âm.' };
     daCo[ten.toLowerCase()] = true;
-    // CongTay = false: chỉ hiện trên ECOBoard (ví dụ điểm cộng tự động qua form), BOD không chọn được khi cộng điểm.
+    // CongTay = false: chỉ hiện trên app eco (ví dụ điểm cộng tự động qua form), BOD không chọn được khi cộng điểm.
     kq.push({ TenLoai: ten, Diem: diem, CongTay: ds[i].congTay === false ? 'khong' : 'co' });
   }
   if (!kq.length) return { ds: [], loi: 'Cần ít nhất một loại hoạt động.' };
@@ -641,8 +674,8 @@ function soanTinNhac_(tenNguoiNhan, ds, homNay, laNhanSu) {
   if (!ds.length) return '';
   var sx = ds.slice().sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : 0; });
   var dau = laNhanSu
-    ? 'ECODesk nhắc việc. Chào ' + tenNguoiNhan + ', nhờ bạn nhắc các bạn sau qua Messenger:'
-    : 'ECODesk nhắc việc. Chào ' + tenNguoiNhan + ', bạn có ' + ds.length + ' task cần chú ý:';
+    ? 'eco nhắc việc. Chào ' + tenNguoiNhan + ', nhờ bạn nhắc các bạn sau qua Messenger:'
+    : 'eco nhắc việc. Chào ' + tenNguoiNhan + ', bạn có ' + ds.length + ' task cần chú ý:';
   return dau + '\n' + sx.map(function (t) {
     return '• ' + (laNhanSu ? t.nguoi + ': ' : '') + t.ten + ' (hạn ' + hienNgay_(t.hanChot) + ', ' + moTaHan_(t.hanChot, homNay) + ')';
   }).join('\n');
@@ -1062,7 +1095,7 @@ function xepTheoBan_(nguoi, thuTu) {
 /** Kiểm tra thông tin Google trả về cho một ID token. Trả về '' nếu hợp lệ. */
 function kiemTraTokenGoogle_(info, clientId, bayGioGiay) {
   if (!info || !info.email) return 'Không xác nhận được tài khoản Google. Bạn thử lại nhé.';
-  if (String(info.aud) !== String(clientId)) return 'Mã đăng nhập không phải của ECODesk.';
+  if (String(info.aud) !== String(clientId)) return 'Mã đăng nhập không phải của app eco.';
   if (['accounts.google.com', 'https://accounts.google.com'].indexOf(String(info.iss)) < 0) return 'Mã đăng nhập không phải do Google cấp.';
   if (!(info.email_verified === true || info.email_verified === 'true')) return 'Email Google này chưa được xác minh.';
   if (Number(info.exp) < bayGioGiay) return 'Mã đăng nhập đã hết hạn. Bạn thử lại nhé.';
@@ -1385,7 +1418,7 @@ if (typeof module !== 'undefined') {
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
-    linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, khongPhaiBod: khongPhaiBod_,
+    linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, dongBoTaiKhoan: dongBoTaiKhoan_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,

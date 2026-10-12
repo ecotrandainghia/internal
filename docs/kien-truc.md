@@ -145,11 +145,12 @@ Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số 
 
 ## Trang vỏ (`pwa/`) và đăng nhập Google
 
-- `pwa/board/` và `pwa/desk/` là hai trang có manifest riêng nên cài được thành hai app. Mỗi trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`.
+- `pwa/home/` là trang có manifest để cài app eco. Trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`. `pwa/board/`, `pwa/desk/` và trang gốc chỉ chuyển sang `home/` (link cũ vẫn dùng được).
+- Địa chỉ từng trang: app báo trang vỏ mỗi lần đổi trang (`trang`), trang vỏ ghi vào địa chỉ dạng `home/#/task` bằng `history.pushState`; bấm quay lại thì trang vỏ báo app (`vo-trang`) để mở lại trang đó. Đang mở hộp thoại thì quay lại chỉ đóng hộp thoại. Mở app thẳng trên script.google.com thì dùng `google.script.history`.
 - `pwa/sw.js` giữ sẵn file của trang vỏ (cần cho việc cài app); dữ liệu luôn lấy trực tiếp từ Apps Script.
 - Trang vỏ được đưa lên GitHub Pages từ nhánh `gh-pages` (bản sao của thư mục `pwa/`).
 - Đăng nhập Google: ECODesk (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Bấm nút thì trang vỏ hiện nút đăng nhập chính thức của Google, nhận mã xác nhận (ID token) rồi gửi vào ECODesk. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email và tạo phiên như đăng nhập mật khẩu.
-- Ghi nhớ đăng nhập: phiên ECODesk có hạn 60 ngày và tự gia hạn mỗi lần mở. Phiên lưu cả trong khung lẫn ở trang vỏ (`eco_desk_phien`), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.
+- Ghi nhớ đăng nhập: phiên ECODesk có hạn 60 ngày và tự gia hạn mỗi lần mở. Phiên lưu cả trong khung lẫn ở trang vỏ (`eco_phien_vo`; đọc được cả `eco_desk_phien` của ECODesk cũ), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.
 - Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app (`vien`). App trả lời `ho-tro-vien` thì trang vỏ cho khung tràn toàn màn hình; app cũ không trả lời thì khung vẫn chừa phần trên như trước. App gửi `mau` (màu thanh tiêu đề và thanh tab) để trang vỏ tô phần tai thỏ và thanh vuốt cùng màu. Trên iPhone (app ở màn hình chính) khung được kéo cao bằng màn hình nếu trình duyệt báo thiếu.
 - Icon: `tab-*.png` tách nền cho tab trình duyệt (cả trang Apps Script qua `setFaviconUrl`); `apple-*.png` vuông nền trắng cho iPhone (máy tự bo góc); `*-192/512.png` vuông nền trắng cho Android (máy tự cắt theo hình của máy); `badge-96.png` hình trắng cho thanh trạng thái Android. Trong app, logo hiện trong khung tròn.
 - Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.

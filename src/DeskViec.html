@@ -265,10 +265,11 @@ VIEWS.log = function () {
 
 /* ---------- Góp ý ---------- */
 VIEWS.gopy = function () {
+  if (NGUOI.vaiTro !== 'BOD') { vietGopY(); return; }
   dangTai();
   goiPhien('layGopY').then(function (ds) {
     if (page !== 'gopy') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Góp ý ẩn danh</h2><p class="lead">Gửi từ ECOBoard, không có tên người gửi. Bấm vào góp ý mới để đánh dấu đã đọc. Mail báo góp ý mới bật hoặc tắt trong Cài đặt.</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Góp ý ẩn danh</h2><p class="lead">Thành viên gửi trong app eco, không có tên người gửi. Bấm vào góp ý mới để đánh dấu đã đọc. Mail báo góp ý mới bật hoặc tắt trong Cài đặt.</p></div></div>' +
       '<div style="display:grid;gap:10px">' + (ds.length ? ds.map(function (g) {
         return '<div class="card" ' + (g.daDoc ? '' : 'data-doc="' + g.thoiGian + '" style="cursor:pointer;border-left:4px solid var(--info)"') + '><div class="row sb"><span class="hint">' + ngayDayDu(g.thoiGian) + '</span>' + (g.daDoc ? '<span class="pill p-mute">Đã đọc</span>' : '<span class="pill p-info">Mới</span>') + '</div><p style="margin:6px 0 0;white-space:pre-wrap">' + esc(g.noiDung) + '</p></div>';
       }).join('') : rong(ic('chat') + 'Chưa có góp ý nào.')) + '</div>';
@@ -285,14 +286,29 @@ VIEWS.gopy = function () {
   }).catch(loiTai);
 };
 
+/** Thành viên, HR, UCV gửi góp ý ẩn danh cho BOD. */
+function vietGopY() {
+  $('#main').innerHTML = '<div class="head"><div><h2>Góp ý ẩn danh</h2><p class="lead">Không ghi tên người gửi. Chỉ BOD đọc được.</p></div></div>' +
+    '<form class="card form" id="fb" style="max-width:640px"><label class="f">Bạn muốn góp ý điều gì cho CLB?<textarea id="fb-t" rows="7" maxlength="2000"></textarea></label>' +
+    '<div class="row"><button class="btn" id="fb-b">' + ic('chat', 16) + 'Gửi góp ý</button><span id="fb-m"></span></div></form>';
+  $('#fb').onsubmit = function (e) {
+    e.preventDefault();
+    var v = $('#fb-t').value.trim();
+    if (!v) { thongBao($('#fb-m'), 'loi', 'Bạn chưa viết gì.'); return; }
+    $('#fb-b').disabled = true; thongBao($('#fb-m'), 'cho', 'Đang gửi…');
+    goiPhien('guiGopY', v).then(function () { $('#fb-b').disabled = false; $('#fb-t').value = ''; thongBao($('#fb-m'), 'ok', 'Đã gửi góp ý. Cảm ơn bạn!'); })
+      .catch(function (err) { $('#fb-b').disabled = false; thongBao($('#fb-m'), 'loi', err.message); });
+  };
+}
+
 /* ---------- Cài đặt ---------- */
 var CD = null;
 var SET = [
   ['Cá nhân', [['tbtoi', 'bell', 'Thông báo của tôi', function () { return 'Cách tôi nhận nhắc deadline và các thiết bị đã bật thông báo'; }, 'thông báo của tôi nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử'],
     ['theme', 'sun', 'Giao diện sáng hoặc tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark'],
-    ['matkhau', 'key', 'Đổi mật khẩu', function () { return 'Mật khẩu đăng nhập ECODesk của bạn'; }, 'mật khẩu đổi password đăng nhập']]],
+    ['matkhau', 'key', 'Đổi mật khẩu', function () { return 'Mật khẩu đăng nhập app eco của bạn'; }, 'mật khẩu đổi password đăng nhập']]],
   ['Giao diện hai app', [['chude', 'star', 'Giao diện theo mùa và ngày lễ', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí']]],
-  ['Cộng điểm và ECOBoard', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
+  ['Cộng điểm, ghim và quy chế', [['types', 'star', 'Loại hoạt động và mức điểm', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
     ['pins', 'pin', 'Bảng ghim và quy chế', function () { return CD.ghim.length + ' liên kết ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế'); }, 'link ghim quy chế luật ecoboard']]],
   ['Nhắc deadline', [['tbkhac', 'users', 'Thông báo của BOD và HR', function () { return 'Cách nhận của từng người, gửi thử nhắc deadline'; }, 'thông báo mọi người người khác nhận zalo app mail cách nhận máy gỡ gửi thử'],
     ['due', 'clock', 'Lịch nhắc deadline', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'không hoàn thành sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
@@ -305,7 +321,7 @@ var SET = [
   ['Làm log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
   ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad mã hr'],
     ['ucv', 'users', 'Tài khoản UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' tài khoản'; }, 'UCV ucv tài khoản mail'],
-    ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho BOD, HR và UCV'; }, 'mật khẩu tài khoản đặt lại'],
+    ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại'],
     ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'],
     ['loginbg', 'eye', 'Ảnh nền trang đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Đang dùng nền xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background']]]
 ];
@@ -324,7 +340,7 @@ VIEWS.caidat = function () {
     var g = SET.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
     var it = g[1].filter(function (x) { return x[0] === sub; })[0];
     $('#main').innerHTML = '<div><button class="back" id="back">' + ic('left', 16) + 'Cài đặt</button><div class="crumb" style="margin-top:6px">' + g[0] + '</div><h2 style="margin:0;font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px"></div>';
-    $('#back').onclick = function () { sub = null; VIEWS.caidat(); };
+    $('#back').onclick = function () { diToi('caidat'); };
     window.scrollTo(0, 0);
     SUB[sub]();
     return;
@@ -338,7 +354,7 @@ VIEWS.caidat = function () {
       return f.length ? '<div class="sgroup"><h4>' + g[0] + '</h4><div class="slist">' + f.map(function (x) { return '<button class="sitem" data-s="' + x[0] + '"><span class="ic">' + ic(x[1]) + '</span><div><b>' + x[2] + '</b><span>' + esc(x[3]()) + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>'; }).join('') + '</div></div>' : '';
     }).join('');
     $('#slists').innerHTML = html || '<p class="muted">Không tìm thấy mục cài đặt nào.</p>';
-    $$('[data-s]').forEach(function (b) { b.onclick = function () { CUON_CAI_DAT = { y: window.scrollY, q: $('#sq').value }; sub = b.getAttribute('data-s'); VIEWS.caidat(); }; });
+    $$('[data-s]').forEach(function (b) { b.onclick = function () { CUON_CAI_DAT = { y: window.scrollY, q: $('#sq').value }; diToi('caidat', b.getAttribute('data-s')); }; });
   };
   // Quay lại từ một mục cài đặt thì giữ nguyên chỗ đang cuộn (và ô tìm) như lúc mở mục đó.
   var nho = CUON_CAI_DAT; CUON_CAI_DAT = null;
@@ -456,7 +472,7 @@ var SUB = {
     var ds = CD.loai.map(function (l) { return { ten: l.ten, diem: l.diem, congTay: l.congTay !== false }; });
     $('#subbody').innerHTML = '<div class="card" id="tybox"></div><div id="sdbox" style="display:grid;gap:inherit"></div>';
     var ve = function () {
-      $('#tybox').innerHTML = '<div class="ctitle"><h3>' + ic('star', 18) + ' Loại hoạt động và mức điểm</h3></div><p class="hint" style="margin-top:0">Đây là số điểm thật được cộng mỗi lần, dù BOD cộng tay hay app tự cộng qua form seeding bên dưới. Mọi loại đều hiện ở mục Quy chế trên ECOBoard. Bỏ chọn “BOD cộng” nếu loại đó chỉ được cộng tự động qua form, khi đó BOD sẽ không thấy nó trong trang Cộng điểm. Đổi số điểm chỉ áp dụng cho các lần cộng từ nay về sau.</p><div class="tscroll"><table><thead><tr><th>Loại hoạt động</th><th class="n">Điểm mỗi lần</th><th class="c">BOD cộng</th><th></th></tr></thead><tbody>' +
+      $('#tybox').innerHTML = '<div class="ctitle"><h3>' + ic('star', 18) + ' Loại hoạt động và mức điểm</h3></div><p class="hint" style="margin-top:0">Đây là số điểm thật được cộng mỗi lần, dù BOD cộng tay hay app tự cộng qua form seeding bên dưới. Mọi loại đều hiện ở mục Quy chế trên app eco. Bỏ chọn “BOD cộng” nếu loại đó chỉ được cộng tự động qua form, khi đó BOD sẽ không thấy nó trong trang Cộng điểm. Đổi số điểm chỉ áp dụng cho các lần cộng từ nay về sau.</p><div class="tscroll"><table><thead><tr><th>Loại hoạt động</th><th class="n">Điểm mỗi lần</th><th class="c">BOD cộng</th><th></th></tr></thead><tbody>' +
         ds.map(function (l, i) { return '<tr><td><input type="text" id="ty' + i + '" value="' + esc(l.ten) + '" aria-label="Tên loại"></td><td style="width:110px"><input type="number" min="0" step="any" id="tp' + i + '" value="' + l.diem + '" aria-label="Điểm"></td><td class="c" style="width:80px;text-align:center"><input type="checkbox" id="tc' + i + '"' + (l.congTay ? ' checked' : '') + ' aria-label="BOD cộng tay loại này"></td><td style="width:44px"><button class="ibtn" data-x="' + i + '" aria-label="Xoá">' + ic('trash', 16) + '</button></td></tr>'; }).join('') +
         '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="add">' + ic('plus', 14) + 'Thêm loại</button><button class="btn sm" id="save">Lưu</button><span id="m"></span></div>';
       var doc = function () { ds = ds.map(function (_, i) { return { ten: $('#ty' + i).value, diem: $('#tp' + i).value, congTay: $('#tc' + i).checked }; }); };
@@ -472,13 +488,13 @@ var SUB = {
     var ds = CD.ghim.map(function (g) { return { tieuDe: g.tieuDe, link: g.link }; });
     var laLink = /^https?:\/\//i.test(CD.quyChe);
     $('#subbody').innerHTML = '<form class="card form" id="qcf"><div class="ctitle"><h3>' + ic('book', 18) + ' Quy chế cộng điểm</h3>' + (laLink ? '<a class="btn ghost sm" href="' + esc(CD.quyChe) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Mở</a>' : '') + '</div>' +
-      '<label class="f">Link file quy chế <small>Thường là một file Google Docs. ECOBoard hiện nút “Xem quy chế” dẫn tới link này. Bỏ trống để ẩn.</small><input type="url" id="qc" value="' + esc(laLink ? CD.quyChe : '') + '" placeholder="https://docs.google.com/document/d/…"></label>' +
+      '<label class="f">Link file quy chế <small>Thường là một file Google Docs. Trang chủ app hiện nút “Xem quy chế” dẫn tới link này. Bỏ trống để ẩn.</small><input type="url" id="qc" value="' + esc(laLink ? CD.quyChe : '') + '" placeholder="https://docs.google.com/document/d/…"></label>' +
       (CD.quyChe && !laLink ? '<p class="hint" style="margin:0">Trước đây quy chế được gõ trực tiếp. Hãy chép nội dung cũ sang một file Google Docs rồi dán link vào đây.</p>' : '') +
       '<div class="row"><button class="btn sm" id="qcs">Lưu link quy chế</button><span id="qcm"></span></div></form>' +
       '<div class="card" id="ghimc"></div>';
     $('#qcf').onsubmit = function (e) { e.preventDefault(); luuVa($('#qcs'), $('#qcm'), 'luuQuyChe', [$('#qc').value]); };
     var ve = function () {
-      $('#ghimc').innerHTML = '<div class="ctitle"><h3>' + ic('pin', 18) + ' Link ghim</h3><span class="hint">Hiện ở tab Bảng ghim trên ECOBoard</span></div><div class="form">' + (ds.length ? ds.map(function (g, i) { return '<div class="row" style="flex-wrap:nowrap;align-items:flex-start"><div class="grid2" style="gap:8px;flex:1"><input type="text" id="pt' + i + '" value="' + esc(g.tieuDe) + '" placeholder="Tên link" aria-label="Tên link"><input type="url" id="pu' + i + '" value="' + esc(g.link) + '" placeholder="https://…" aria-label="Địa chỉ link"></div><button class="ibtn" data-x="' + i + '" aria-label="Xoá">' + ic('trash', 16) + '</button></div>'; }).join('') : '<p class="hint" style="margin:0">Chưa có link nào.</p>') +
+      $('#ghimc').innerHTML = '<div class="ctitle"><h3>' + ic('pin', 18) + ' Link ghim</h3><span class="hint">Hiện ở trang chủ app cho mọi người đã đăng nhập</span></div><div class="form">' + (ds.length ? ds.map(function (g, i) { return '<div class="row" style="flex-wrap:nowrap;align-items:flex-start"><div class="grid2" style="gap:8px;flex:1"><input type="text" id="pt' + i + '" value="' + esc(g.tieuDe) + '" placeholder="Tên link" aria-label="Tên link"><input type="url" id="pu' + i + '" value="' + esc(g.link) + '" placeholder="https://…" aria-label="Địa chỉ link"></div><button class="ibtn" data-x="' + i + '" aria-label="Xoá">' + ic('trash', 16) + '</button></div>'; }).join('') : '<p class="hint" style="margin:0">Chưa có link nào.</p>') +
         '<div class="row"><button class="btn ghost sm" id="add">' + ic('plus', 14) + 'Thêm link</button><button class="btn sm" id="save">Lưu link ghim</button><span id="m"></span></div></div>';
       var doc = function () { ds = ds.map(function (_, i) { return { tieuDe: $('#pt' + i).value, link: $('#pu' + i).value }; }); };
       $('#add').onclick = function () { doc(); ds.push({ tieuDe: '', link: '' }); ve(); $('#pt' + (ds.length - 1)).focus(); };
@@ -489,7 +505,7 @@ var SUB = {
   },
   notify: function () {
     $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Hai loại này luôn gửi qua mail tới email của từng BOD.</p>' +
-      '<label class="switch"><input type="checkbox" id="bg"' + (CD.baoGopY ? ' checked' : '') + '>Gửi mail khi có góp ý mới từ ECOBoard</label>' +
+      '<label class="switch"><input type="checkbox" id="bg"' + (CD.baoGopY ? ' checked' : '') + '>Gửi mail khi có góp ý mới từ app eco</label>' +
       '<p class="hint" style="margin:0">Có kèm nội dung góp ý. Nhiều góp ý gửi liền nhau chỉ báo một lần mỗi 10 phút.</p>' +
       '<label class="switch"><input type="checkbox" id="bt"' + (CD.baoThuChoDuyet ? ' checked' : '') + '>Gửi mail khi UCV gửi thư chờ duyệt</label>' +
       '<p class="hint" style="margin:0">UCV luôn được báo qua mail khi thư của mình được duyệt hoặc bị trả lại.</p><span id="m"></span></div>';
@@ -497,7 +513,7 @@ var SUB = {
     $('#bt').onchange = function () { luuVa($('#bt'), $('#m'), 'luuSuKienThongBao', [{ thuChoDuyet: $('#bt').checked }]); };
   },
   taskgiao: function () {
-    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng cho task giao (BOD tạo). Task nhập (HR tạo) chỉ dùng để nhắc deadline và xem lại cuối năm. Tin gửi theo cách nhận mỗi người đã chọn, và chỉ tới người có tài khoản ECODesk.</p>' +
+    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng cho task giao (BOD tạo). Task nhập (HR tạo) chỉ dùng để nhắc deadline và xem lại cuối năm. Tin gửi theo cách nhận mỗi người đã chọn, và chỉ tới người có tài khoản app eco.</p>' +
       '<label class="switch"><input type="checkbox" id="tm"' + (CD.baoTaskMoi ? ' checked' : '') + '>Báo cho người được giao khi có task mới</label>' +
       '<label class="switch"><input type="checkbox" id="tx"' + (CD.baoTaskXong ? ' checked' : '') + '>Báo cho người giao khi task đã xong</label><span id="m"></span></div>';
     $('#tm').onchange = function () { luuVa($('#tm'), $('#m'), 'luuSuKienThongBao', [{ taskMoi: $('#tm').checked }]); };
@@ -506,7 +522,7 @@ var SUB = {
   loginbg: function () {
     var ve = function () {
       var co = ANH_NEN && ANH_NEN.data && CD.anhNen;
-      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Ảnh hiện phía sau khung đăng nhập ECODesk. Ảnh được tự thu nhỏ trước khi tải lên và tự cắt cho vừa màn hình, nên chọn ảnh có cảnh đẹp ở giữa.</p>' +
+      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Ảnh hiện phía sau khung đăng nhập app eco. Ảnh được tự thu nhỏ trước khi tải lên và tự cắt cho vừa màn hình, nên chọn ảnh có cảnh đẹp ở giữa.</p>' +
         '<div class="anh-xem' + (co ? '' : ' trong') + '"' + (co ? ' style="background-image:url(&quot;' + ANH_NEN.data + '&quot;)"' : '') + '>' + (co ? '' : '<span>' + (CD.anhNen ? 'Đang dùng ảnh riêng' : 'Chưa có ảnh, đang dùng màu xanh của CLB') + '</span>') + '<div class="anh-khung"></div></div>' +
         '<div class="row"><label class="btn sm" style="cursor:pointer">' + ic('plus', 14) + 'Chọn ảnh<input type="file" id="an-f" accept="image/*" hidden></label>' +
         (CD.anhNen ? '<button class="btn ghost sm" id="an-x">Bỏ ảnh nền</button>' : '') + '<span id="m"></span></div></div>';
@@ -543,7 +559,7 @@ var SUB = {
         '<span class="chu"><b>' + (p ? p.ten : 'Mặc định') + '</b><small>' + (p ? p.khi : 'Xanh lá của CLB') + '</small></span></button>';
     };
     var ve = function () {
-      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Áp dụng cho mọi người trên cả ECODesk và ECOBoard: đổi màu, thêm hoa lá rơi và đồ trang trí hợp dịp. Giao diện không tự đổi theo ngày, hết dịp thì BOD vào đây chọn lại.</p><span id="m"></span></div>' +
+      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Áp dụng cho mọi người trên cả app: đổi màu, thêm hoa lá rơi và đồ trang trí hợp dịp. Giao diện không tự đổi theo ngày, hết dịp thì BOD vào đây chọn lại.</p><span id="m"></span></div>' +
         '<div class="card"><div class="ctitle"><h3>' + ic('sun', 18) + ' Bốn mùa</h3></div><div class="chude-luoi deu">' + [null].concat(DS_CHU_DE.filter(function (p) { return p.nhom === 'mua'; })).map(the).join('') + '</div></div>' +
         '<div class="card"><div class="ctitle"><h3>' + ic('star', 18) + ' Ngày lễ lớn</h3></div><div class="chude-luoi deu">' + DS_CHU_DE.filter(function (p) { return p.nhom === 'le'; }).map(the).join('') + '</div></div>';
       $$('#subbody [data-cd]').forEach(function (b) {
@@ -633,7 +649,7 @@ var SUB = {
         '<li>Trên máy tính, mở <b>bot.zaloplatforms.com</b> và đăng nhập bằng Zalo của Head HR.</li>' +
         '<li>Bấm tạo bot mới, đặt tên dễ nhận ra, ví dụ “Bot nhắc việc ECO”.</li>' +
         '<li>Tạo xong, trang sẽ hiện <b>mã bot (token)</b> có dạng <code>số:chuỗi ký tự</code>. Bấm sao chép.</li>' +
-        '<li>Dán mã vào ô “Mã bot” ở trên, bấm <b>Lưu</b>. Nếu mã sai, ECODesk sẽ báo ngay.</li>' +
+        '<li>Dán mã vào ô “Mã bot” ở trên, bấm <b>Lưu</b>. Nếu mã sai, app eco sẽ báo ngay.</li>' +
         '<li>Báo mọi người: mở Zalo, tìm bot theo tên vừa đặt, tìm được bot là đủ (mỗi người thấy mã của mình ở trang Nhắc deadline, hoặc xem bảng ở trên).</li>' +
         '<li>Mỗi người bấm “Kiểm tra tin nhắn mới” (hoặc “Kiểm tra Zalo” ở trang Nhắc deadline) rồi nhắn mã cho bot trong vòng 25 giây; bot trả lời “Đã kết nối” là xong. Bấm “Gửi thử” để chắc chắn bot nhắn được.</li>' +
         '</ol><p class="hint">Đổi sang bot mới thì mọi người phải nhắn mã kết nối lại cho bot mới.</p></details>';
@@ -719,8 +735,8 @@ var SUB = {
   hr: function (vaiTro) {
     vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
     var hr = CD.taiKhoan.filter(function (t) { return t.vaiTro === vaiTro; });
-    var daCo = {}; CD.taiKhoan.forEach(function (t) { daCo[t.email.toLowerCase()] = true; });
-    var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()]; });
+    var daCo = {}; CD.taiKhoan.forEach(function (t) { if (t.vaiTro !== 'TV') daCo[t.email.toLowerCase()] = true; });
+    var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()] && t.ban.trim().toUpperCase() !== 'BOD'; });
     // HR được phân quản lý một số ban: chỉ thấy, thao tác và được nhắc deadline task của các ban đó.
     var cacBan = ['PG', 'PR', 'AD'];
     var chuaAi = vaiTro !== 'HR' || hr.some(function (t) { return !t.banQuanLy.some(function (b) { return cacBan.indexOf(b) >= 0; }); }) ? []
@@ -734,7 +750,7 @@ var SUB = {
     $('#subbody').innerHTML = (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>HR quản lý task của PG, PR và AD. HR chỉ thấy, giao và được nhắc deadline task của thành viên các ban mình được phân. Mọi HR cùng quản lý một ban đều được nhắc. Chưa phân ban thì HR quản lý cả ba ban. Task của ban HR do Head HR quản lý và nhắc.</span></div>' : '') +
       (chuaAi.length ? '<p class="err">Ban ' + chuaAi.join(', ') + ' chưa có HR nào quản lý nên task của ban này chưa được ai nhắc.</p>' : '') +
       '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + phanBan(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
-      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách và chưa có tài khoản</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu ban đầu <small>Ít nhất 6 ký tự. Gửi riêng cho người đó, họ tự đổi sau. Nếu CLB đã bật đăng nhập bằng Google, họ có thể đăng nhập bằng Google luôn.</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
+      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách thành viên</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu mới <small>Không bắt buộc. Bỏ trống thì người đó vẫn đăng nhập bằng mật khẩu đang dùng (hoặc mật khẩu chung của CLB, hoặc Google).</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
     $$('[data-luupb]').forEach(function (b) {
       b.onclick = function () {
@@ -747,26 +763,33 @@ var SUB = {
   },
   ucv: function () { SUB.hr('UCV'); },
   google: function () {
-    $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản ECODesk có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở ECODesk qua trang ecotdn.github.io/desk hoặc app đã cài.</p>' +
+    $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản app eco có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở app eco qua trang ecotdn.github.io/home hoặc app đã cài.</p>' +
       '<label class="f">Google Client ID <small>Tạo một lần trên Google Cloud bằng tài khoản CLB (xem hướng dẫn bên dưới). Bỏ trống để tắt.</small><input type="text" id="gg-i" value="' + esc(CD.googleClientId) + '" placeholder="1234567890-abc….apps.googleusercontent.com"></label>' +
       '<div class="row"><button class="btn sm" id="gg-b">Lưu</button><span id="m"></span></div></form>' +
       '<details class="card"' + (CD.googleClientId ? '' : ' open') + '><summary style="cursor:pointer;font-weight:600">Hướng dẫn lấy Google Client ID (làm một lần)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
       '<li>Trên máy tính, đăng nhập tài khoản Google của CLB, mở <b>console.cloud.google.com</b>. Lần đầu sẽ được hỏi đồng ý điều khoản, bấm đồng ý.</li>' +
-      '<li>Ở góc trên bên trái bấm chọn dự án, bấm <b>New project</b>, đặt tên “ECODesk”, bấm <b>Create</b>, rồi chọn dự án vừa tạo.</li>' +
-      '<li>Mở menu, vào <b>APIs &amp; Services</b> rồi <b>OAuth consent screen</b> (có thể tên là Google Auth Platform). Bấm <b>Get started</b>, điền tên app “ECODesk”, email hỗ trợ là email CLB, chọn <b>External</b>, điền email liên hệ, đồng ý rồi bấm <b>Create</b>.</li>' +
+      '<li>Ở góc trên bên trái bấm chọn dự án, bấm <b>New project</b>, đặt tên “eco”, bấm <b>Create</b>, rồi chọn dự án vừa tạo.</li>' +
+      '<li>Mở menu, vào <b>APIs &amp; Services</b> rồi <b>OAuth consent screen</b> (có thể tên là Google Auth Platform). Bấm <b>Get started</b>, điền tên app “eco”, email hỗ trợ là email CLB, chọn <b>External</b>, điền email liên hệ, đồng ý rồi bấm <b>Create</b>.</li>' +
       '<li>Vào mục <b>Audience</b>, bấm <b>Publish app</b> để ai cũng đăng nhập được (chỉ xin email và tên nên Google không cần duyệt).</li>' +
-      '<li>Vào mục <b>Clients</b> (hoặc Credentials), bấm <b>Create client</b>, chọn loại <b>Web application</b>, tên “ECODesk”.</li>' +
+      '<li>Vào mục <b>Clients</b> (hoặc Credentials), bấm <b>Create client</b>, chọn loại <b>Web application</b>, tên “eco”.</li>' +
       '<li>Ở <b>Authorized JavaScript origins</b>, bấm Add URI và dán đúng: <code>https://ecotdn.github.io</code>. Bấm <b>Create</b>.</li>' +
       '<li>Sao chép <b>Client ID</b> (đuôi .apps.googleusercontent.com), dán vào ô ở trên, bấm Lưu.</li></ol></details>';
     $('#gg').onsubmit = function (e) { e.preventDefault(); luuVa($('#gg-b'), $('#m'), 'luuGoogleClientId', [$('#gg-i').value]); };
   },
   accounts: function () {
-    $('#subbody').innerHTML = '<div class="card flush"><div class="lst">' + CD.taiKhoan.map(function (t, i) {
-      return '<div class="li" style="flex-wrap:wrap"><div class="c" style="min-width:180px"><b class="t">' + esc(t.ten) + '</b><span class="s">' + (VAI_TRO[t.vaiTro] || esc(t.vaiTro)) + ' · ' + esc(t.email) + '</span></div><div class="row" style="flex-wrap:nowrap"><input type="text" id="np' + i + '" placeholder="Mật khẩu mới" aria-label="Mật khẩu mới cho ' + esc(t.ten) + '" style="max-width:170px"><button class="btn ghost sm" data-rs="' + i + '">Đặt lại</button></div></div>';
-    }).join('') + '</div><div style="padding:0 18px 12px" id="m"></div></div>';
-    $$('[data-rs]').forEach(function (b) {
-      b.onclick = function () { var i = b.getAttribute('data-rs'); var t = CD.taiKhoan[i]; luuVa(b, $('#m'), 'datLaiMatKhau', [t.email, $('#np' + i).value], function () { $('#np' + i).value = ''; thongBao($('#m'), 'ok', 'Đã đặt lại mật khẩu cho ' + t.ten); }); };
-    });
+    $('#subbody').innerHTML = '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="tk-q" placeholder="Tìm theo tên hoặc email" aria-label="Tìm tài khoản"></div>' +
+      '<div class="card flush"><div class="lst" id="tk-ds"></div><div style="padding:0 18px 12px" id="m"></div></div>';
+    var ve = function (q) {
+      q = boDau(q || '');
+      $('#tk-ds').innerHTML = CD.taiKhoan.map(function (t, i) {
+        if (q && boDau(t.ten + ' ' + t.email).indexOf(q) < 0) return '';
+        return '<div class="li" style="flex-wrap:wrap"><div class="c" style="min-width:180px"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(VAI_TRO[t.vaiTro] || t.vaiTro) + ' · ' + esc(t.email) + '</span></div><div class="row" style="flex-wrap:nowrap"><input type="text" id="np' + i + '" placeholder="Mật khẩu mới" aria-label="Mật khẩu mới cho ' + esc(t.ten) + '" style="max-width:170px"><button class="btn ghost sm" data-rs="' + i + '">Đặt lại</button></div></div>';
+      }).join('') || rong('Không tìm thấy ai.');
+      $$('[data-rs]').forEach(function (b) {
+        b.onclick = function () { var i = b.getAttribute('data-rs'); var t = CD.taiKhoan[i]; luuVa(b, $('#m'), 'datLaiMatKhau', [t.email, $('#np' + i).value], function () { $('#np' + i).value = ''; thongBao($('#m'), 'ok', 'Đã đặt lại mật khẩu cho ' + t.ten); }); };
+      });
+    };
+    ve(); $('#tk-q').oninput = function (e) { ve(e.target.value); };
   }
 };
 </script>

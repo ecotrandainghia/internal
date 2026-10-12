@@ -1,5 +1,5 @@
 <style>
-/* =================== Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt, áp dụng cho cả ECOBoard và ECODesk) ===================
+/* =================== Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt, áp dụng cho cả app) ===================
    Màu được tính sẵn trong đoạn script bên dưới. Ở đây chỉ có hình trang trí và hiệu ứng. */
 html[data-chude] .av{background:var(--soft-2);color:var(--accent)}
 html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--accent);color:var(--on-accent)}
@@ -22,7 +22,7 @@ html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--a
 @keyframes tt-ngang{from{transform:translate3d(-70px,0,0)}to{transform:translate3d(calc(100vw + 70px),var(--lech),0)}}
 @keyframes tt-vo{from{transform:scaleY(1)}to{transform:scaleY(.4)}}
 
-/* Trang trí trong khung chào (và đầu trang ECOBoard). Kích thước tính theo em để thu nhỏ trên điện thoại. */
+/* Trang trí trong khung chào (và đầu trang app eco). Kích thước tính theo em để thu nhỏ trên điện thoại. */
 .tt-chao{position:absolute;inset:0;z-index:-1;pointer-events:none;font-size:10px;overflow:hidden}
 .tt-chao>*{position:absolute}
 .tt-treo{top:-2px;transform-origin:50% 0;animation:tt-dua 3.4s ease-in-out infinite alternate}
@@ -68,7 +68,7 @@ html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--a
   .tt-canh{width:17em;height:7.6em}
   .tt-chao .tt-duoi{display:none}
 }
-/* Đầu trang ECOBoard: thu nhỏ, chỉ giữ đồ treo phía trên. */
+/* Đầu trang app eco: thu nhỏ, chỉ giữ đồ treo phía trên. */
 header.co-tt{position:relative;overflow:hidden;isolation:isolate}
 .tt-chao.tt-dau{font-size:6.5px}
 @media (prefers-reduced-motion:reduce){#trangtri{display:none}.tt-chao,.tt-chao *{animation:none!important}}
@@ -309,7 +309,7 @@ function bayNgang(hinh, so, lop) {
   for (var i = 0; i < so; i++) { var t = ngauNhien(8, 13); o += '<span class="bay ' + (lop || '') + '" style="top:0;--y:' + ngauNhien(1, 8).toFixed(1) + 'em;--co:' + ngauNhien(2.6, 3.6).toFixed(1) + 'em;--t:' + t.toFixed(1) + 's;--tre:' + (-ngauNhien(0, t)).toFixed(1) + 's">' + hinh + '</span>'; }
   return o;
 }
-/** Từng phần trang trí: dau = true là phần treo phía trên, dùng được cho cả đầu trang ECOBoard. */
+/** Từng phần trang trí: dau = true là phần treo phía trên, dùng được cho cả đầu trang app eco. */
 var TRANG_TRI = {
   xuan: function () { return [{ h: HINH.canhCay('dao'), dau: true }, { h: roiChao([['hoa', '#f7a8c4', '#d6336c'], ['canh', '#f9c0d3']], 6) }]; },
   ha: function () { return [{ h: HINH.canhCay('phuong'), dau: true }, { h: roiChao([['canh', '#e8352a'], ['canh', '#f05a3a']], 5) }]; },

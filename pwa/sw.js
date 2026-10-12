@@ -1,8 +1,7 @@
 /* Service worker tối giản: giữ sẵn các file của trang vỏ để app mở nhanh và cài được lên màn hình chính. */
-var BO_NHO = 'eco-vo-7';
-var TEP = ['./config.js', './vo.js', './vo.css', './board/', './board/index.html', './board/manifest.webmanifest', './desk/', './desk/index.html', './desk/manifest.webmanifest',
-  './icons/board-192.png', './icons/board-512.png', './icons/desk-192.png', './icons/desk-512.png',
-  './icons/tab-board.png', './icons/tab-desk.png', './icons/apple-board.png', './icons/apple-desk.png', './icons/badge-96.png'];
+var BO_NHO = 'eco-vo-8';
+var TEP = ['./config.js', './vo.js', './vo.css', './home/', './home/index.html', './home/manifest.webmanifest',
+  './icons/eco-192.png', './icons/eco-512.png', './icons/tab-eco.png', './icons/apple-eco.png', './icons/badge-96.png'];
 
 self.addEventListener('install', function (e) {
   // Lưu từng file riêng: thiếu một file cũng không làm hỏng việc cài (cần để nhận thông báo).
@@ -21,20 +20,20 @@ self.addEventListener('fetch', function (e) {
   }).catch(function () { return caches.match(e.request); }));
 });
 
-/* ---------- Thông báo của ECODesk ---------- */
+/* ---------- Thông báo của app eco ---------- */
 /*
  * Máy chủ gửi kèm nội dung đã mã hoá (trình duyệt tự giải mã) nên hiện ngay. iPhone chỉ cho rất ít thời gian,
  * phải hiện thông báo ngay chứ không kịp hỏi lại máy chủ. Máy bật từ bản cũ (tin không có nội dung) thì
  * hỏi lại nội dung bằng mã riêng của máy, quá 4 giây thì hiện câu chung.
  */
 self.addEventListener('push', function (e) {
-  var mac = { tieuDe: 'ECODesk', noiDung: 'Bạn có thông báo mới.' };
+  var mac = { tieuDe: 'eco', noiDung: 'Bạn có thông báo mới.' };
   var co = null;
   try { co = e.data ? e.data.json() : null; } catch (loi) { co = null; }
   var hien = function (ds) {
     return Promise.all((ds.length ? ds : [mac]).slice(-3).map(function (t, i) {
-      return self.registration.showNotification(t.tieuDe === 'ECODesk' ? 'ECODesk' : 'ECODesk: ' + t.tieuDe, {
-        body: String(t.noiDung || '').slice(0, 400), icon: '../icons/desk-192.png', badge: '../icons/badge-96.png', tag: 'eco-' + Date.now() + '-' + i, data: { url: './' }
+      return self.registration.showNotification(t.tieuDe === 'eco' ? 'eco' : 'eco: ' + t.tieuDe, {
+        body: String(t.noiDung || '').slice(0, 400), icon: '../icons/eco-192.png', badge: '../icons/badge-96.png', tag: 'eco-' + Date.now() + '-' + i, data: { url: './' }
       });
     }));
   };

@@ -12,11 +12,12 @@
 </head>
 <body>
 <div id="app"></div>
-<script>window.ECO_LOGO = <?!= JSON.stringify(include('LogoDesk').trim()) ?>;
+<script>window.ECO_LOGO = <?!= JSON.stringify(include('LogoEco').trim()) ?>;
 window.ECO_GOOGLE_CLIENT_ID = <?!= JSON.stringify(googleClientId || '') ?>;</script>
 <?!= include('DungChung') ?>
 <?!= include('DeskChung') ?>
 <?!= include('DeskTrangChu') ?>
+<?!= include('EcoXepHang') ?>
 <?!= include('DeskViec') ?>
 <?!= include('DeskMail') ?>
 <script>

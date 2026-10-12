@@ -135,10 +135,10 @@ function nhanTinMoiZalo_(choGiay) {
         if (ai) {
           ghiKetNoiZalo_(ai.ten, String(m.chat.id), String((m.from && m.from.display_name) || ''));
           bao.soMoi++;
-          guiZalo_(token, m.chat.id, 'Đã kết nối với ECODesk. Từ nay ' + ai.ten + ' sẽ nhận thông báo ở đây.');
+          guiZalo_(token, m.chat.id, 'Đã kết nối với app eco. Từ nay ' + ai.ten + ' sẽ nhận thông báo ở đây.');
         } else {
           if (bao.tinKhongMa.length < 5) bao.tinKhongMa.push({ tenZalo: String((m.from && m.from.display_name) || ''), noiDung: String(m.text || '(không phải chữ)').slice(0, 40) });
-          guiZalo_(token, m.chat.id, 'Bot này gửi thông báo của ECODesk. Muốn nhận, hãy gửi mã kết nối 6 ký tự của bạn (xem trong ECODesk, mục Thông báo).');
+          guiZalo_(token, m.chat.id, 'Bot này gửi thông báo của app eco. Muốn nhận, hãy gửi mã kết nối 6 ký tự của bạn (xem trong app eco, mục Thông báo).');
         }
       } catch (e) { /* gửi trả lời lỗi thì bỏ qua, lần sau vẫn chạy tiếp */ }
     });
@@ -263,7 +263,7 @@ function baoTaskMoi_(dong, nguoiTao) {
       if (d.KieuTao !== 'Giao task' || !batSuKien_('BaoTaskMoi')) return;
       var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach; })[0];
       if (!n || n.ten === nguoiTao) return;
-      guiThongBao_(n, 'Task mới', 'ECODesk: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay_(d.HanChot) + '.');
+      guiThongBao_(n, 'Task mới', 'eco: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay_(d.HanChot) + '.');
     });
   } catch (e) { /* bỏ qua */ }
 }
@@ -274,7 +274,7 @@ function baoTaskXong_(task, nguoiLam, nguoiDanhDau) {
     if (task.kieuTao !== 'Giao task' || task.nguoiTao === nguoiDanhDau || !batSuKien_('BaoTaskXong')) return;
     var n = nguoiNhanThongBao_().filter(function (x) { return x.ten === task.nguoiTao; })[0];
     if (!n) return;
-    guiThongBao_(n, 'Task đã xong', 'ECODesk: ' + nguoiLam + ' đã xong task "' + task.ten + '"' + (nguoiDanhDau !== nguoiLam ? ' (' + nguoiDanhDau + ' xác nhận)' : '') + '.');
+    guiThongBao_(n, 'Task đã xong', 'eco: ' + nguoiLam + ' đã xong task "' + task.ten + '"' + (nguoiDanhDau !== nguoiLam ? ' (' + nguoiDanhDau + ' xác nhận)' : '') + '.');
   } catch (e) { /* bỏ qua */ }
 }
 
@@ -295,7 +295,7 @@ function coLichNhac_() {
   return ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'nhacViecHangNgay'; });
 }
 
-/* ---------- Gọi từ ECODesk ---------- */
+/* ---------- Gọi từ app eco ---------- */
 
 function layCaiDatZalo(phien) {
   canDangNhap_(phien, 'caidat');
@@ -374,7 +374,7 @@ function guiTinThuZalo(phien, ten) {
   var token = layTokenZalo_();
   var n = dongBoNguoiNhanZalo_().filter(function (x) { return x.ten === ten; })[0];
   if (!token || !n || !n.chatId) throw new Error(ten + ' chưa kết nối Zalo.');
-  guiZalo_(token, n.chatId, 'ECODesk: đây là tin nhắn thử. Bạn sẽ nhận thông báo ở đây.');
+  guiZalo_(token, n.chatId, 'eco: đây là tin nhắn thử. Bạn sẽ nhận thông báo ở đây.');
   return true;
 }
 

@@ -57,7 +57,8 @@ VIEWS.home = function () {
   var chucNang = flat().filter(function (x) { return x[0] !== 'home'; });
   $('#main').innerHTML = khungChao(tenGoi(NGUOI.ten)) +
     '<div id="tomtat">' + cho() + '</div>' +
-    '<div class="card"><h3>Đi tới</h3><div class="tiles">' + chucNang.map(function (x) { return '<button class="tile" data-p="' + x[0] + '">' + ic(x[2], 22) + x[1] + huyHieu(x[0]) + '</button>'; }).join('') + '</div></div>';
+    '<div class="card"><h3>Đi tới</h3><div class="tiles">' + chucNang.map(function (x) { return '<button class="tile" data-p="' + x[0] + '">' + ic(x[2], 22) + x[1] + huyHieu(x[0]) + '</button>'; }).join('') + '</div></div>' +
+    '<div id="tc-them" style="display:grid;gap:14px"></div>';
   goiPhien('layTrangChu').then(function (d) { if (page === 'home') veTomTat(d); })
     .catch(function (err) { if ($('#tomtat')) $('#tomtat').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
 };
@@ -65,6 +66,7 @@ function veTomTat(d) {
   if (!$('#tomtat')) return;
   capNhatTuTrangChu(d);
   var o = [];
+  if (d.diemCuaToi) o.push(oTom(d.diemCuaToi.diem, 'Điểm của bạn', 'Hạng ' + d.diemCuaToi.hang + ' trong ' + d.diemCuaToi.tong + ' thành viên', 'xephang'));
   var phuTask = function (t) { return [t.sap ? t.sap + ' sắp đến hạn' : '', t.tre ? t.tre + ' trễ hạn' : ''].filter(String).join(' · ') || 'Không có gì gấp'; };
   if (d.taskCuaToi) o.push(oTom(d.taskCuaToi.dangLam, 'Task của bạn', phuTask(d.taskCuaToi), 'task', d.taskCuaToi.tre ? 'do' : d.taskCuaToi.sap ? 'vang' : ''));
   if (d.taskThanhVien) o.push(oTom(d.taskThanhVien.sap + d.taskThanhVien.tre, 'Task thành viên cần nhắc', phuTask(d.taskThanhVien), 'task', d.taskThanhVien.tre ? 'do' : d.taskThanhVien.sap ? 'vang' : ''));
@@ -80,7 +82,8 @@ function veTomTat(d) {
   if (tb && ((tb.cach.indexOf('app') >= 0 && !tb.soMay) || (tb.cach.indexOf('zalo') >= 0 && !tb.daKetNoiZalo))) {
     nhac = '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('bell', 15) + ' Bạn chưa cài xong cách nhận thông báo, nên có thể bỏ lỡ tin quan trọng.</span><button class="btn sm" data-p="thongbao">Cài thông báo</button></div>';
   }
-  $('#tomtat').innerHTML = nhac + '<div class="toms">' + o.join('') + '</div>';
+  $('#tomtat').innerHTML = nhac + (o.length ? '<div class="toms">' + o.join('') + '</div>' : '');
+  veTrangChuThem(d);
 }
 
 /* ---------- Trang Thông báo ---------- */
@@ -94,7 +97,7 @@ function suKienCuaToi(tb) {
   if (tb.vaiTro === 'HR') return { cach: ['Task của thành viên sắp đến hạn hoặc trễ hạn, để bạn nhắc lại các ban (' + g + ').'].concat(tb.suKien.taskMoi ? ['Khi có người giao task mới cho bạn.'] : []), mail: [] };
   return {
     cach: ['Task của bạn sắp đến hạn hoặc trễ hạn (' + g + ').'].concat(giao),
-    mail: [].concat(tb.suKien.thuChoDuyet ? ['UCV gửi thư chờ duyệt.'] : []).concat(tb.suKien.gopY ? ['Có góp ý mới từ ECOBoard.'] : [])
+    mail: [].concat(tb.suKien.thuChoDuyet ? ['UCV gửi thư chờ duyệt.'] : []).concat(tb.suKien.gopY ? ['Có góp ý mới từ app eco.'] : [])
   };
 }
 function ketQuaGuiThu(kq) {
@@ -167,8 +170,8 @@ function veCuaToi(tb) {
   };
   $('#tbapp').onclick = function () {
     var m2 = $('#tbm2');
-    if (!coVo) { thongBao(m2, 'loi', 'Mở ECODesk từ app đã cài trên điện thoại (ecotdn.github.io/desk) rồi bật ở đó.'); return; }
-    if (VO_TB === 'can-cai') { thongBao(m2, 'loi', 'Trên iPhone, cần thêm ECODesk vào màn hình chính (Chia sẻ, Thêm vào MH chính) rồi mở từ đó mới bật được thông báo.'); return; }
+    if (!coVo) { thongBao(m2, 'loi', 'Mở eco từ app đã cài trên điện thoại (ecotdn.github.io/home) rồi bật ở đó.'); return; }
+    if (VO_TB === 'can-cai') { thongBao(m2, 'loi', 'Trên iPhone, cần thêm app eco vào màn hình chính (Chia sẻ, Thêm vào MH chính) rồi mở từ đó mới bật được thông báo.'); return; }
     if (VO_TB === 'cu') { thongBao(m2, 'loi', 'App trên máy này là bản cũ. Xoá app khỏi màn hình chính rồi thêm lại, sau đó bật lại.'); return; }
     if (VO_TB === 'khong') { thongBao(m2, 'loi', 'Trình duyệt này không hỗ trợ thông báo của app.'); return; }
     thongBao(m2, 'cho', 'Bấm “Bật” ở hộp hiện ra rồi cho phép thông báo.');
