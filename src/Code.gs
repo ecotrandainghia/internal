@@ -12,15 +12,14 @@ function doGet(e) {
     // App trên điện thoại hỏi nội dung thông báo mới.
     return ContentService.createTextOutput(JSON.stringify(layThongBaoChoMay_(e.parameter.tb))).setMimeType(ContentService.MimeType.JSON);
   }
-  var app = (e && e.parameter && e.parameter.app) || 'board';
-  var laDesk = app === 'desk';
-  var trang = HtmlService.createTemplateFromFile(laDesk ? 'Desk' : 'Board');
-  trang.googleClientId = laDesk ? String(layCaiDat_('GoogleClientId') || '') : '';
+  // Một app duy nhất. Link cũ (?app=desk) vẫn mở app này.
+  var trang = HtmlService.createTemplateFromFile('Eco');
+  trang.googleClientId = String(layCaiDat_('GoogleClientId') || '');
   trang.thuocTinhChuDe = thuocTinhChuDe_(layCaiDat_('ChuDe'));
   return trang.evaluate()
-    .setTitle(laDesk ? 'ECODesk' : 'ECOBoard')
+    .setTitle('eco')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
-    .setFaviconUrl('https://ecotdn.github.io/icons/tab-' + (laDesk ? 'desk' : 'board') + '.png')
+    .setFaviconUrl('https://ecotdn.github.io/icons/tab-eco.png')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -37,6 +36,7 @@ function moHopThoaiTaiDanhSach() {
   khoiTaoCoSoDuLieu_();
   var t = HtmlService.createTemplateFromFile('HauKy');
   t.linkNguon = layCaiDat_('LinkSheetThanhVien') || '';
+  t.coMatKhauMacDinh = !!layCaiDat_('MatKhauMacDinh');
   // Vé dùng một lần: chỉ người mở được menu trong file Sheet mới tải danh sách lên được.
   t.ve = Utilities.getUuid();
   CacheService.getScriptCache().put('ve_tai_danh_sach', t.ve, 3600);
@@ -67,14 +67,11 @@ function taiDanhSachThanhVien(yeuCau) {
   var kq = docDanhSachThanhVien_(tab.getDataRange().getValues());
   if (kq.loi.length) throw new Error(kq.loi.join('\n'));
 
-  var bodCanCo = taiKhoanBodCanCo_(kq.thanhVien);
-  var taiKhoan = docBang_('TaiKhoan');
-  var emailDaCo = {};
-  taiKhoan.forEach(function (tk) { emailDaCo[String(tk.Email).toLowerCase()] = true; });
-  var canTaoMoi = bodCanCo.filter(function (b) { return !emailDaCo[b.Email]; });
   var matKhau = String(yeuCau.matKhauMacDinh || '');
-  if (canTaoMoi.length && matKhau.length < 6) {
-    throw new Error('Có ' + canTaoMoi.length + ' BOD mới cần tài khoản. Nhập mật khẩu mặc định (ít nhất 6 ký tự).');
+  if (matKhau) { var loiMk = kiemTraMatKhauMoi_(matKhau); if (loiMk) throw new Error('Mật khẩu mặc định: ' + loiMk); }
+  var soTkMoi = dongBoTaiKhoan_(docBang_('TaiKhoan'), kq.thanhVien).moi.length;
+  if (soTkMoi && !matKhau && !layCaiDat_('MatKhauMacDinh')) {
+    throw new Error('Có ' + soTkMoi + ' thành viên chưa có tài khoản app eco. Nhập mật khẩu mặc định của CLB (ít nhất 6 ký tự).');
   }
 
   var khoa = layKhoa_();
@@ -95,38 +92,36 @@ function taiDanhSachThanhVien(yeuCau) {
       }));
     }
 
-    var soTaoMoi = dongBoTaiKhoanBod_(bodCanCo, matKhau, bayGio);
+    if (matKhau) datMatKhauMacDinh_(matKhau);
+    var soTaoMoi = dongBoTaiKhoanThanhVien_(kq.thanhVien, bayGio);
     datCaiDat_('LinkSheetThanhVien', yeuCau.link);
     xoaBoNhoTam_();
 
     var ky = kyMoi || kyHienTai;
     return 'Đã tải ' + kq.thanhVien.length + ' thành viên (' + yeuCau.kieu + ').' +
       (ky ? ' Kỳ hiện tại: nhiệm kỳ ' + ky.NhiemKy + ', học kỳ ' + ky.HocKy + '.' : ' Chưa có kỳ hoạt động; lần đầu hãy chọn "Sau tuyển đợt 1".') +
-      (soTaoMoi ? ' Đã tạo ' + soTaoMoi + ' tài khoản BOD mới.' : '') +
+      (soTaoMoi ? ' Đã tạo ' + soTaoMoi + ' tài khoản mới (đăng nhập bằng mật khẩu mặc định hoặc Google).' : '') +
       (cu.soMoiRoi ? ' ' + cu.soMoiRoi + ' người không còn trong danh sách, hồ sơ đã được giữ ở tab ThanhVienCu.' : '');
   } finally {
     traKhoa_(khoa);
   }
 }
 
-/** Giữ tài khoản BOD khớp với danh sách: thêm BOD mới, gỡ quyền người không còn là BOD. */
-function dongBoTaiKhoanBod_(bodCanCo, matKhau, bayGio) {
-  var canCo = {};
-  bodCanCo.forEach(function (b) { canCo[b.Email] = b; });
-  var taiKhoan = docBang_('TaiKhoan').filter(function (tk) {
-    return tk.VaiTro !== 'BOD' || canCo[String(tk.Email).toLowerCase()];
-  });
-  var daCo = {};
-  taiKhoan.forEach(function (tk) { daCo[String(tk.Email).toLowerCase()] = true; });
-  var soMoi = 0;
-  bodCanCo.forEach(function (b) {
-    if (daCo[b.Email]) return;
-    var muoi = Utilities.getUuid();
-    taiKhoan.push({ Email: b.Email, HoVaTen: b.HoVaTen, VaiTro: 'BOD', MatKhau: bamMatKhau_(matKhau, muoi), Muoi: muoi, NgayTao: bayGio });
-    soMoi++;
-  });
-  ghiDeBang_('TaiKhoan', taiKhoan);
-  return soMoi;
+/** Giữ tài khoản khớp với danh sách: thêm người mới, cập nhật BOD theo cột Ban, bỏ người đã rời CLB. Trả về số tài khoản mới. */
+function dongBoTaiKhoanThanhVien_(thanhVien, bayGio) {
+  bangDuLieu_('TaiKhoan'); // thêm cột còn thiếu nếu sheet còn bản cũ
+  var kq = dongBoTaiKhoan_(docBang_('TaiKhoan'), thanhVien);
+  ghiDeBang_('TaiKhoan', kq.ds.concat(kq.moi.map(function (m) {
+    return { Email: m.Email, HoVaTen: m.HoVaTen, VaiTro: m.VaiTro, MatKhau: '', Muoi: '', NgayTao: bayGio };
+  })));
+  return kq.moi.length;
+}
+
+/** Mật khẩu mặc định chung của CLB: tài khoản chưa đổi mật khẩu thì đăng nhập bằng mật khẩu này. Chỉ lưu bản băm. */
+function datMatKhauMacDinh_(matKhau) {
+  var muoi = Utilities.getUuid();
+  datCaiDat_('MuoiMacDinh', muoi);
+  datCaiDat_('MatKhauMacDinh', bamMatKhau_(matKhau, muoi));
 }
 
 function bamMatKhau_(matKhau, muoi) {
@@ -138,11 +133,12 @@ function bamMatKhau_(matKhau, muoi) {
   return bam;
 }
 
-/* ===================== API cho ECOBoard ===================== */
+/* ===================== Xếp hạng điểm và góp ý ===================== */
 
+/** Bảng xếp hạng: ai mở app cũng xem được, không cần đăng nhập. Chỉ có họ tên, lớp, ban và điểm. */
 function layDuLieuBoard() {
   var cache = CacheService.getScriptCache();
-  var daLuu = cache.get('board');
+  var daLuu = cache.get('xephang');
   if (daLuu) return JSON.parse(daLuu);
 
   var ky = layKyHienTai_();
@@ -151,17 +147,18 @@ function layDuLieuBoard() {
   var luuTru = ky && Number(ky.HocKy) === 2 ? docBang_('LuuTruThanhVien') : [];
   var duLieu = {
     ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
-    thanhVien: tongHopBangDiem_(thanhVien.filter(khongPhaiBod_), lichSu, ky, luuTru), // BOD không tham gia cộng điểm
-    loaiHoatDong: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, tuDong: !loaiCongTay_(l) }; }),
-    ghim: docBang_('BangGhim').filter(function (g) { return linkHopLe_(g.DuongDan); })
-      .map(function (g) { return { tieuDe: String(g.TieuDe || g.DuongDan), link: String(g.DuongDan).trim() }; }),
-    quyChe: String(layCaiDat_('QuyChe') || '')
+    thanhVien: tongHopBangDiem_(thanhVien.filter(khongPhaiBod_), lichSu, ky, luuTru) // BOD không tham gia cộng điểm
   };
-  cache.put('board', JSON.stringify(duLieu), 60);
+  cache.put('xephang', JSON.stringify(duLieu), 60);
   return duLieu;
 }
 
-function layLichSuBoard(ten, hocKy) {
+/** Lịch sử cộng điểm: thành viên xem của mình, BOD xem của mọi người. */
+function layLichSuDiem(phien, ten, hocKy) {
+  var tk = canDangNhap_(phien);
+  if (!coQuyen_(String(tk.VaiTro), 'lichsudiem') && String(ten).toLowerCase() !== String(tk.HoVaTen).toLowerCase()) {
+    throw new Error('Bạn chỉ xem được lịch sử điểm của mình.');
+  }
   var ky = layKyHienTai_();
   if (!ky) return [];
   var hk = Number(hocKy) === 1 ? 1 : Number(ky.HocKy);
@@ -172,7 +169,9 @@ function layLichSuBoard(ten, hocKy) {
   return lichSuCongKhai_(docBang_('LichSuDiem'), ten, ky.NhiemKy, hk);
 }
 
-function guiGopY(noiDung) {
+/** Góp ý ẩn danh: phải đăng nhập (chặn người ngoài gửi bừa) nhưng không lưu tên người gửi. */
+function guiGopY(phien, noiDung) {
+  canDangNhap_(phien, 'guigopy');
   var loi = kiemTraGopY_(noiDung);
   if (loi) throw new Error(loi);
   var cache = CacheService.getScriptCache();
@@ -399,7 +398,7 @@ function datCaiDat_(khoa, giaTri) {
 }
 
 function xoaBoNhoTam_() {
-  CacheService.getScriptCache().remove('board');
+  CacheService.getScriptCache().remove('xephang');
 }
 
 function include(ten) {

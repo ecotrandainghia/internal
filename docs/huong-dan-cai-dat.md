@@ -33,10 +33,10 @@ Trên GitHub, mở từng file trong thư mục `src/`, bấm nút **Copy raw fi
 |---|---|
 | `src/Code.gs` | Dán đè vào file `Mã.gs` có sẵn (hoặc `Code.gs`) |
 | `src/Logic.gs` | Bấm **+ → Tập lệnh**, đặt tên `Logic` |
-| `src/Board.html` | Bấm **+ → HTML**, đặt tên `Board` |
+| `src/EcoXepHang.html` | Bấm **+ → HTML**, đặt tên `EcoXepHang` |
 | `src/HauKy.html` | Bấm **+ → HTML**, đặt tên `HauKy` |
-| `src/MayChuDesk.gs` | Bấm **+ → Tập lệnh**, đặt tên `MayChuDesk` (không đặt `Desk` vì Apps Script không cho trùng tên với `Desk.html`) |
-| `src/Desk.html` | Bấm **+ → HTML**, đặt tên `Desk` |
+| `src/MayChuDesk.gs` | Bấm **+ → Tập lệnh**, đặt tên `MayChuDesk` (không đặt `Desk` vì Apps Script không cho trùng tên giữa file .gs và .html) |
+| `src/Eco.html` | Bấm **+ → HTML**, đặt tên `Eco` |
 | `src/Zalo.gs` | Bấm **+ → Tập lệnh**, đặt tên `Zalo` |
 | `src/Mail.gs` | Bấm **+ → Tập lệnh**, đặt tên `Mail` |
 | `src/BaoCao.gs` | Bấm **+ → Tập lệnh**, đặt tên `BaoCao` |

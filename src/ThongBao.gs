@@ -1,5 +1,5 @@
 /**
- * Thông báo của ECODesk.
+ * Thông báo của app eco.
  *  - Nhắc deadline (BOD: task của mình và task mới được giao; ban nhân sự: task của thành viên) gửi theo cách
  *    mỗi người chọn: Zalo, app trên điện thoại (thông báo đẩy), mail. BOD sửa được cho mọi người.
  *  - Các thông báo khác chỉ gửi qua mail: thư UCV chờ duyệt và góp ý mới (cho BOD), kết quả duyệt thư (cho UCV).
@@ -72,7 +72,7 @@ function guiThongBao_(n, tieuDe, noiDung, baoCao) {
     else { try { guiZalo_(token, n.chatId, noiDung); duoc++; ghi('Zalo: đã gửi.'); } catch (e) { ghi('Zalo: lỗi ' + e.message); } }
   }
   if (n.cach.indexOf('mail') >= 0 && emailHopLe_(n.email)) {
-    try { MailApp.sendEmail(n.email, 'ECODesk: ' + tieuDe, noiDung + '\n\n(Thư tự động từ ECODesk. Đổi cách nhận nhắc deadline trong ECODesk.)'); duoc++; ghi('Mail: đã gửi tới ' + n.email + '.'); } catch (e) { ghi('Mail: lỗi ' + e.message); }
+    try { MailApp.sendEmail(n.email, 'eco: ' + tieuDe, noiDung + '\n\n(Thư tự động từ app eco. Đổi cách nhận nhắc deadline trong app eco.)'); duoc++; ghi('Mail: đã gửi tới ' + n.email + '.'); } catch (e) { ghi('Mail: lỗi ' + e.message); }
   }
   if (n.cach.indexOf('app') >= 0) {
     try { if (guiLenApp_(n.email, tieuDe, noiDung, baoCao)) duoc++; } catch (e) { ghi('App: lỗi ' + e.message); }
@@ -213,7 +213,7 @@ function batSuKien_(khoa) {
 /** Gửi một mail thông báo. Lỗi thì bỏ qua, không ảnh hưởng việc đang làm. */
 function guiMailThongBao_(email, tieuDe, noiDung) {
   if (!emailHopLe_(email)) return false;
-  try { MailApp.sendEmail(String(email).trim(), 'ECODesk: ' + tieuDe, noiDung + '\n\n(Thư tự động từ ECODesk.)', { name: 'ECODesk' }); return true; } catch (e) { return false; }
+  try { MailApp.sendEmail(String(email).trim(), 'eco: ' + tieuDe, noiDung + '\n\n(Thư tự động từ app eco.)', { name: 'eco' }); return true; } catch (e) { return false; }
 }
 
 /** Báo qua mail cho mọi BOD. */
@@ -226,7 +226,7 @@ function baoChoBod_(tieuDe, noiDung) {
 /** UCV vừa gửi thư chờ BOD duyệt. */
 function baoThuChoDuyet_(nguoiTao, tieuDeThu) {
   if (!batSuKien_('BaoThuChoDuyet')) return;
-  baoChoBod_('Thư chờ duyệt', 'ECODesk: ' + nguoiTao + ' vừa gửi thư "' + (String(tieuDeThu || '').trim() || '(chưa có tiêu đề)') + '" chờ BOD duyệt. Mở ECODesk, mục Mail để xem.');
+  baoChoBod_('Thư chờ duyệt', 'eco: ' + nguoiTao + ' vừa gửi thư "' + (String(tieuDeThu || '').trim() || '(chưa có tiêu đề)') + '" chờ BOD duyệt. Mở app eco, mục Mail để xem.');
 }
 
 /** Báo cho UCV kết quả duyệt thư của mình. */
@@ -235,15 +235,15 @@ function baoKetQuaDuyet_(nguoiTao, tieuDeThu, trangThai, ghiChu, nguoiDuyet) {
     var n = docBang_('TaiKhoan').filter(function (t) { return String(t.HoVaTen) === String(nguoiTao) && t.VaiTro === 'UCV'; })[0];
     if (!n) return;
     var ten = '"' + (String(tieuDeThu || '').trim() || '(chưa có tiêu đề)') + '"';
-    var tin = trangThai === TRANG_THAI_VIEC.DUYET ? 'ECODesk: thư ' + ten + ' đã được ' + nguoiDuyet + ' duyệt và gửi đi.'
-      : trangThai === TRANG_THAI_VIEC.SUA ? 'ECODesk: thư ' + ten + ' cần sửa lại.'
-      : 'ECODesk: thư ' + ten + ' không được duyệt.';
+    var tin = trangThai === TRANG_THAI_VIEC.DUYET ? 'eco: thư ' + ten + ' đã được ' + nguoiDuyet + ' duyệt và gửi đi.'
+      : trangThai === TRANG_THAI_VIEC.SUA ? 'eco: thư ' + ten + ' cần sửa lại.'
+      : 'eco: thư ' + ten + ' không được duyệt.';
     if (ghiChu && trangThai !== TRANG_THAI_VIEC.DUYET) tin += ' Ghi chú của BOD: ' + String(ghiChu).slice(0, 500);
     guiMailThongBao_(n.Email, trangThai === TRANG_THAI_VIEC.DUYET ? 'Thư đã được duyệt' : 'Kết quả duyệt thư', tin);
   } catch (e) { /* bỏ qua */ }
 }
 
-/* ---------- Gọi từ ECODesk ---------- */
+/* ---------- Gọi từ app eco ---------- */
 
 /** Cách nhận nhắc deadline của chính mình (BOD, ban nhân sự). */
 function layThongBaoCuaToi(phien) {
@@ -308,7 +308,7 @@ function guiThuThongBaoCuaToi(phien) {
   var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
   if (!toi) throw new Error('Không tìm thấy tài khoản của bạn.');
   var baoCao = [];
-  var duoc = guiThongBao_(toi, 'Thông báo thử', 'ECODesk: đây là thông báo thử. Bạn sẽ nhận nhắc deadline theo cách này.', baoCao);
+  var duoc = guiThongBao_(toi, 'Thông báo thử', 'eco: đây là thông báo thử. Bạn sẽ nhận nhắc deadline theo cách này.', baoCao);
   if (!baoCao.length) baoCao.push('Chưa chọn cách nhận nào.');
   return { duoc: duoc, chiTiet: baoCao };
 }
@@ -327,7 +327,7 @@ function guiThuThongBao(phien, yc) {
     var bc = [];
     var x = {}; Object.keys(n).forEach(function (k) { x[k] = n[k]; });
     x.cach = cach;
-    try { if (guiThongBao_(x, 'Thông báo thử', 'ECODesk: ' + tk.HoVaTen + ' gửi thử thông báo cho bạn. Nếu bạn đọc được dòng này là đã nhận được.', bc)) duoc++; }
+    try { if (guiThongBao_(x, 'Thông báo thử', 'eco: ' + tk.HoVaTen + ' gửi thử thông báo cho bạn. Nếu bạn đọc được dòng này là đã nhận được.', bc)) duoc++; }
     catch (e) { bc.push('Lỗi: ' + e.message); }
     if (cach.indexOf('mail') >= 0 && !emailHopLe_(n.email)) bc.push('Mail: email không hợp lệ.');
     bc.forEach(function (d) { chiTiet.push(n.ten + ' · ' + d); });

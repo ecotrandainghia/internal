@@ -1,9 +1,8 @@
 /*
- * Trang vỏ: mở ECOBoard hoặc ECODesk (chạy trên Google Apps Script) toàn màn hình,
- * để có thể "Thêm vào màn hình chính" như một app, và giúp ECODesk đăng nhập bằng Google.
+ * Trang vỏ: mở app eco (chạy trên Google Apps Script) toàn màn hình, để có thể "Thêm vào màn hình chính" như một app,
+ * giúp đăng nhập bằng Google, bật thông báo, và giữ địa chỉ từng trang (#/task, #/xephang…) để nút quay lại dùng được.
  */
 (function () {
-  var app = document.body.getAttribute('data-app');
   var khung = document.getElementById('khung');
   var bao = document.getElementById('bao');
   var url = String((window.ECO_CONFIG && ECO_CONFIG.webAppUrl) || '').trim();
@@ -15,7 +14,7 @@
   } else if (!navigator.onLine) {
     hienBao('Không có mạng. Kết nối mạng rồi mở lại app.');
   } else {
-    khung.src = url + (app === 'desk' ? '?app=desk' : '');
+    khung.src = url;
     khung.hidden = false;
   }
   window.addEventListener('online', function () { if (!khung.src && url) location.reload(); });
@@ -33,10 +32,10 @@
     var c = getComputedStyle(do_);
     return { t: parseFloat(c.paddingTop) || 0, r: parseFloat(c.paddingRight) || 0, b: parseFloat(c.paddingBottom) || 0, l: parseFloat(c.paddingLeft) || 0 };
   }
-  /* Ghi nhớ đăng nhập ECODesk ngay ở trang vỏ (bộ nhớ của khung bên trong hay bị điện thoại xoá). */
-  var KHOA_PHIEN = 'eco_' + app + '_phien';
-  function docPhien() { try { return localStorage.getItem(KHOA_PHIEN) || ''; } catch (e) { return ''; } }
-  function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); } catch (e) {} }
+  /* Ghi nhớ đăng nhập ngay ở trang vỏ (bộ nhớ của khung bên trong hay bị điện thoại xoá). Đọc được cả phiên của ECODesk cũ. */
+  var KHOA_PHIEN = 'eco_phien_vo';
+  function docPhien() { try { return localStorage.getItem(KHOA_PHIEN) || localStorage.getItem('eco_desk_phien') || ''; } catch (e) { return ''; } }
+  function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); localStorage.removeItem('eco_desk_phien'); } catch (e) {} }
 
   var nguon = null, nguonOrigin = '', appCon = null, appOrigin = '';
   /* iPhone (app trên màn hình chính) đôi khi báo chiều cao màn hình thiếu một đoạn ở dưới: kéo khung xuống tận đáy. */
@@ -54,8 +53,18 @@
   }
   function guiVo() {
     chinhCao();
-    if (appCon) { try { appCon.postMessage({ eco: 'vo', vien: vien(), phien: app === 'desk' ? docPhien() : '', thongBao: app === 'desk' ? trangThaiThongBao() : '' }, appOrigin); } catch (e) {} }
+    if (appCon) { try { appCon.postMessage({ eco: 'vo', vien: vien(), phien: docPhien(), thongBao: trangThaiThongBao(), trang: duongHienTai() }, appOrigin); } catch (e) {} }
   }
+
+  /* ---------- Địa chỉ từng trang: #/task, #/caidat/matkhau… ---------- */
+  function duongHienTai() { return decodeURIComponent(location.hash.replace(/^#\/?/, '')); }
+  function datDuong(duong, thay) {
+    duong = String(duong || '').replace(/[^A-Za-z0-9_/-]/g, '');
+    if (!duong || duong === duongHienTai()) return;
+    var dc = location.pathname + location.search + '#/' + duong;
+    try { if (thay) history.replaceState(null, '', dc); else history.pushState(null, '', dc); } catch (e) {}
+  }
+  window.addEventListener('popstate', function () { baoApp({ eco: 'vo-trang', duong: duongHienTai() }); });
   window.addEventListener('resize', guiVo);
   window.addEventListener('orientationchange', function () { setTimeout(guiVo, 300); });
 
@@ -65,7 +74,8 @@
     if (d.eco === 'xin-chao') { appCon = e.source; appOrigin = e.origin; guiVo(); return; }
     /* App mới tự chừa khoảng an toàn: cho khung tràn toàn màn hình để đầu và chân app cân đối. */
     if (d.eco === 'ho-tro-vien') { document.body.classList.add('tran'); return; }
-    if (d.eco === 'phien' && app === 'desk') { luuPhien(String(d.phien || '')); return; }
+    if (d.eco === 'phien') { luuPhien(String(d.phien || '')); return; }
+    if (d.eco === 'trang') { datDuong(d.duong, !!d.thay); return; }
     if (d.eco === 'mau') {
       var mau3 = function (x, mac) { return /^#[0-9a-f]{6}$/i.test(x) ? x : mac; };
       var mau = mau3(d.mau, '#274e13'), nen = mau3(d.nen, '#f4f6f1'), chan = mau3(d.chan, mau);
@@ -78,9 +88,8 @@
       khung.style.background = nen;
       return;
     }
-    if (d.eco === 'bat-thong-bao' && app === 'desk' && d.khoaCong) { moHopThongBao(String(d.khoaCong)); return;
-    }
-    if (d.eco === 'dang-nhap-google' && app === 'desk' && d.clientId) {
+    if (d.eco === 'bat-thong-bao' && d.khoaCong) { moHopThongBao(String(d.khoaCong)); return; }
+    if (d.eco === 'dang-nhap-google' && d.clientId) {
       nguon = e.source; nguonOrigin = e.origin;
       moGoogle(String(d.clientId));
     }
@@ -111,10 +120,10 @@
   }
   function dangKyThongBao(khoaCong) {
     var tt = trangThaiThongBao();
-    if (tt === 'can-cai') return Promise.reject(new Error('Trên iPhone, thêm ECODesk vào màn hình chính rồi mở từ đó mới bật được thông báo.'));
+    if (tt === 'can-cai') return Promise.reject(new Error('Trên iPhone, thêm eco vào màn hình chính rồi mở từ đó mới bật được thông báo.'));
     if (tt !== 'co') return Promise.reject(new Error('Trình duyệt này không hỗ trợ thông báo của app.'));
     return Notification.requestPermission().then(function (q) {
-      if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với ECODesk rồi thử lại.');
+      if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với eco rồi thử lại.');
       // Đăng ký (hoặc cập nhật) service worker ngay lúc này, không chờ trang tải xong.
       return henGio(navigator.serviceWorker.register('../sw.js', { scope: './' }).then(function (reg) {
         return reg.update().catch(function () {}).then(function () { return navigator.serviceWorker.ready; });

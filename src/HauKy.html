@@ -23,12 +23,12 @@
 
   <label>Kiểu tải</label>
   <div class="kieu">
-    <label><input type="radio" name="kieu" value="Sau tuyển đợt 1"><span>Sau tuyển đợt 1<small>Bắt đầu nhiệm kỳ mới, học kỳ 1. Điểm trên ECOBoard về 0.</small></span></label>
+    <label><input type="radio" name="kieu" value="Sau tuyển đợt 1"><span>Sau tuyển đợt 1<small>Bắt đầu nhiệm kỳ mới, học kỳ 1. Điểm trên app eco về 0.</small></span></label>
     <label><input type="radio" name="kieu" value="Sau tuyển đợt 2"><span>Sau tuyển đợt 2<small>Bắt đầu học kỳ 2. Điểm về 0, người còn ở lại xem được điểm học kỳ 1.</small></span></label>
     <label><input type="radio" name="kieu" value="Cập nhật" checked><span>Cập nhật<small>Chỉ cập nhật thông tin thành viên, không đổi điểm.</small></span></label>
   </div>
 
-  <label for="mk">Mật khẩu mặc định cho BOD mới <small>Chỉ cần khi có BOD chưa có tài khoản</small></label>
+  <label for="mk">Mật khẩu chung của CLB <small><?= coMatKhauMacDinh ? 'Đã có. Bỏ trống để giữ nguyên, nhập mới để đổi.' : 'Mọi thành viên dùng mật khẩu này cho lần đăng nhập app eco đầu tiên. Ít nhất 6 ký tự.' ?> Người đã tự đổi mật khẩu thì không bị ảnh hưởng.</small></label>
   <input type="password" id="mk" autocomplete="new-password">
 
   <button id="nut" onclick="tai()">Tải lên</button>
@@ -37,7 +37,7 @@
 <script>
 function tai() {
   var kieu = document.querySelector('input[name=kieu]:checked').value;
-  if (kieu !== 'Cập nhật' && !confirm('Chọn "' + kieu + '" sẽ bắt đầu học kỳ mới và đưa điểm trên ECOBoard về 0. Tiếp tục?')) return;
+  if (kieu !== 'Cập nhật' && !confirm('Chọn "' + kieu + '" sẽ bắt đầu học kỳ mới và đưa điểm trên app eco về 0. Tiếp tục?')) return;
   var nut = document.getElementById('nut');
   var kq = document.getElementById('kq');
   nut.disabled = true;

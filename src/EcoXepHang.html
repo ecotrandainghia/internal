@@ -1,0 +1,128 @@
+<style>
+/* Bảng xếp hạng điểm (ai mở app cũng xem được) và nút đăng nhập khi chưa đăng nhập. */
+.xh-tools{display:grid;gap:10px}
+.xh-tools .row{flex-wrap:wrap}
+.xh-sort{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.xh-sort select{width:auto;padding:6px 10px;font-size:13px}
+.xh .li{display:grid;grid-template-columns:34px minmax(0,1fr) auto;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;font:inherit;color:inherit}
+.xh .li:first-child{border-top:0}
+.xh button.li{cursor:pointer}
+.xh button.li:hover{background:var(--soft)}
+.xh .li.toi{background:var(--soft)}
+.xh-hang{font:700 15px var(--f-num);color:var(--muted);text-align:center}
+.xh-hang.r1{color:#a0770c}.xh-hang.r2{color:#6b7280}.xh-hang.r3{color:#9a5a2b}
+.xh-ban{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px;background:var(--soft);color:var(--accent);margin-right:6px}
+.xh-diem{font:700 18px var(--f-num);color:var(--accent);white-space:nowrap}
+.xh-diem small{font:500 11px var(--f-body);color:var(--muted);margin-left:2px}
+.xh-stat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.xh-stat div{flex:1 1 120px;background:var(--soft);border-radius:12px;padding:10px 12px}
+.xh-stat b{display:block;font:700 22px var(--f-num);color:var(--accent)}
+.xh-stat span{font-size:12px;color:var(--muted)}
+.xh-ls{width:100%;border-collapse:collapse;font-size:14px}
+.xh-ls th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}
+.xh-ls td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.xh-ls td.n{font-family:var(--f-num);text-align:right;white-space:nowrap}
+.dn-nut{width:100%;justify-content:center}
+.gon .dn-nut .t{display:none}
+.topbar .btn{background:#fff;color:var(--brand);border-color:#fff}
+.tc-ghim{display:grid;gap:8px}
+.tc-ghim a{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:inherit;text-decoration:none;min-width:0}
+.tc-ghim a:hover{border-color:var(--accent)}
+.tc-ghim a>div{min-width:0}
+.tc-ghim .u{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+<script>
+/* =================== Xếp hạng điểm =================== */
+var XH = { d: null, luc: 0, ban: 'Tất cả', q: '', dir: 'desc' };
+
+/** Bảng xếp hạng công khai, giữ 60 giây trên máy. */
+function napXepHang() {
+  if (XH.d && Date.now() - XH.luc < 60000) return Promise.resolve(XH.d);
+  return goi('layDuLieuBoard').then(function (d) { XH.d = d; XH.luc = Date.now(); return d; });
+}
+/** Hạng của từng người: bằng điểm thì cùng hạng. */
+function hangTheoDiem(ds) {
+  var hang = {}, truoc = null, h = 0;
+  ds.slice().sort(function (a, b) { return b.diem - a.diem; }).forEach(function (p, i) { if (p.diem !== truoc) { h = i + 1; truoc = p.diem; } hang[p.ten] = h; });
+  return hang;
+}
+function laToi(ten) { return NGUOI && String(ten).toLowerCase() === String(NGUOI.ten).toLowerCase(); }
+/** Ai xem được lịch sử của ai: BOD xem mọi người, còn lại xem của mình. Khách không xem được. */
+function xemDuocLichSu(ten) { return !!NGUOI && (NGUOI.vaiTro === 'BOD' || laToi(ten)); }
+
+VIEWS.xephang = function () {
+  dangTai();
+  napXepHang().then(function (d) {
+    if (page !== 'xephang') return;
+    var hang = hangTheoDiem(d.thanhVien);
+    var toi = d.thanhVien.filter(function (p) { return laToi(p.ten); })[0];
+    var nhom = [];
+    d.thanhVien.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
+    $('#main').innerHTML = '<div id="xh-trang" style="display:grid;gap:14px"><div class="head"><div><h2>Xếp hạng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Học kỳ ' + d.ky.hocKy : 'Chưa bắt đầu học kỳ') + '</p></div></div>' +
+      (!NGUOI ? '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('info', 15) + ' Đăng nhập để xem lịch sử cộng điểm của bạn và dùng các chức năng khác.</span><button class="btn sm" data-p="dangnhap">Đăng nhập</button></div>' : '') +
+      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hang[toi.ten] + ' với ' + toi.diem + ' điểm</b><div class="hint">Trong ' + d.thanhVien.length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Xem lịch sử điểm</button></div>' : '') +
+      '<div class="xh-tools"><input type="search" id="xh-q" placeholder="Tìm theo tên…" aria-label="Tìm theo tên" value="' + esc(XH.q) + '">' +
+      (nhom.length > 1 ? '<div class="row" id="xh-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" aria-pressed="' + (b === XH.ban) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="row"><span class="hint" id="xh-dem"></span><label class="xh-sort">Sắp xếp<select id="xh-sx"><option value="desc">Điểm cao → thấp</option><option value="asc"' + (XH.dir === 'asc' ? ' selected' : '') + '>Điểm thấp → cao</option></select></label></div></div>' +
+      '<div class="card flush xh"><div class="lst" id="xh-ds"></div></div>' +
+      (NGUOI && NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Bấm vào một người để xem lịch sử cộng điểm.</p>' : '') + '</div>';
+    var ve = function () {
+      var tim = boDau(XH.q);
+      var ds = d.thanhVien.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && boDau(p.ten).indexOf(tim) >= 0; });
+      ds.sort(function (a, b) { return XH.dir === 'desc' ? b.diem - a.diem : a.diem - b.diem; });
+      $('#xh-dem').textContent = ds.length + ' thành viên';
+      $('#xh-ds').innerHTML = ds.length ? ds.map(function (p) {
+        var r = hang[p.ten], the = xemDuocLichSu(p.ten) ? 'button' : 'div';
+        return '<' + the + ' class="li' + (laToi(p.ten) ? ' toi' : '') + '"' + (the === 'button' ? ' data-ls="' + esc(p.ten) + '"' : '') + '><span class="xh-hang' + (r <= 3 && p.diem > 0 ? ' r' + r : '') + '">' + r + '</span>' +
+          '<span class="c"><b class="t">' + esc(p.ten) + (laToi(p.ten) ? ' <span class="hint">(bạn)</span>' : '') + '</b><span class="s"><span class="xh-ban">' + esc(p.ban) + '</span>' + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</span></span>' +
+          '<span class="xh-diem">' + p.diem + '<small>điểm</small></span></' + the + '>';
+      }).join('') : rong(d.thanhVien.length ? 'Không có ai khớp với tìm kiếm.' : 'Chưa có danh sách thành viên.');
+    };
+    ve();
+    $('#xh-q').oninput = function (e) { XH.q = e.target.value; ve(); };
+    $('#xh-sx').onchange = function (e) { XH.dir = e.target.value; ve(); };
+    if ($('#xh-ban')) $('#xh-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; XH.ban = b.getAttribute('data-b'); $$('#xh-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
+    $('#xh-trang').onclick = function (e) { var b = e.target.closest('[data-ls]'); if (b) moLichSuDiem(b.getAttribute('data-ls'), false); };
+  }).catch(loiTai);
+};
+
+/** Hộp lịch sử cộng điểm của một người (học kỳ này, hoặc học kỳ 1 khi đang ở học kỳ 2). */
+function moLichSuDiem(ten, hk1) {
+  var p = XH.d && XH.d.thanhVien.filter(function (x) { return x.ten === ten; })[0];
+  if (!p || !xemDuocLichSu(ten)) return;
+  var khung = function (than, ls) {
+    var dem = {};
+    (ls || []).forEach(function (x) { dem[x.loai] = (dem[x.loai] || 0) + 1; });
+    return '<div class="hint" style="margin-bottom:10px"><span class="xh-ban">' + esc(p.ban) + '</span>' + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</div>' +
+      '<div class="xh-stat"><div><b>' + (hk1 ? p.diemHk1 : p.diem) + '</b><span>' + (hk1 ? 'Điểm học kỳ 1' : 'Tổng điểm học kỳ này') + '</span></div>' +
+      Object.keys(dem).map(function (k) { return '<div><b>' + dem[k] + '</b><span>lần ' + esc(k) + '</span></div>'; }).join('') + '</div>' +
+      (p.diemHk1 !== null && p.diemHk1 !== undefined ? '<div class="row" style="margin-bottom:12px"><button class="chip" aria-pressed="' + !hk1 + '" data-hk="0">Học kỳ này</button><button class="chip" aria-pressed="' + !!hk1 + '" data-hk="1">Học kỳ 1</button></div>' : '') + than;
+  };
+  var h = moHop({ tieuDe: p.ten, than: khung(cho(), null) });
+  h.querySelector('.dlg').style.maxWidth = '560px';
+  h.addEventListener('click', function (e) { var b = e.target.closest('[data-hk]'); if (b) moLichSuDiem(ten, b.getAttribute('data-hk') === '1'); });
+  goiPhien('layLichSuDiem', ten, hk1 ? 1 : 0).then(function (ls) {
+    if (!document.body.contains(h)) return;
+    h.querySelector('.dlg-b').innerHTML = khung(ls.length ? '<table class="xh-ls"><thead><tr><th>Ngày</th><th>Hoạt động</th><th style="text-align:right">Điểm</th></tr></thead><tbody>' + ls.map(function (x) {
+      var n = new Date(x.thoiGian);
+      return '<tr><td style="white-space:nowrap">' + p2(n.getDate()) + '/' + p2(n.getMonth() + 1) + '/' + n.getFullYear() + '</td><td>' + esc(x.loai) + (x.ten ? ' <span class="hint">· ' + esc(x.ten) + '</span>' : '') + '</td><td class="n">+' + x.diem + '</td></tr>';
+    }).join('') + '</tbody></table>' : '<p class="hint">Chưa có lần cộng điểm nào.</p>', ls);
+  }).catch(function (err) { if (document.body.contains(h)) h.querySelector('.dlg-b').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+}
+
+/** Phần thêm ở trang chủ cho mọi người đã đăng nhập: link ghim, quy chế và mức điểm. */
+function veTrangChuThem(d) {
+  var o = $('#tc-them');
+  if (!o || !d.ghim) return;
+  var qc = String(d.quyChe || '').trim();
+  o.innerHTML = (d.ghim.length ? '<div class="card"><h3>' + ic('pin', 18) + ' Link ghim</h3><div class="tc-ghim">' + d.ghim.map(function (g) {
+    return '<a href="' + esc(g.link) + '" target="_blank" rel="noopener"><span class="ic">' + ic('ext', 18) + '</span><div><b>' + esc(g.tieuDe) + '</b><div class="u">' + esc(g.link) + '</div></div></a>';
+  }).join('') + '</div></div>' : '') +
+    '<div class="card"><h3>' + ic('book', 18) + ' Quy chế cộng điểm</h3>' +
+    (/^https:\/\/\S+$/.test(qc) ? '<p class="hint" style="margin-top:0">Quy chế nằm trong một file riêng.</p><a class="btn sm" target="_blank" rel="noopener" href="' + esc(qc) + '">' + ic('ext', 14) + 'Xem quy chế</a>'
+      : '<p style="white-space:pre-wrap;margin:0">' + esc(qc || 'BOD chưa đăng quy chế.') + '</p>') +
+    (d.loaiHoatDong && d.loaiHoatDong.length ? '<table class="xh-ls" style="margin-top:12px"><thead><tr><th>Loại hoạt động</th><th style="text-align:right">Điểm mỗi lần</th></tr></thead><tbody>' + d.loaiHoatDong.map(function (l) {
+      return '<tr><td>' + esc(l.ten) + (l.tuDong ? ' <span class="pill p-mute">cộng tự động</span>' : '') + '</td><td class="n">' + l.diem + '</td></tr>';
+    }).join('') + '</tbody></table>' : '') + '</div>';
+}
+</script>
