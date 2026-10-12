@@ -6,8 +6,8 @@ VIEWS.diem = function () {
   dangTai();
   goiPhien('layDuLieuCongDiem').then(function (d) {
     if (page !== 'diem') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Cộng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Học kỳ ' + d.ky.hocKy + '. ' : '') + 'Chọn loại hoạt động và những người được cộng. BOD không tham gia cộng điểm nên không có trong danh sách.</p></div></div>' +
-      (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có học kỳ nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" ở menu ECO hậu kỳ trong Google Sheet.</span></div>') +
+    $('#main').innerHTML = '<div class="head"><div><h2>Cộng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') + 'Chọn loại hoạt động và những người được cộng. BOD không tham gia cộng điểm nên không có trong danh sách.</p></div></div>' +
+      (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" ở menu ECO hậu kỳ trong Google Sheet.</span></div>') +
       '<div class="diem-grid"><form class="card form" id="fd">' +
       '<div><div style="font-weight:600;font-size:13px;margin-bottom:8px">Loại hoạt động</div><div class="types" id="types">' +
       (d.loai.length ? d.loai.map(function (l, i) { return '<button type="button" class="type" aria-pressed="' + (i === 0) + '" data-t="' + esc(l.ten) + '"><b>' + esc(l.ten) + '</b><span>+' + l.diem + ' điểm</span></button>'; }).join('') : '<span class="hint">Chưa có loại hoạt động. Thêm trong Cài đặt.</span>') + '</div></div>' +
@@ -17,7 +17,7 @@ VIEWS.diem = function () {
       '<div class="card recent"><div class="ctitle"><h3>Vừa cộng gần đây</h3><span class="hint">Cộng nhầm thì bấm Xoá</span></div><div class="lst" id="ganday">' +
       (d.ganDay.length ? d.ganDay.map(function (r) {
         return '<div class="li"><div class="c"><b class="t">' + esc(r.ten) + '</b><span class="s">' + esc(r.loai) + (r.tenHoatDong ? ' · ' + esc(r.tenHoatDong) : '') + ' · ' + ngayGio(r.thoiGian) + ' · ' + esc(r.nguoiCong) + '</span></div><span class="num" style="font-weight:700;color:var(--accent)">+' + r.diem + '</span><button class="btn ghost sm" data-del="' + r.thoiGian + '" data-ten="' + esc(r.ten) + '">Xoá</button></div>';
-      }).join('') : rong(ic('star') + 'Chưa có lần cộng nào trong học kỳ này.')) +
+      }).join('') : rong(ic('star') + 'Chưa có lần cộng nào trong giai đoạn này.')) +
       '</div><div id="delm"></div></div></div>';
     var layChon = bindPicker('pk');
     $('#types').onclick = function (e) { var b = e.target.closest('[data-t]'); if (!b) return; $$('#types .type').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
@@ -156,9 +156,9 @@ VIEWS.baocao = function () {
     var B = { kieu: 'thang', cheDo: 'thanhvien', kq: null, sapXep: 'diem', tang: false, ban: 'Tất cả', tim: '', khoaBd: 'diem' };
     $('#main').innerHTML = '<div class="head"><div><h2>Báo cáo</h2><p class="lead">Chỉ tính thành viên đang trong CLB, không tính BOD. Chọn khoảng thời gian, xem bảng tổng hợp và biểu đồ thay đổi theo thời gian.</p></div></div>' +
       '<div class="card form"><div class="grid2" style="--o:190px">' +
-      '<label class="f">Khoảng thời gian<select id="bk"><option value="thang">Tháng</option><option value="hocky">Học kỳ</option><option value="nhiemky">Nhiệm kỳ</option><option value="tuychon">Tự chọn</option></select></label>' +
+      '<label class="f">Khoảng thời gian<select id="bk"><option value="thang">Tháng</option><option value="hocky">Giai đoạn</option><option value="nhiemky">Nhiệm kỳ</option><option value="tuychon">Tự chọn</option></select></label>' +
       '<label class="f" id="bk-thang">Tháng<input type="month" id="bt" value="' + thangNay + '" max="' + thangNay + '"></label>' +
-      '<label class="f" id="bk-hocky" hidden>Học kỳ<select id="bh">' + (tt.hocKy.length ? tt.hocKy.map(function (h, i) { return '<option value="' + i + '">' + esc(h.ten) + '</option>'; }).join('') : '<option value="">Chưa có học kỳ</option>') + '</select></label>' +
+      '<label class="f" id="bk-hocky" hidden>Giai đoạn<select id="bh">' + (tt.hocKy.length ? tt.hocKy.map(function (h, i) { return '<option value="' + i + '">' + esc(h.ten) + '</option>'; }).join('') : '<option value="">Chưa có giai đoạn</option>') + '</select></label>' +
       '<label class="f" id="bk-nhiemky" hidden>Nhiệm kỳ<select id="bn">' + (tt.nhiemKy.length ? tt.nhiemKy.map(function (h, i) { return '<option value="' + i + '">' + esc(h.ten) + '</option>'; }).join('') : '<option value="">Chưa có nhiệm kỳ</option>') + '</select></label>' +
       '<label class="f" id="bk-tu" hidden>Từ ngày<input type="date" id="btu" value="' + thangNay + '-01"></label><label class="f" id="bk-den" hidden>Đến ngày<input type="date" id="bden" value="' + tt.homNay + '"></label></div>' +
       '<div class="row sb"><div class="seg" id="bcd"><button data-c="thanhvien" aria-pressed="true">Theo thành viên</button><button data-c="ban" aria-pressed="false">Theo ban</button><button data-c="clb" aria-pressed="false">Cả CLB</button></div>' +
@@ -319,6 +319,7 @@ var SET = [
     ['sign', 'edit', 'Chữ ký thư', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature'],
     ['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['Làm log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
+  ['Thành viên', [['sinhnhat', 'clock', 'Lịch sinh nhật', function () { return 'Lịch Google cho nhóm CRE, tự cập nhật mỗi lần tải danh sách'; }, 'sinh nhật lịch calendar google cre chúc mừng chia sẻ']]],
   ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad mã hr'],
     ['ucv', 'users', 'Tài khoản UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' tài khoản'; }, 'UCV ucv tài khoản mail'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại'],
@@ -775,6 +776,30 @@ var SUB = {
       '<li>Ở <b>Authorized JavaScript origins</b>, bấm Add URI và dán đúng: <code>https://ecotdn.github.io</code>. Bấm <b>Create</b>.</li>' +
       '<li>Sao chép <b>Client ID</b> (đuôi .apps.googleusercontent.com), dán vào ô ở trên, bấm Lưu.</li></ol></details>';
     $('#gg').onsubmit = function (e) { e.preventDefault(); luuVa($('#gg-b'), $('#m'), 'luuGoogleClientId', [$('#gg-i').value]); };
+  },
+  sinhnhat: function () {
+    $('#subbody').innerHTML = '<div class="card">' + cho() + '</div>';
+    goiPhien('layLichSinhNhat').then(function (d) {
+      if (sub !== 'sinhnhat') return;
+      var tt = !d.nhiemKy ? '<p class="hint" style="margin:0">Chưa có nhiệm kỳ. Lịch được tạo khi tải danh sách “Sau tuyển đợt 1”.</p>'
+        : d.loi ? '<p class="err" style="margin:0">' + esc(d.loi) + '</p>'
+        : d.coLich ? '<p style="margin:0">Lịch <b>' + esc(d.ten) + '</b> đang có ' + d.soSuKien + ' sinh nhật của nhiệm kỳ ' + esc(d.nhiemKy) + '.</p>'
+        : '<p style="margin:0">Chưa có lịch cho nhiệm kỳ ' + esc(d.nhiemKy) + '. Bấm Đồng bộ lại để tạo.</p>';
+      $('#subbody').innerHTML = '<div class="card form">' + tt +
+        '<p class="hint" style="margin:0">Mỗi lần tải danh sách (từ đợt 1 trở đi), app tự thêm sinh nhật người mới, sửa người đổi ngày sinh hoặc ban, bỏ người đã rời. Lịch nằm trong Google Calendar của tài khoản CLB, mỗi nhiệm kỳ một lịch riêng.</p>' +
+        (d.nhiemKy ? '<div class="row"><button class="btn sm" id="sn-b">' + ic('refresh', 14) + 'Đồng bộ lại</button><span id="sn-m"></span></div>' : '') + '</div>' +
+        '<details class="card" open><summary style="cursor:pointer;font-weight:600">Chia sẻ lịch cho nhóm CRE (làm một lần mỗi nhiệm kỳ)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
+        '<li>Trên máy tính, đăng nhập tài khoản Google của CLB, ' + (d.linkCaiDat ? '<a href="' + esc(d.linkCaiDat) + '" target="_blank" rel="noopener">mở cài đặt của lịch này</a>' : 'mở <b>calendar.google.com</b>, ở cột trái tìm lịch “' + esc(d.ten || 'Sinh nhật') + '”, bấm dấu ba chấm rồi <b>Cài đặt và chia sẻ</b>') + '.</li>' +
+        '<li>Ở mục <b>Chia sẻ với những người cụ thể</b>, bấm <b>Thêm người</b>, nhập email của các bạn nhóm CRE, chọn quyền <b>Xem tất cả chi tiết sự kiện</b>, bấm <b>Gửi</b>.</li>' +
+        '<li>Các bạn CRE mở mail mời, bấm thêm lịch, rồi trong Google Calendar trên điện thoại đặt thông báo cho sự kiện cả ngày (gợi ý: trước 1 ngày lúc 20:00).</li></ol></details>';
+      if ($('#sn-b')) $('#sn-b').onclick = function () {
+        var b = this; b.disabled = true; thongBao($('#sn-m'), 'cho', 'Đang đồng bộ, có thể mất một hai phút…');
+        goiPhien('dongBoSinhNhatNgay').then(function (k) {
+          b.disabled = false;
+          thongBao($('#sn-m'), 'ok', 'Đã thêm ' + k.soTao + ', bỏ ' + k.soXoa + ', giữ ' + k.soGiu + '.' + (k.conLai ? ' Còn ' + k.conLai + ' người, bấm lại lần nữa.' : '') + (k.thieuNgay.length ? ' ' + k.thieuNgay.length + ' người chưa có ngày sinh hợp lệ.' : ''));
+        }).catch(function (err) { b.disabled = false; thongBao($('#sn-m'), 'loi', err.message); });
+      };
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
   },
   accounts: function () {
     $('#subbody').innerHTML = '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="tk-q" placeholder="Tìm theo tên hoặc email" aria-label="Tìm tài khoản"></div>' +

@@ -16,16 +16,16 @@ function truMotNgay_(ngay) {
   return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - 1)).toISOString().slice(0, 10);
 }
 
-/** Các mốc thời gian chọn nhanh: học kỳ, nhiệm kỳ (từ tab KyHoatDong) và các tháng. */
+/** Các mốc thời gian chọn nhanh: giai đoạn, nhiệm kỳ (từ tab KyHoatDong) và các tháng. */
 function layThongTinBaoCao(phien) {
   canDangNhap_(phien, 'baocao');
   var hom = homNay_();
   var ky = docBangNhiemKy_('KyHoatDong', 'BatDau').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian_(k.BatDau) }; })
     .filter(function (k) { return k.tu; }).sort(function (a, b) { return a.tu < b.tu ? -1 : 1; })
-    // Lỡ tải cùng một đợt hai lần thì vẫn chỉ là một học kỳ.
+    // Lỡ tải cùng một đợt hai lần thì vẫn chỉ là một giai đoạn.
     .filter(function (k, i, ds) { return !i || ds[i - 1].nhiemKy !== k.nhiemKy || ds[i - 1].hocKy !== k.hocKy; });
   var hocKy = ky.map(function (k, i) {
-    return { ten: 'Học kỳ ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
+    return { ten: 'Giai đoạn ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
   }).reverse();
   var nhiemKy = [];
   hocKy.slice().reverse().forEach(function (h, i) {

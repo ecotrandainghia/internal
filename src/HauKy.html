@@ -4,55 +4,110 @@
 <base target="_top">
 <style>
   body{font-family:Arial,sans-serif;font-size:14px;color:#1b2416;margin:0;padding:4px 2px}
-  label{display:block;font-weight:bold;margin:12px 0 4px}
+  h3{font-size:14px;margin:16px 0 6px;color:#274e13}
+  h3 span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#274e13;color:#fff;font-size:12px;margin-right:6px}
+  label{display:block;font-weight:bold;margin:10px 0 4px}
   small{font-weight:normal;color:#5f6b58}
   input[type=text],input[type=password]{width:100%;box-sizing:border-box;padding:8px;border:1px solid #c9d3c0;border-radius:6px}
-  .kieu label{font-weight:normal;margin:6px 0;display:flex;gap:8px;align-items:flex-start}
+  .kieu label{font-weight:normal;margin:6px 0;display:flex;gap:8px;align-items:flex-start;border:1px solid #dde3d6;border-radius:8px;padding:8px}
+  .kieu label.xong{background:#f2f5ee}
   .kieu small{display:block}
-  button{margin-top:16px;background:#274e13;color:#fff;border:0;border-radius:6px;padding:10px 16px;font-weight:bold;cursor:pointer}
+  .the{display:inline-block;font-size:11px;font-weight:bold;border-radius:4px;padding:0 6px;margin-left:4px;background:#e6eedf;color:#274e13}
+  .the.xong{background:#fde8c8;color:#7a4b00}
+  button{margin-top:14px;background:#274e13;color:#fff;border:0;border-radius:6px;padding:10px 16px;font-weight:bold;cursor:pointer}
+  button.phu{background:#fff;color:#274e13;border:1px solid #274e13}
   button:disabled{opacity:.6;cursor:wait}
+  #xem{margin-top:12px;border:1px solid #dde3d6;border-radius:8px;padding:10px;background:#fafcf8}
+  #xem ul{margin:6px 0 0;padding-left:18px}
+  #xem li{margin:3px 0}
+  .ds{color:#5f6b58;font-size:12px}
   #kq{margin-top:12px;white-space:pre-wrap}
-  .ok{color:#2f7a28}.loi{color:#b3261e}
+  .ok{color:#2f7a28}.loi{color:#b3261e}.canh{color:#7a4b00}
 </style>
 </head>
 <body>
-  <label for="link">Link sheet danh sách thành viên</label>
+  <h3><span>1</span>Chọn sheet danh sách thành viên</h3>
+  <label for="link">Link sheet <small>Sheet có cột Họ và tên, Ban (và các cột khác như Lớp, Ngày sinh, Email)</small></label>
   <input type="text" id="link" value="<?= linkNguon ?>" placeholder="https://docs.google.com/spreadsheets/d/…">
   <label for="tab">Tên tab <small>Bỏ trống để dùng tab đầu tiên</small></label>
   <input type="text" id="tab">
 
-  <label>Kiểu tải</label>
-  <div class="kieu">
-    <label><input type="radio" name="kieu" value="Sau tuyển đợt 1"><span>Sau tuyển đợt 1<small>Bắt đầu nhiệm kỳ mới, học kỳ 1. Điểm trên app eco về 0.</small></span></label>
-    <label><input type="radio" name="kieu" value="Sau tuyển đợt 2"><span>Sau tuyển đợt 2<small>Bắt đầu học kỳ 2. Điểm về 0, người còn ở lại xem được điểm học kỳ 1.</small></span></label>
-    <label><input type="radio" name="kieu" value="Cập nhật" checked><span>Cập nhật<small>Chỉ cập nhật thông tin thành viên, không đổi điểm.</small></span></label>
-  </div>
+  <h3><span>2</span>Chọn kiểu tải</h3>
+  <div class="kieu" id="kieu"></div>
 
-  <label for="mk">Mật khẩu chung của CLB <small><?= coMatKhauMacDinh ? 'Đã có. Bỏ trống để giữ nguyên, nhập mới để đổi.' : 'Mọi thành viên dùng mật khẩu này cho lần đăng nhập app eco đầu tiên. Ít nhất 6 ký tự.' ?> Người đã tự đổi mật khẩu thì không bị ảnh hưởng.</small></label>
+  <h3><span>3</span>Mật khẩu chung của CLB</h3>
+  <label for="mk"><small><?= coMatKhauMacDinh ? 'Đã có. Bỏ trống để giữ nguyên, nhập mới để đổi.' : 'Mọi thành viên dùng mật khẩu này cho lần đăng nhập app eco đầu tiên. Ít nhất 6 ký tự.' ?> Người đã tự đổi mật khẩu thì không bị ảnh hưởng.</small></label>
   <input type="password" id="mk" autocomplete="new-password">
 
-  <button id="nut" onclick="tai()">Tải lên</button>
+  <h3><span>4</span>Xem trước rồi tải lên</h3>
+  <button id="nutXem" class="phu" onclick="xemTruoc()">Xem trước thay đổi</button>
+  <div id="xem" hidden></div>
+  <button id="nut" onclick="tai()" hidden>Tải lên</button>
   <div id="kq"></div>
 
 <script>
-function tai() {
-  var kieu = document.querySelector('input[name=kieu]:checked').value;
-  if (kieu !== 'Cập nhật' && !confirm('Chọn "' + kieu + '" sẽ bắt đầu học kỳ mới và đưa điểm trên app eco về 0. Tiếp tục?')) return;
-  var nut = document.getElementById('nut');
-  var kq = document.getElementById('kq');
-  nut.disabled = true;
-  kq.className = '';
-  kq.textContent = 'Đang tải…';
+var TINH_TRANG = <?!= JSON.stringify(tinhTrang) ?>;
+var VE = <?!= JSON.stringify(ve) ?>;
+var MO_TA = {
+  'Sau Oday': 'Thêm thành viên mới sau Oday (là thành viên chính thức), ẩn người đã rời. Chưa bắt đầu giai đoạn, chưa thêm lịch sinh nhật.',
+  'Sau tuyển đợt 1': 'Bắt đầu nhiệm kỳ mới và giai đoạn 1, điểm về 0. Thêm người mới (chính thức), ẩn người đã rời, cập nhật lịch sinh nhật.',
+  'Sau tuyển đợt 2': 'Bắt đầu giai đoạn 2, điểm về 0 (vẫn xem được điểm giai đoạn 1). Người mới là thành viên bổ sung.',
+  'Cập nhật': 'Sửa thông tin, thêm người bị sót, ẩn người đã rời. Không đổi giai đoạn, không đổi điểm. Đổi ban giữa nhiệm kỳ cũng dùng kiểu này.'
+};
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+(function () {
+  var ds = TINH_TRANG.concat([{ kieu: 'Cập nhật', nhiemKy: '', daLam: false }]);
+  document.getElementById('kieu').innerHTML = ds.map(function (k) {
+    return '<label class="' + (k.daLam ? 'xong' : '') + '"><input type="radio" name="kieu" value="' + esc(k.kieu) + '"' + (k.kieu === 'Cập nhật' ? ' checked' : '') + '><span><b>' + esc(k.kieu) + '</b>' +
+      (k.nhiemKy ? '<span class="the' + (k.daLam ? ' xong' : '') + '">' + (k.daLam ? 'Đã làm' : 'Chưa làm') + ' · nhiệm kỳ ' + esc(k.nhiemKy) + '</span>' : '') +
+      '<small>' + esc(MO_TA[k.kieu]) + (k.daLam ? ' Mỗi nhiệm kỳ chỉ làm một lần: chọn lại sẽ được tính là Cập nhật.' : '') + '</small></span></label>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('#link,#tab,input[name=kieu]'), function (o) { o.addEventListener('input', anXem); o.addEventListener('change', anXem); });
+})();
+function yeuCau() {
+  return {
+    link: document.getElementById('link').value,
+    tenTab: document.getElementById('tab').value.trim(),
+    kieu: document.querySelector('input[name=kieu]:checked').value,
+    matKhauMacDinh: document.getElementById('mk').value,
+    ve: VE
+  };
+}
+function anXem() { document.getElementById('xem').hidden = true; document.getElementById('nut').hidden = true; }
+function dsTen(ds) { return ds.length ? '<div class="ds">' + esc(ds.slice(0, 15).join(', ')) + (ds.length > 15 ? '… và ' + (ds.length - 15) + ' người khác' : '') + '</div>' : ''; }
+var CAN_MK = false;
+function xemTruoc() {
+  var nut = document.getElementById('nutXem'), kq = document.getElementById('kq'), xem = document.getElementById('xem');
+  nut.disabled = true; kq.className = ''; kq.textContent = 'Đang đọc sheet…'; anXem();
   google.script.run
-    .withSuccessHandler(function (thongBao) { nut.disabled = false; kq.className = 'ok'; kq.textContent = thongBao; })
+    .withSuccessHandler(function (d) {
+      nut.disabled = false; kq.textContent = ''; CAN_MK = d.canMatKhau;
+      xem.innerHTML = (d.doiThanhCapNhat ? '<p class="canh"><b>"' + esc(d.kieuChon) + '" đã làm trong nhiệm kỳ ' + esc(d.nhiemKy) + ', lần này sẽ được tính là Cập nhật.</b></p>' : '') +
+        '<b>' + esc(d.kieu) + '</b>: ' + d.tong + ' thành viên' + (d.boSung ? ' (' + d.boSung + ' bổ sung)' : '') + '.<ul>' +
+        '<li>' + esc(d.giaiDoan) + '</li>' +
+        '<li>Thêm ' + d.them.length + ' người.' + dsTen(d.them) + '</li>' +
+        '<li>Sửa thông tin ' + d.sua.length + ' người.' + dsTen(d.sua) + '</li>' +
+        (d.doiBan.length ? '<li>' + d.doiBan.length + ' người đổi ban (app ghi lại ngày đổi).' + dsTen(d.doiBan.map(function (x) { return x.HoVaTen + ': ' + x.BanCu + ' → ' + x.BanMoi; })) + '</li>' : '') +
+        '<li>Ẩn ' + d.an.length + ' người không còn trong danh sách (hồ sơ và điểm vẫn được giữ).' + dsTen(d.an) + '</li>' +
+        (d.soTkMoi ? '<li>Tạo ' + d.soTkMoi + ' tài khoản app eco mới.' + (d.canMatKhau ? ' <span class="loi">Cần nhập mật khẩu chung ở bước 3.</span>' : '') + '</li>' : '') +
+        (d.sinhNhat ? '<li>Cập nhật lịch sinh nhật trên Google Calendar.</li>' : '') + '</ul>';
+      xem.hidden = false;
+      var n = document.getElementById('nut');
+      n.hidden = false; n.disabled = CAN_MK && !document.getElementById('mk').value;
+    })
     .withFailureHandler(function (e) { nut.disabled = false; kq.className = 'loi'; kq.textContent = e.message; })
-    .taiDanhSachThanhVien({
-      link: document.getElementById('link').value,
-      tenTab: document.getElementById('tab').value.trim(),
-      kieu: kieu,
-      matKhauMacDinh: document.getElementById('mk').value,
-      ve: <?!= JSON.stringify(ve) ?>
-    });
+    .xemTruocTaiDanhSach(yeuCau());
+}
+document.getElementById('mk').addEventListener('input', function () { var n = document.getElementById('nut'); n.disabled = CAN_MK && !this.value; });
+function tai() {
+  var y = yeuCau();
+  if (y.kieu !== 'Cập nhật' && !confirm('Tải "' + y.kieu + '"? Mỗi nhiệm kỳ chỉ làm một lần.')) return;
+  var nut = document.getElementById('nut'), kq = document.getElementById('kq');
+  nut.disabled = true; kq.className = ''; kq.textContent = 'Đang tải… (có cập nhật lịch sinh nhật thì có thể mất vài phút)';
+  google.script.run
+    .withSuccessHandler(function (thongBao) { kq.className = 'ok'; kq.textContent = thongBao; nut.hidden = true; document.getElementById('xem').hidden = true; })
+    .withFailureHandler(function (e) { nut.disabled = false; kq.className = 'loi'; kq.textContent = e.message; })
+    .taiDanhSachThanhVien(y);
 }
 </script>
 </body>

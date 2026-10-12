@@ -23,8 +23,11 @@ var COT_BAT_BUOC = ['HoVaTen', 'Ban'];
 
 /** Các tab trong file dữ liệu và tên cột của từng tab. */
 var BANG = {
-  ThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }),
-  ThanhVienCu: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['NgayRoi']),
+  ThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['LoaiThanhVien', 'DotGiaNhap']),
+  ThanhVienCu: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['NgayRoi', 'LoaiThanhVien', 'DotGiaNhap']),
+  LanTai: ['ThoiGian', 'NhiemKy', 'KieuChon', 'Kieu', 'SoThem', 'SoSua', 'SoAn', 'TongSo'],
+  DoiBan: ['ThoiGian', 'HoVaTen', 'BanCu', 'BanMoi'],
+  SinhNhat: ['HoVaTen', 'NgaySinh', 'TieuDe', 'MaSuKien', 'NhiemKy'],
   LichSuDiem: ['ThoiGian', 'HoVaTen', 'LoaiHoatDong', 'TenHoatDong', 'Diem', 'NguoiCong', 'NhiemKy', 'HocKy'],
   KyHoatDong: ['NhiemKy', 'HocKy', 'BatDau', 'KieuTaiLen'],
   LuuTruThanhVien: ['NhiemKy', 'HocKy', 'HoVaTen', 'Ban'],
@@ -57,19 +60,160 @@ function capNhatThanhVienCu_(cu, moi, daRoi, bayGio) {
   roi.forEach(function (t) { moiRoi[k(t)] = true; });
   var ds = daRoi.filter(function (t) { return k(t) && !conLai[k(t)] && !moiRoi[k(t)]; });
   roi.forEach(function (t) {
-    var dong = { NgayRoi: bayGio };
+    var dong = { NgayRoi: bayGio, LoaiThanhVien: t.LoaiThanhVien || '', DotGiaNhap: t.DotGiaNhap || '' };
     COT_THANH_VIEN.forEach(function (c) { dong[c[0]] = t[c[0]] == null ? '' : t[c[0]]; });
     ds.push(dong);
   });
   return { ds: ds, soMoiRoi: roi.length };
 }
 
-/** Ba kiểu tải danh sách thành viên ở phần hậu kỳ. */
+/**
+ * Bốn kiểu tải danh sách thành viên ở phần hậu kỳ. Oday, đợt 1, đợt 2 mỗi nhiệm kỳ chỉ một lần, theo thứ tự đó.
+ * - Oday: thêm thành viên mới (chính thức) trước đợt 1, chưa bắt đầu giai đoạn nào.
+ * - Đợt 1: bắt đầu nhiệm kỳ và giai đoạn 1. Đợt 2: bắt đầu giai đoạn 2, người mới là thành viên bổ sung.
+ * - Cập nhật: sửa thông tin, thêm người bị sót, ẩn người đã rời; không đổi giai đoạn.
+ */
 var KIEU_TAI = {
+  ODAY: 'Sau Oday',
   DOT1: 'Sau tuyển đợt 1',
   DOT2: 'Sau tuyển đợt 2',
   CAP_NHAT: 'Cập nhật'
 };
+var THU_TU_DOT = ['Sau Oday', 'Sau tuyển đợt 1', 'Sau tuyển đợt 2'];
+var TEN_DOT = { 'Sau Oday': 'Oday', 'Sau tuyển đợt 1': 'Đợt 1', 'Sau tuyển đợt 2': 'Đợt 2', 'Cập nhật': 'Cập nhật' };
+var LOAI_TV = { CHINH_THUC: 'Chính thức', BO_SUNG: 'Bổ sung' };
+
+/** Nhiệm kỳ theo năm tải: Oday và đợt 1 lấy năm tải là năm bắt đầu, đợt 2 lấy năm tải là năm kết thúc. */
+function nhiemKyTheoKieu_(ngay, kieu) {
+  var y = ngay.getFullYear();
+  return kieu === KIEU_TAI.DOT2 ? (y - 1) + '-' + y : y + '-' + (y + 1);
+}
+
+/**
+ * Kiểu tải thực sự. Oday, đợt 1, đợt 2 đã làm trong nhiệm kỳ (hoặc đã làm đợt sau nó) thì tự chuyển thành Cập nhật.
+ * @param {Array<Object>} lanTai các dòng LanTai (và KyHoatDong cũ, có NhiemKy và Kieu/KieuTaiLen)
+ * @return {{kieu:string, nhiemKy:string, doiThanhCapNhat:boolean, daLam:Array<string>, dauNhiemKy:boolean}}
+ */
+function kieuTaiThucTe_(kieu, ngay, lanTai) {
+  var nk = kieu === KIEU_TAI.CAP_NHAT ? '' : nhiemKyTheoKieu_(ngay, kieu);
+  var daLamTrong = function (n) {
+    var ds = [];
+    (lanTai || []).forEach(function (l) {
+      var k = String(l.Kieu || l.KieuTaiLen || '');
+      if (String(l.NhiemKy) === n && THU_TU_DOT.indexOf(k) >= 0 && ds.indexOf(k) < 0) ds.push(k);
+    });
+    return ds.sort(function (a, b) { return THU_TU_DOT.indexOf(a) - THU_TU_DOT.indexOf(b); });
+  };
+  if (!nk) return { kieu: kieu, nhiemKy: '', doiThanhCapNhat: false, daLam: [], dauNhiemKy: false };
+  var daLam = daLamTrong(nk);
+  var thuTu = THU_TU_DOT.indexOf(kieu);
+  var trung = daLam.some(function (k) { return THU_TU_DOT.indexOf(k) >= thuTu; });
+  return {
+    kieu: trung ? KIEU_TAI.CAP_NHAT : kieu,
+    nhiemKy: nk,
+    doiThanhCapNhat: trung,
+    daLam: daLam,
+    // Lần tải đầu của nhiệm kỳ (Oday, hoặc đợt 1 khi không có Oday): mọi người đang ở lại thành thành viên chính thức của nhiệm kỳ mới.
+    dauNhiemKy: !trung && kieu !== KIEU_TAI.DOT2 && !daLam.length
+  };
+}
+
+/** Đưa giá trị một ô về chữ để so sánh (ngày thì dạng yyyy-mm-dd). */
+function chuOSoSanh_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]') return isNaN(v.getTime()) ? '' : v.getFullYear() + '-' + (v.getMonth() + 1) + '-' + v.getDate();
+  return String(v == null ? '' : v).trim();
+}
+
+/**
+ * So danh sách mới với danh sách đang có (theo họ tên, không phân biệt hoa thường).
+ * @return {{them:Array<string>, sua:Array<string>, an:Array<string>, doiBan:Array<Object>}}
+ */
+function soSanhDanhSach_(cu, moi) {
+  var k = function (t) { return String(t.HoVaTen || '').trim().toLowerCase(); };
+  var theoTen = {};
+  cu.forEach(function (t) { if (k(t)) theoTen[k(t)] = t; });
+  var conLai = {};
+  var kq = { them: [], sua: [], an: [], doiBan: [] };
+  moi.forEach(function (t) {
+    conLai[k(t)] = true;
+    var c = theoTen[k(t)];
+    if (!c) { kq.them.push(t.HoVaTen); return; }
+    if (COT_THANH_VIEN.some(function (x) { return chuOSoSanh_(c[x[0]]) !== chuOSoSanh_(t[x[0]]); })) kq.sua.push(t.HoVaTen);
+    if (chuOSoSanh_(c.Ban).toUpperCase() !== chuOSoSanh_(t.Ban).toUpperCase()) kq.doiBan.push({ HoVaTen: t.HoVaTen, BanCu: chuOSoSanh_(c.Ban), BanMoi: chuOSoSanh_(t.Ban) });
+  });
+  cu.forEach(function (t) { if (k(t) && !conLai[k(t)]) kq.an.push(t.HoVaTen); });
+  return kq;
+}
+
+/**
+ * Gắn loại thành viên (chính thức hoặc bổ sung) và đợt gia nhập cho danh sách mới.
+ * Người đang có giữ nguyên, trừ lần tải đầu nhiệm kỳ (mọi người thành chính thức của nhiệm kỳ mới).
+ * Người mới: Oday, đợt 1, Cập nhật (người bị sót) là chính thức; đợt 2 là bổ sung.
+ */
+function ganLoaiThanhVien_(moi, cu, kieu, dauNhiemKy) {
+  var theoTen = {};
+  cu.forEach(function (t) { theoTen[String(t.HoVaTen || '').trim().toLowerCase()] = t; });
+  return moi.map(function (t) {
+    var x = {};
+    Object.keys(t).forEach(function (k) { x[k] = t[k]; });
+    var c = theoTen[String(t.HoVaTen).trim().toLowerCase()];
+    if (c && !dauNhiemKy) {
+      x.LoaiThanhVien = c.LoaiThanhVien === LOAI_TV.BO_SUNG ? LOAI_TV.BO_SUNG : LOAI_TV.CHINH_THUC;
+      x.DotGiaNhap = String(c.DotGiaNhap || '');
+    } else if (c) {
+      x.LoaiThanhVien = LOAI_TV.CHINH_THUC; x.DotGiaNhap = '';
+    } else {
+      x.LoaiThanhVien = kieu === KIEU_TAI.DOT2 ? LOAI_TV.BO_SUNG : LOAI_TV.CHINH_THUC;
+      x.DotGiaNhap = kieu === KIEU_TAI.CAP_NHAT ? '' : TEN_DOT[kieu];
+    }
+    return x;
+  });
+}
+
+/** Ngày sinh từ ô sheet: ngày, hoặc chữ dd/mm/yyyy, dd-mm-yyyy, d/m, yyyy-mm-dd. Trả về { ngay, thang } hoặc null. */
+function docNgaySinh_(v) {
+  var d = null, m = null;
+  if (Object.prototype.toString.call(v) === '[object Date]') { if (isNaN(v.getTime())) return null; d = v.getDate(); m = v.getMonth() + 1; }
+  else {
+    var s = String(v == null ? '' : v).trim(), x;
+    if ((x = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) { d = +x[3]; m = +x[2]; }
+    else if ((x = s.match(/^(\d{1,2})[-/.](\d{1,2})(?:[-/.](\d{2,4}))?$/))) { d = +x[1]; m = +x[2]; }
+  }
+  if (!m || m < 1 || m > 12 || !d || d < 1 || d > [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]) return null;
+  return { ngay: d, thang: m };
+}
+
+/** Tên lịch sinh nhật của nhiệm kỳ, ví dụ "Sinh nhật 2627" cho 2026-2027. */
+function tenLichSinhNhat_(nhiemKy) {
+  var p = String(nhiemKy).split('-');
+  return 'Sinh nhật ' + (p.length === 2 ? p[0].slice(-2) + p[1].slice(-2) : nhiemKy);
+}
+
+/**
+ * Việc cần làm để lịch sinh nhật khớp danh sách thành viên.
+ * @param {Array<Object>} daCo các dòng tab SinhNhat của nhiệm kỳ này
+ * @return {{tao:Array<Object>, xoa:Array<Object>, soGiu:number, thieuNgay:Array<string>}}
+ */
+function keHoachSinhNhat_(thanhVien, daCo) {
+  var cu = {};
+  daCo.forEach(function (r) { cu[String(r.HoVaTen).trim().toLowerCase()] = r; });
+  var kq = { tao: [], xoa: [], soGiu: 0, thieuNgay: [] };
+  var conLai = {};
+  thanhVien.forEach(function (t) {
+    var k = String(t.HoVaTen).trim().toLowerCase();
+    var ns = docNgaySinh_(t.NgaySinh);
+    if (!ns) { kq.thieuNgay.push(t.HoVaTen); return; }
+    conLai[k] = true;
+    var ngay = ('0' + ns.ngay).slice(-2) + '/' + ('0' + ns.thang).slice(-2);
+    var tieuDe = 'Sinh nhật ' + t.HoVaTen + (t.Ban ? ' (' + t.Ban + ')' : '');
+    var r = cu[k];
+    if (r && String(r.NgaySinh) === ngay && String(r.TieuDe) === tieuDe && r.MaSuKien) { kq.soGiu++; return; }
+    if (r && r.MaSuKien) kq.xoa.push(r);
+    kq.tao.push({ HoVaTen: t.HoVaTen, NgaySinh: ngay, TieuDe: tieuDe, ngay: ns.ngay, thang: ns.thang, moTa: [t.Lop ? 'Lớp ' + t.Lop : '', t.LinkFacebook ? String(t.LinkFacebook) : ''].filter(String).join('\n') });
+  });
+  daCo.forEach(function (r) { if (!conLai[String(r.HoVaTen).trim().toLowerCase()] && r.MaSuKien) kq.xoa.push(r); });
+  return kq;
+}
 
 /** Bỏ dấu tiếng Việt. */
 function boDau_(s) {
@@ -198,11 +342,9 @@ function tenNhiemKy_(ngay) {
  * @return {?{NhiemKy:string, HocKy:number}} kỳ mới, hoặc null nếu kiểu tải không mở kỳ mới
  */
 function tinhKyMoi_(kyHienTai, kieu, ngay) {
-  if (kieu === KIEU_TAI.DOT1) return { NhiemKy: tenNhiemKy_(ngay), HocKy: 1 };
-  if (kieu === KIEU_TAI.DOT2) {
-    return { NhiemKy: kyHienTai ? String(kyHienTai.NhiemKy) : tenNhiemKy_(ngay), HocKy: 2 };
-  }
-  return null;
+  if (kieu === KIEU_TAI.DOT1) return { NhiemKy: nhiemKyTheoKieu_(ngay, kieu), HocKy: 1 };
+  if (kieu === KIEU_TAI.DOT2) return { NhiemKy: nhiemKyTheoKieu_(ngay, kieu), HocKy: 2 };
+  return null; // Oday và Cập nhật không mở giai đoạn mới
 }
 
 /** Biến các dòng của một tab (có dòng tiêu đề) thành danh sách đối tượng. */
@@ -298,12 +440,13 @@ function tongHopBangDiem_(thanhVien, lichSu, ky, luuTru) {
       ban: String(tv.Ban || ''),
       nhom: nhomBan_(tv.Ban),
       diem: tong[ten] || 0,
-      diemHk1: coHk1[ten] ? (tongHk1[ten] || 0) : null
+      diemHk1: coHk1[ten] ? (tongHk1[ten] || 0) : null,
+      boSung: tv.LoaiThanhVien === LOAI_TV.BO_SUNG
     };
   });
 }
 
-/** Lịch sử cộng điểm công khai của một người trong một học kỳ, mới nhất trước. */
+/** Lịch sử cộng điểm công khai của một người trong một giai đoạn, mới nhất trước. */
 function lichSuCongKhai_(lichSu, ten, nhiemKy, hocKy) {
   var k = String(ten).toLowerCase();
   return lichSu.filter(function (d) {
@@ -447,7 +590,7 @@ function kiemTraMatKhauMoi_(mk) {
  * @return {{dong:Array<Object>, loi:string}}
  */
 function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio) {
-  if (!ky) return { dong: [], loi: 'Chưa có học kỳ nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.' };
+  if (!ky) return { dong: [], loi: 'Chưa có giai đoạn nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.' };
   var loai = null;
   loaiHoatDong.forEach(function (l) { if (String(l.TenLoai) === String(yeuCau.loai)) loai = l; });
   if (!loai) return { dong: [], loi: 'Không có loại hoạt động "' + yeuCau.loai + '".' };
@@ -1360,7 +1503,7 @@ function goiYLoaiSeeding_(tenCot, loaiHoatDong) {
 function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGio) {
   var nguoiNop = cot.nguoiNop >= 0 ? String(dong[cot.nguoiNop] == null ? '' : dong[cot.nguoiNop]).trim() : '';
   var kq = { dong: [], khongKhop: [], nguoiNop: nguoiNop, loi: '' };
-  if (!ky) { kq.loi = 'Chưa có học kỳ nào nên chưa cộng được. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.'; return kq; }
+  if (!ky) { kq.loi = 'Chưa có giai đoạn nào nên chưa cộng được. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.'; return kq; }
   var loaiTheoTen = {};
   loaiHoatDong.forEach(function (l) { loaiTheoTen[String(l.TenLoai)] = l; });
   var theoFb = {};
@@ -1414,7 +1557,9 @@ function chuanHoaCachNhan_(giaTri) {
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
+    COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI, LOAI_TV: LOAI_TV,
+    nhiemKyTheoKieu: nhiemKyTheoKieu_, kieuTaiThucTe: kieuTaiThucTe_, soSanhDanhSach: soSanhDanhSach_, ganLoaiThanhVien: ganLoaiThanhVien_,
+    docNgaySinh: docNgaySinh_, tenLichSinhNhat: tenLichSinhNhat_, keHoachSinhNhat: keHoachSinhNhat_,
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,

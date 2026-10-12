@@ -21,10 +21,13 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 
 | Tab | Cột | Ghi chú |
 |---|---|---|
-| ThanhVien | HoVaTen, Lop, Ban, ChucVu, NgaySinh, SoDienThoaiCaNhan, SoDienThoaiPhuHuynh, Email, LinkFacebook, TenFacebook, NoiSong | Danh sách hiện tại. Bị ghi đè mỗi lần tải danh sách. |
-| ThanhVienCu | các cột của ThanhVien, NgayRoi | Hồ sơ đầy đủ của người không còn trong danh sách mới (tự thêm khi tải danh sách). Ai quay lại CLB thì tự bỏ khỏi đây. |
+| ThanhVien | HoVaTen, Lop, Ban, ChucVu, NgaySinh, SoDienThoaiCaNhan, SoDienThoaiPhuHuynh, Email, LinkFacebook, TenFacebook, NoiSong, LoaiThanhVien, DotGiaNhap | Danh sách hiện tại. Bị ghi đè mỗi lần tải danh sách. LoaiThanhVien: Chính thức hoặc Bổ sung (người vào ở đợt 2); DotGiaNhap: đợt người đó vào trong nhiệm kỳ. |
+| LanTai | ThoiGian, NhiemKy, KieuChon, Kieu, SoThem, SoSua, SoAn, TongSo | Mỗi lần tải danh sách một dòng. Dùng để biết Oday, đợt 1, đợt 2 đã làm trong nhiệm kỳ chưa. |
+| DoiBan | ThoiGian, HoVaTen, BanCu, BanMoi | Ai đổi ban và từ lúc nào (ghi khi tải danh sách thấy cột Ban khác trước). |
+| SinhNhat | HoVaTen, NgaySinh, TieuDe, MaSuKien, NhiemKy | Sự kiện sinh nhật app đã tạo trong lịch Google “Sinh nhật yyyy” của từng nhiệm kỳ (mã lịch lưu ở CaiDat `LichSinhNhat`). |
+| ThanhVienCu | các cột của ThanhVien, NgayRoi, LoaiThanhVien, DotGiaNhap | Hồ sơ đầy đủ của người không còn trong danh sách mới (tự thêm khi tải danh sách). Ai quay lại CLB thì tự bỏ khỏi đây. |
 | LichSuDiem | ThoiGian, HoVaTen, LoaiHoatDong, TenHoatDong, Diem, NguoiCong, NhiemKy, HocKy | Mỗi lần cộng điểm là một dòng. Không bao giờ xoá. Điểm được ghi lại tại thời điểm cộng, nên đổi số điểm của loại hoạt động không làm đổi lịch sử. |
-| KyHoatDong | NhiemKy, HocKy, BatDau, KieuTaiLen | Dòng cuối là kỳ hiện tại. |
+| KyHoatDong | NhiemKy, HocKy, BatDau, KieuTaiLen | Mỗi giai đoạn một dòng (cột HocKy là số giai đoạn, giữ tên cũ). Dòng cuối là giai đoạn hiện tại. |
 | LuuTruThanhVien | NhiemKy, HocKy, HoVaTen, Ban | Danh sách thành viên ở đầu mỗi học kỳ, dùng để biết ai được xem điểm học kỳ 1. |
 | LoaiHoatDong | TenLoai, Diem | Mặc định Staff, Log, Tham gia hoạt động; BOD thêm hoặc sửa trong Cài đặt. |
 | BangGhim | TieuDe, DuongDan | Link ghim trên ECOBoard. |
@@ -46,12 +49,16 @@ Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần d�
 
 1. Đọc tab nguồn, tìm dòng tiêu đề trong 10 dòng đầu, nhận cột theo **tên** (bỏ dấu, không phân biệt hoa thường), nên đổi thứ tự cột vẫn chạy. Cột "Ghi chú" và các cột lạ bị bỏ qua.
 2. Bắt buộc có cột "Họ và tên" và "Ban". Trùng tên thì dừng và báo dòng bị trùng.
-3. Theo kiểu tải:
-   - **Sau tuyển đợt 1**: mở nhiệm kỳ mới (đặt tên theo năm học, từ tháng 8 là năm học mới), học kỳ 1.
-   - **Sau tuyển đợt 2**: cùng nhiệm kỳ, học kỳ 2.
-   - **Cập nhật**: không đổi kỳ.
-4. Chuyển hồ sơ người không còn trong danh sách sang tab ThanhVienCu, rồi ghi đè tab ThanhVien. Điểm "về 0" vì ECOBoard chỉ cộng các dòng LichSuDiem của kỳ hiện tại, lịch sử cũ vẫn còn nguyên.
-5. Đồng bộ tài khoản BOD: ai có Ban = BOD và có email thì được tạo tài khoản với mật khẩu mặc định; ai không còn là BOD thì bị gỡ tài khoản BOD.
+3. Theo kiểu tải. Nhiệm kỳ đặt theo năm tải: Oday và đợt 1 lấy năm tải làm năm bắt đầu, đợt 2 lấy năm tải làm năm kết thúc. Oday, đợt 1, đợt 2 mỗi nhiệm kỳ chỉ làm một lần, theo thứ tự đó; chọn lại (hoặc chọn đợt trước khi đã làm đợt sau) thì tự tính là Cập nhật.
+   - **Sau Oday**: thêm người mới (chính thức), ẩn người đã rời. Chưa mở giai đoạn, chưa thêm lịch sinh nhật.
+   - **Sau tuyển đợt 1**: mở nhiệm kỳ và giai đoạn 1. Người mới là chính thức.
+   - **Sau tuyển đợt 2**: mở giai đoạn 2. Người mới là thành viên bổ sung (ghi đợt gia nhập).
+   - **Cập nhật**: sửa thông tin, thêm người bị sót (chính thức), ẩn người đã rời; không đổi giai đoạn. Đổi ban giữa nhiệm kỳ dùng kiểu này, app ghi ngày đổi vào tab DoiBan.
+   - Lần tải đầu của nhiệm kỳ (Oday, hoặc đợt 1 nếu không có Oday): mọi người ở lại đều thành chính thức của nhiệm kỳ mới.
+4. Hộp thoại có nút **Xem trước** (`xemTruocTaiDanhSach`): báo kiểu tải thực sự, số người thêm, sửa, đổi ban, ẩn, số tài khoản mới, trước khi ghi.
+5. Chuyển hồ sơ người không còn trong danh sách sang tab ThanhVienCu, rồi ghi đè tab ThanhVien. Điểm "về 0" vì app chỉ cộng các dòng LichSuDiem của giai đoạn hiện tại, lịch sử cũ vẫn còn nguyên.
+6. Đồng bộ tài khoản: mọi thành viên có email đều có tài khoản; Ban = BOD là BOD; HR, UCV giữ nguyên; người rời CLB bị bỏ tài khoản. Tài khoản mới đăng nhập bằng mật khẩu chung của CLB (nhập ở hộp thoại, chỉ lưu bản băm).
+7. Từ đợt 1 trở đi: đồng bộ lịch Google “Sinh nhật yyyy” của nhiệm kỳ (sự kiện cả ngày lặp lại hằng năm). Cần tài khoản CLB cấp quyền Google Calendar một lần (chạy `khoiTaoCoSoDuLieu` trong Apps Script). BOD xem tình trạng, đồng bộ lại và hướng dẫn chia sẻ cho nhóm CRE ở Cài đặt, Lịch sinh nhật.
 
 ## ECOBoard
 

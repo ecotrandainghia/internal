@@ -647,3 +647,30 @@ function layTrangChu(phien) {
   kq.thongBao = toi ? { cach: toi.cach, soMay: toi.soMay, daKetNoiZalo: !!toi.chatId } : null;
   return kq;
 }
+
+/* ===================== Lịch sinh nhật ===================== */
+
+/** Tình trạng lịch sinh nhật của nhiệm kỳ hiện tại, cho mục Cài đặt. */
+function layLichSinhNhat(phien) {
+  canDangNhap_(phien, 'caidat');
+  var ky = layKyHienTai_();
+  if (!ky) return { nhiemKy: '', coLich: false, soSuKien: 0 };
+  var nk = String(ky.NhiemKy), cal = null;
+  try { cal = layLichSinhNhat_(nk, false); } catch (e) {
+    return { nhiemKy: nk, coLich: false, soSuKien: 0, loi: 'Tài khoản CLB chưa cấp quyền Google Calendar cho app. Mở Apps Script, chạy hàm khoiTaoCoSoDuLieu một lần và bấm Cho phép.' };
+  }
+  return {
+    nhiemKy: nk, ten: cal ? cal.getName() : tenLichSinhNhat_(nk), coLich: !!cal,
+    soSuKien: docBang_('SinhNhat').filter(function (r) { return String(r.NhiemKy) === nk; }).length,
+    linkCaiDat: cal ? 'https://calendar.google.com/calendar/u/0/r/settings/calendar/' + Utilities.base64Encode(cal.getId()).replace(/=+$/, '') : ''
+  };
+}
+
+/** Đồng bộ lại lịch sinh nhật ngay (ví dụ lần trước chưa xong, hoặc vừa cấp quyền Calendar). */
+function dongBoSinhNhatNgay(phien) {
+  canDangNhap_(phien, 'caidat');
+  var ky = layKyHienTai_();
+  if (!ky) throw new Error('Chưa có nhiệm kỳ. Lịch sinh nhật bắt đầu từ lần tải "Sau tuyển đợt 1".');
+  var kq = dongBoSinhNhat_(docBang_('ThanhVien'), String(ky.NhiemKy));
+  return { soTao: kq.soTao, soXoa: kq.soXoa, soGiu: kq.soGiu, conLai: kq.conLai, thieuNgay: kq.thieuNgay };
+}
