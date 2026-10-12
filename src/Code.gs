@@ -278,16 +278,19 @@ function layLichSuDiem(phien, ten, hocKy) {
   return lichSuCongKhai_(docBang_('LichSuDiem'), ten, ky.NhiemKy, hk);
 }
 
-/** Góp ý ẩn danh: phải đăng nhập (chặn người ngoài gửi bừa) nhưng không lưu tên người gửi. */
-function guiGopY(phien, noiDung) {
-  canDangNhap_(phien, 'guigopy');
+/**
+ * Góp ý: phải đăng nhập (chặn người ngoài gửi bừa). Mặc định ẩn danh; người gửi chọn ghi tên thì
+ * BOD đánh dấu "Đã đưa vào sử dụng" được và người gửi được cộng điểm.
+ */
+function guiGopY(phien, noiDung, ghiTen) {
+  var tk = canDangNhap_(phien, 'guigopy');
   var loi = kiemTraGopY_(noiDung);
   if (loi) throw new Error(loi);
   var cache = CacheService.getScriptCache();
   var dem = Number(cache.get('demGopY') || 0);
   if (dem >= GIOI_HAN_GOP_Y_MOI_PHUT) throw new Error('Đang có nhiều góp ý gửi cùng lúc, bạn thử lại sau một phút nhé.');
   cache.put('demGopY', String(dem + 1), 60);
-  themDong_('GopY', [{ ThoiGian: new Date(), NoiDung: String(noiDung).trim(), DaDoc: false }]);
+  themDong_('GopY', [{ ThoiGian: new Date(), NoiDung: String(noiDung).trim(), DaDoc: false, HoVaTen: ghiTen ? String(tk.HoVaTen) : '' }]);
   try { thongBaoGopYMoi_(String(noiDung).trim()); } catch (e) { /* không gửi được mail báo thì góp ý vẫn được lưu */ }
   return true;
 }
@@ -317,7 +320,7 @@ function khoiTaoCoSoDuLieu_() {
   BANG_NHO_TAM.forEach(boNhoTamBang_); // có thể vừa thêm cột: đọc lại cho đủ cột
   BO_NHO_BANG_ = {};
   if (!docBang_('LoaiHoatDong').length) {
-    themDong_('LoaiHoatDong', ['Staff', 'Log', 'Tham gia hoạt động'].map(function (t) { return { TenLoai: t, Diem: 0 }; }));
+    themDong_('LoaiHoatDong', chuanHoaLoaiHoatDong_(MUC_DIEM_QUY_CHE).ds);
   }
   var macDinh = ss.getSheetByName('Sheet1') || ss.getSheetByName('Trang tính1');
   if (macDinh && macDinh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(macDinh);

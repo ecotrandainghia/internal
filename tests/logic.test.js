@@ -69,7 +69,7 @@ test('tongHopBangDiem chỉ tính học kỳ hiện tại, ẩn thông tin riên
   ];
   const luuTru = [{ NhiemKy: '2026-2027', HocKy: 1, HoVaTen: 'A' }];
   const kq = L.tongHopBangDiem(tv, ls, { NhiemKy: '2026-2027', HocKy: 2 }, luuTru);
-  assert.deepStrictEqual(kq[0], { ten: 'A', lop: '10A', ban: 'PR CAP', nhom: 'PR', diem: 3, diemHk1: 5, boSung: false });
+  assert.deepStrictEqual(kq[0], { ten: 'A', lop: '10A', ban: 'PR CAP', nhom: 'PR', diem: 3, diemHk1: 5, diemCaKy: 8, boSung: false, top: false, topHk1: false, topCaKy: false });
   assert.strictEqual(kq[1].diem, 2);
   assert.strictEqual(kq[1].boSung, true);
   assert.strictEqual(kq[1].diemHk1, null);
@@ -194,4 +194,98 @@ test('ngày sinh và kế hoạch lịch sinh nhật', () => {
   assert.deepStrictEqual(kh.tao.map((x) => x.TieuDe), ['Sinh nhật Bình (AD)', 'Sinh nhật Dũng (PG)']);
   assert.deepStrictEqual(kh.xoa.map((x) => x.MaSuKien), ['b', 'e']);
   assert.deepStrictEqual(kh.thieuNgay, ['Chi']);
+});
+
+test('top 15%: làm tròn thông thường, tính cả người bằng điểm, không tính người 0 điểm', () => {
+  assert.strictEqual(L.soNguoiTop(10), 2); // 1,5 → 2
+  assert.strictEqual(L.soNguoiTop(70), 11); // 10,5 → 11 (không bị sai số thành 10)
+  assert.strictEqual(L.soNguoiTop(16), 2); // 2,4 → 2
+  assert.strictEqual(L.soNguoiTop(3), 0);
+  const ds = (diem) => diem.map((d, i) => ({ ten: 'T' + i, diem: d }));
+  assert.deepStrictEqual(Object.keys(L.topTheoDiem(ds([9, 8, 8, 7, 5, 4, 3, 2, 1, 0]), 'diem')), ['t0', 't1', 't2']);
+  assert.deepStrictEqual(Object.keys(L.topTheoDiem(ds([5, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 'diem')), ['t0']);
+  assert.deepStrictEqual(L.topTheoDiem(ds([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 'diem'), {});
+});
+
+test('tongHopBangDiem: giai đoạn 1 chỉ xếp hạng chính thức; giai đoạn 2 có bảng giai đoạn 1 và cả nhiệm kỳ', () => {
+  const ten = Array.from({ length: 10 }, (_, i) => 'N' + i);
+  const tv = ten.map((t) => ({ HoVaTen: t, Ban: 'PG' })).concat([{ HoVaTen: 'Bs', Ban: 'PG', LoaiThanhVien: 'Bổ sung' }]);
+  const ls = ten.map((t, i) => ({ HoVaTen: t, Diem: 10 - i, NhiemKy: 'K', HocKy: 1 }))
+    .concat([{ HoVaTen: 'N9', Diem: 50, NhiemKy: 'K', HocKy: 2 }, { HoVaTen: 'Bs', Diem: 40, NhiemKy: 'K', HocKy: 2 }]);
+  const gd1 = L.tongHopBangDiem(tv.slice(0, 10), ls, { NhiemKy: 'K', HocKy: 1 }, []);
+  assert.deepStrictEqual(gd1.filter((p) => p.top).map((p) => p.ten), ['N0', 'N1']);
+  const luuTru = ten.map((t) => ({ NhiemKy: 'K', HocKy: 1, HoVaTen: t }));
+  const gd2 = L.tongHopBangDiem(tv, ls, { NhiemKy: 'K', HocKy: 2 }, luuTru);
+  // Giai đoạn 2: 11 người, top 2 → N9 (50) và Bs (40).
+  assert.deepStrictEqual(gd2.filter((p) => p.top).map((p) => p.ten), ['N9', 'Bs']);
+  // Giai đoạn 1 và cả nhiệm kỳ: chỉ 10 người chính thức.
+  assert.deepStrictEqual(gd2.filter((p) => p.topHk1).map((p) => p.ten), ['N0', 'N1']);
+  assert.deepStrictEqual(gd2.filter((p) => p.topCaKy).map((p) => p.ten), ['N0', 'N9']);
+  const bs = gd2.filter((p) => p.ten === 'Bs')[0];
+  assert.strictEqual(bs.diemHk1, null);
+  assert.strictEqual(bs.diemCaKy, null);
+});
+
+test('giới hạn số lần mỗi giai đoạn (góp ý được dùng tối đa 2 lần)', () => {
+  const KY = { NhiemKy: 'K', HocKy: 1 };
+  const LOAI = [{ TenLoai: 'Góp ý', Diem: 10, GioiHan: 2 }, { TenLoai: 'Staff', Diem: 3 }];
+  const TV = [{ HoVaTen: 'An' }, { HoVaTen: 'Bình' }];
+  const ls = [
+    { HoVaTen: 'An', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', HocKy: 1 },
+    { HoVaTen: 'An', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', HocKy: 1 },
+    { HoVaTen: 'Bình', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', HocKy: 2 } // giai đoạn khác không tính
+  ];
+  const now = new Date();
+  assert.match(L.taoDongCongDiem({ loai: 'Góp ý', nguoi: ['An', 'Bình'] }, TV, LOAI, 'BOD', KY, now, ls).loi, /tối đa 2 lần mỗi giai đoạn\. Đã đủ: An\./);
+  assert.strictEqual(L.taoDongCongDiem({ loai: 'Góp ý', nguoi: ['Bình'] }, TV, LOAI, 'BOD', KY, now, ls).loi, '');
+  assert.strictEqual(L.taoDongCongDiem({ loai: 'Staff', nguoi: ['An'] }, TV, LOAI, 'BOD', KY, now, ls.concat(ls, ls)).loi, '');
+});
+
+test('chuanHoaLoaiHoatDong: số lần tối đa, gắn chức năng tự cộng, mức điểm theo quy chế', () => {
+  const kq = L.chuanHoaLoaiHoatDong([{ ten: 'Góp ý', diem: 10, gioiHan: '2', dungCho: 'gopy', congTay: false }, { ten: 'Staff', diem: 3, gioiHan: '' }]);
+  assert.deepStrictEqual(kq.ds, [{ TenLoai: 'Góp ý', Diem: 10, CongTay: 'khong', GioiHan: 2, DungCho: 'gopy' }, { TenLoai: 'Staff', Diem: 3, CongTay: 'co' }]);
+  assert.match(L.chuanHoaLoaiHoatDong([{ ten: 'A', diem: 1, gioiHan: 1.5 }]).loi, /số nguyên/);
+  assert.match(L.chuanHoaLoaiHoatDong([{ ten: 'A', diem: 1, dungCho: 'react' }, { ten: 'B', diem: 1, dungCho: 'react' }]).loi, /chỉ chọn một/i);
+  const qc = L.chuanHoaLoaiHoatDong(L.MUC_DIEM_QUY_CHE);
+  assert.strictEqual(qc.loi, '');
+  assert.strictEqual(qc.ds.length, 10);
+  assert.deepStrictEqual(qc.ds.map((l) => l.Diem), [1, 2, 3, 5, 10, 20, 40, 40, 40, 50]);
+  assert.strictEqual(L.loaiDungCho(qc.ds, 'gopy').GioiHan, 2);
+});
+
+test('nhóm HR và quyền báo cáo seeding', () => {
+  assert.deepStrictEqual(L.nhomHr(' sup-seed, CRE ; abc, SUP-SEED'), ['SUP-SEED', 'CRE']);
+  assert.strictEqual(L.duocBaoCaoSeeding({ VaiTro: 'HR', NhomHr: 'SUP-SEED' }), true);
+  assert.strictEqual(L.duocBaoCaoSeeding({ VaiTro: 'HR', NhomHr: 'CRE' }), false);
+  assert.strictEqual(L.duocBaoCaoSeeding({ VaiTro: 'BOD' }), true);
+  assert.strictEqual(L.duocBaoCaoSeeding(null), false);
+});
+
+test('báo cáo seeding: dò tên, chặn trùng bài, cảnh báo 48 giờ, cộng theo loại react/comment', () => {
+  const KY = { NhiemKy: 'K', HocKy: 1 };
+  const TV = [{ HoVaTen: 'Nguyễn Văn An', TenFacebook: 'An Nguyễn' }, { HoVaTen: 'Lê Bình', TenFacebook: '' }];
+  const LOAI = [{ TenLoai: 'React', Diem: 1, DungCho: 'react' }, { TenLoai: 'Comment', Diem: 2, DungCho: 'comment' }];
+  const now = new Date(2026, 9, 10, 20);
+  const luc = now.getTime() - 50 * 3600000;
+  const yc = { link: 'https://www.facebook.com/eco/posts/123?mibextid=x', lucDang: luc, react: 'an nguyen\nLê Bình\nNgười Lạ\n\nAN NGUYỄN', comment: 'An Nguyễn' };
+  const kq = L.taoBaoCaoSeeding(yc, TV, LOAI, KY, 'HR Seed', now, [], []);
+  assert.strictEqual(kq.loi, '');
+  assert.deepStrictEqual(kq.react, ['Nguyễn Văn An', 'Lê Bình']);
+  assert.deepStrictEqual(kq.comment, ['Nguyễn Văn An']);
+  assert.deepStrictEqual(kq.khongKhop, ['Người Lạ']);
+  assert.deepStrictEqual(kq.canhBao, []);
+  assert.deepStrictEqual(kq.dong.map((d) => [d.HoVaTen, d.LoaiHoatDong, d.Diem, d.NguoiCong]), [
+    ['Nguyễn Văn An', 'React', 1, 'Seeding: HR Seed'], ['Lê Bình', 'React', 1, 'Seeding: HR Seed'], ['Nguyễn Văn An', 'Comment', 2, 'Seeding: HR Seed']]);
+  assert.strictEqual(kq.bao.TrangThai, 'Đã cộng');
+  // Cùng bài (link khác tham số) thì chặn; báo cáo cũ đã huỷ thì cho điền lại.
+  const cu = [{ LinkBai: 'http://m.facebook.com/eco/posts/123/', NguoiNop: 'X', TrangThai: 'Đã cộng' }];
+  assert.match(L.taoBaoCaoSeeding(yc, TV, LOAI, KY, 'HR', now, cu, []).loi, /đã có báo cáo của X/);
+  assert.strictEqual(L.taoBaoCaoSeeding(yc, TV, LOAI, KY, 'HR', now, [{ ...cu[0], TrangThai: 'Đã huỷ' }], []).loi, '');
+  assert.notStrictEqual(L.chuanLinkBai('https://facebook.com/permalink.php?story_fbid=1&id=2'), L.chuanLinkBai('https://facebook.com/permalink.php?story_fbid=3&id=2'));
+  // Chưa đủ 48 giờ: vẫn gửi được nhưng có cảnh báo.
+  assert.match(L.taoBaoCaoSeeding({ ...yc, lucDang: now.getTime() - 3600000 }, TV, LOAI, KY, 'HR', now, [], []).canhBao[0], /chưa đủ 48 giờ/);
+  assert.match(L.taoBaoCaoSeeding({ ...yc, link: 'abc' }, TV, LOAI, KY, 'HR', now, [], []).loi, /link/);
+  assert.match(L.taoBaoCaoSeeding({ ...yc, lucDang: now.getTime() + 3600000 }, TV, LOAI, KY, 'HR', now, [], []).loi, /tương lai/);
+  assert.match(L.taoBaoCaoSeeding(yc, TV, LOAI.slice(1), KY, 'HR', now, [], []).loi, /react/);
+  assert.match(L.taoBaoCaoSeeding(yc, TV, LOAI, null, 'HR', now, [], []).loi, /Chưa có giai đoạn/);
 });

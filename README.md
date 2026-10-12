@@ -4,7 +4,7 @@ Mã nguồn của app eco (trước đây là hai app ECOBoard và ECODesk), ch�
 
 - Mở app không cần đăng nhập thì chỉ xem được bảng xếp hạng điểm.
 - Mọi thành viên có email trong danh sách đều đăng nhập được (mật khẩu chung của CLB, mật khẩu riêng, hoặc Google). Quyền theo bậc thang: thành viên < HR < UCV < BOD, người bậc trên có cả chức năng của bậc dưới.
-- Thành viên: trang chủ (điểm của mình, link ghim, quy chế), xếp hạng và lịch sử điểm của mình, góp ý ẩn danh, cài đặt. HR thêm task; UCV thêm mail; BOD thêm cộng điểm, duyệt mail, báo cáo, file log, đọc góp ý, cài đặt chung.
+- Thành viên: trang chủ (điểm của mình, link ghim, quy chế), xếp hạng từng giai đoạn (đánh dấu top 15%) và lịch sử điểm của mình, góp ý (ẩn danh hoặc ghi tên), cài đặt. HR thêm task, nhóm SUP-SEED điền báo cáo seeding; UCV thêm mail; BOD thêm cộng điểm, duyệt mail, báo cáo, file log, đọc góp ý, cài đặt chung.
 - Cài được lên điện thoại như app nhờ trang vỏ trong `pwa/` (địa chỉ ecotdn.github.io/home).
 
 ## Tài liệu

@@ -13,6 +13,9 @@
 .xh-hang.r1{color:#a0770c}.xh-hang.r2{color:#6b7280}.xh-hang.r3{color:#9a5a2b}
 .xh-ban{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px;background:var(--soft);color:var(--accent);margin-right:6px}
 .xh-bs{background:var(--info-bg,#e3edf8);color:var(--info,#1f5aa6)}
+.xh-top{background:#fdf0c8;color:#7a5600}
+:root[data-theme="dark"] .xh-top{background:#4a3b10;color:#f5d77a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .xh-top{background:#4a3b10;color:#f5d77a}}
 .xh-diem{font:700 18px var(--f-num);color:var(--accent);white-space:nowrap}
 .xh-diem small{font:500 11px var(--f-body);color:var(--muted);margin-left:2px}
 .xh-stat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
@@ -34,7 +37,7 @@
 </style>
 <script>
 /* =================== Xếp hạng điểm =================== */
-var XH = { d: null, luc: 0, ban: 'Tất cả', q: '', dir: 'desc' };
+var XH = { d: null, luc: 0, ban: 'Tất cả', q: '', dir: 'desc', gd: 'nay' };
 
 /** Bảng xếp hạng công khai, giữ 60 giây trên máy. */
 function napXepHang() {
@@ -42,10 +45,24 @@ function napXepHang() {
   return goi('layDuLieuBoard').then(function (d) { XH.d = d; XH.luc = Date.now(); return d; });
 }
 /** Hạng của từng người: bằng điểm thì cùng hạng. */
-function hangTheoDiem(ds) {
+function hangTheoDiem(ds, khoa) {
+  khoa = khoa || 'diem';
   var hang = {}, truoc = null, h = 0;
-  ds.slice().sort(function (a, b) { return b.diem - a.diem; }).forEach(function (p, i) { if (p.diem !== truoc) { h = i + 1; truoc = p.diem; } hang[p.ten] = h; });
+  ds.slice().sort(function (a, b) { return b[khoa] - a[khoa]; }).forEach(function (p, i) { if (p[khoa] !== truoc) { h = i + 1; truoc = p[khoa]; } hang[p.ten] = h; });
   return hang;
+}
+/**
+ * Bảng đang xem: giai đoạn hiện tại, giai đoạn 1 (khi đang ở giai đoạn 2) hoặc cả nhiệm kỳ.
+ * Giai đoạn 1 và cả nhiệm kỳ chỉ có thành viên chính thức đã ở giai đoạn 1.
+ */
+var BANG_XH = {
+  nay: { diem: 'diem', top: 'top', ten: function (d) { return 'Giai đoạn ' + d.ky.hocKy; } },
+  '1': { diem: 'diemHk1', top: 'topHk1', ten: function () { return 'Giai đoạn 1'; } },
+  ky: { diem: 'diemCaKy', top: 'topCaKy', ten: function () { return 'Cả nhiệm kỳ'; } }
+};
+function dsTheoBang(d, gd) {
+  if (gd === 'nay') return d.thanhVien.filter(function (p) { return d.ky.hocKy === 2 || !p.boSung; });
+  return d.thanhVien.filter(function (p) { return p.diemHk1 !== null && p.diemHk1 !== undefined; });
 }
 function laToi(ten) { return NGUOI && String(ten).toLowerCase() === String(NGUOI.ten).toLowerCase(); }
 /** Ai xem được lịch sử của ai: BOD xem mọi người, còn lại xem của mình. Khách không xem được. */
@@ -55,13 +72,23 @@ VIEWS.xephang = function () {
   dangTai();
   napXepHang().then(function (d) {
     if (page !== 'xephang') return;
-    var hang = hangTheoDiem(d.thanhVien);
-    var toi = d.thanhVien.filter(function (p) { return laToi(p.ten); })[0];
+    var coGd1 = d.ky && d.ky.hocKy === 2 && d.thanhVien.some(function (p) { return p.diemHk1 !== null && p.diemHk1 !== undefined; });
+    if (!coGd1) XH.gd = 'nay';
+    var bang = BANG_XH[XH.gd], khoa = bang.diem;
+    var dsBang = d.ky ? dsTheoBang(d, XH.gd) : [];
+    var hang = hangTheoDiem(dsBang, khoa);
+    var soTop = dsBang.filter(function (p) { return p[bang.top]; }).length;
+    var toi = d.ky ? dsTheoBang(d, 'nay').filter(function (p) { return laToi(p.ten); })[0] : null;
+    var hangNay = toi ? hangTheoDiem(dsTheoBang(d, 'nay'), 'diem')[toi.ten] : 0;
     var nhom = [];
-    d.thanhVien.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
+    dsBang.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
+    if (XH.ban !== 'Tất cả' && nhom.indexOf(XH.ban) < 0) XH.ban = 'Tất cả';
     $('#main').innerHTML = '<div id="xh-trang" style="display:grid;gap:14px"><div class="head"><div><h2>Xếp hạng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy : 'Chưa bắt đầu giai đoạn') + '</p></div></div>' +
       (!NGUOI ? '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('info', 15) + ' Đăng nhập để xem lịch sử cộng điểm của bạn và dùng các chức năng khác.</span><button class="btn sm" data-p="dangnhap">Đăng nhập</button></div>' : '') +
-      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hang[toi.ten] + ' với ' + toi.diem + ' điểm</b><div class="hint">Trong ' + d.thanhVien.length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Xem lịch sử điểm</button></div>' : '') +
+      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hangNay + ' với ' + toi.diem + ' điểm</b>' + (toi.top ? ' <span class="xh-ban xh-top">Top 15%</span>' : '') + '<div class="hint">Giai đoạn ' + d.ky.hocKy + ', trong ' + dsTheoBang(d, 'nay').length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Xem lịch sử điểm</button></div>' : '') +
+      (coGd1 ? '<div class="row" id="xh-gd">' + ['nay', '1', 'ky'].map(function (k) { return '<button class="chip" aria-pressed="' + (k === XH.gd) + '" data-gd="' + k + '">' + BANG_XH[k].ten(d) + '</button>'; }).join('') + '</div>' : '') +
+      (d.ky ? '<p class="hint" style="margin:0">' + (XH.gd === 'nay' && d.ky.hocKy === 1 ? 'Giai đoạn 1 xếp hạng thành viên chính thức. ' : XH.gd === 'nay' ? 'Giai đoạn 2 xếp hạng tất cả thành viên. ' : XH.gd === '1' ? 'Điểm giai đoạn 1 của thành viên chính thức. ' : 'Tổng điểm hai giai đoạn của thành viên chính thức, dùng khi xét bù trừ KPI. ') +
+        'Top 15% là ' + soTop + ' người (' + dsBang.length + ' × 15%, làm tròn, tính cả người bằng điểm).</p>' : '') +
       '<div class="xh-tools"><input type="search" id="xh-q" placeholder="Tìm theo tên…" aria-label="Tìm theo tên" value="' + esc(XH.q) + '">' +
       (nhom.length > 1 ? '<div class="row" id="xh-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" aria-pressed="' + (b === XH.ban) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
       '<div class="row"><span class="hint" id="xh-dem"></span><label class="xh-sort">Sắp xếp<select id="xh-sx"><option value="desc">Điểm cao → thấp</option><option value="asc"' + (XH.dir === 'asc' ? ' selected' : '') + '>Điểm thấp → cao</option></select></label></div></div>' +
@@ -69,21 +96,22 @@ VIEWS.xephang = function () {
       (NGUOI && NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Bấm vào một người để xem lịch sử cộng điểm.</p>' : '') + '</div>';
     var ve = function () {
       var tim = boDau(XH.q);
-      var ds = d.thanhVien.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && boDau(p.ten).indexOf(tim) >= 0; });
-      ds.sort(function (a, b) { return XH.dir === 'desc' ? b.diem - a.diem : a.diem - b.diem; });
+      var ds = dsBang.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && boDau(p.ten).indexOf(tim) >= 0; });
+      ds.sort(function (a, b) { return XH.dir === 'desc' ? b[khoa] - a[khoa] : a[khoa] - b[khoa]; });
       $('#xh-dem').textContent = ds.length + ' thành viên';
       $('#xh-ds').innerHTML = ds.length ? ds.map(function (p) {
         var r = hang[p.ten], the = xemDuocLichSu(p.ten) ? 'button' : 'div';
-        return '<' + the + ' class="li' + (laToi(p.ten) ? ' toi' : '') + '"' + (the === 'button' ? ' data-ls="' + esc(p.ten) + '"' : '') + '><span class="xh-hang' + (r <= 3 && p.diem > 0 ? ' r' + r : '') + '">' + r + '</span>' +
-          '<span class="c"><b class="t">' + esc(p.ten) + (laToi(p.ten) ? ' <span class="hint">(bạn)</span>' : '') + '</b><span class="s"><span class="xh-ban">' + esc(p.ban) + '</span>' + (p.boSung ? '<span class="xh-ban xh-bs">bổ sung</span>' : '') + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</span></span>' +
-          '<span class="xh-diem">' + p.diem + '<small>điểm</small></span></' + the + '>';
-      }).join('') : rong(d.thanhVien.length ? 'Không có ai khớp với tìm kiếm.' : 'Chưa có danh sách thành viên.');
+        return '<' + the + ' class="li' + (laToi(p.ten) ? ' toi' : '') + '"' + (the === 'button' ? ' data-ls="' + esc(p.ten) + '"' : '') + '><span class="xh-hang' + (r <= 3 && p[khoa] > 0 ? ' r' + r : '') + '">' + r + '</span>' +
+          '<span class="c"><b class="t">' + esc(p.ten) + (laToi(p.ten) ? ' <span class="hint">(bạn)</span>' : '') + '</b><span class="s">' + (p[bang.top] ? '<span class="xh-ban xh-top">Top 15%</span>' : '') + '<span class="xh-ban">' + esc(p.ban) + '</span>' + (p.boSung ? '<span class="xh-ban xh-bs">bổ sung</span>' : '') + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</span></span>' +
+          '<span class="xh-diem">' + p[khoa] + '<small>điểm</small></span></' + the + '>';
+      }).join('') : rong(dsBang.length ? 'Không có ai khớp với tìm kiếm.' : 'Chưa có danh sách thành viên.');
     };
     ve();
     $('#xh-q').oninput = function (e) { XH.q = e.target.value; ve(); };
     $('#xh-sx').onchange = function (e) { XH.dir = e.target.value; ve(); };
+    if ($('#xh-gd')) $('#xh-gd').onclick = function (e) { var b = e.target.closest('[data-gd]'); if (!b) return; XH.gd = b.getAttribute('data-gd'); VIEWS.xephang(); };
     if ($('#xh-ban')) $('#xh-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; XH.ban = b.getAttribute('data-b'); $$('#xh-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
-    $('#xh-trang').onclick = function (e) { var b = e.target.closest('[data-ls]'); if (b) moLichSuDiem(b.getAttribute('data-ls'), false); };
+    $('#xh-trang').onclick = function (e) { var b = e.target.closest('[data-ls]'); if (b) moLichSuDiem(b.getAttribute('data-ls'), XH.gd === '1'); };
   }).catch(loiTai);
 };
 
@@ -123,7 +151,7 @@ function veTrangChuThem(d) {
     (/^https:\/\/\S+$/.test(qc) ? '<p class="hint" style="margin-top:0">Quy chế nằm trong một file riêng.</p><a class="btn sm" target="_blank" rel="noopener" href="' + esc(qc) + '">' + ic('ext', 14) + 'Xem quy chế</a>'
       : '<p style="white-space:pre-wrap;margin:0">' + esc(qc || 'BOD chưa đăng quy chế.') + '</p>') +
     (d.loaiHoatDong && d.loaiHoatDong.length ? '<table class="xh-ls" style="margin-top:12px"><thead><tr><th>Loại hoạt động</th><th style="text-align:right">Điểm mỗi lần</th></tr></thead><tbody>' + d.loaiHoatDong.map(function (l) {
-      return '<tr><td>' + esc(l.ten) + (l.tuDong ? ' <span class="pill p-mute">cộng tự động</span>' : '') + '</td><td class="n">' + l.diem + '</td></tr>';
+      return '<tr><td>' + esc(l.ten) + (l.tuDong ? ' <span class="pill p-mute">cộng tự động</span>' : '') + (l.gioiHan ? ' <span class="hint">· tối đa ' + l.gioiHan + ' lần mỗi giai đoạn</span>' : '') + '</td><td class="n">' + l.diem + '</td></tr>';
     }).join('') + '</tbody></table>' : '') + '</div>';
 }
 </script>

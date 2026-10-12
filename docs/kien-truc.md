@@ -29,10 +29,11 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | LichSuDiem | ThoiGian, HoVaTen, LoaiHoatDong, TenHoatDong, Diem, NguoiCong, NhiemKy, HocKy | Mỗi lần cộng điểm là một dòng. Không bao giờ xoá. Điểm được ghi lại tại thời điểm cộng, nên đổi số điểm của loại hoạt động không làm đổi lịch sử. |
 | KyHoatDong | NhiemKy, HocKy, BatDau, KieuTaiLen | Mỗi giai đoạn một dòng (cột HocKy là số giai đoạn, giữ tên cũ). Dòng cuối là giai đoạn hiện tại. |
 | LuuTruThanhVien | NhiemKy, HocKy, HoVaTen, Ban | Danh sách thành viên ở đầu mỗi học kỳ, dùng để biết ai được xem điểm học kỳ 1. |
-| LoaiHoatDong | TenLoai, Diem | Mặc định Staff, Log, Tham gia hoạt động; BOD thêm hoặc sửa trong Cài đặt. |
+| LoaiHoatDong | TenLoai, Diem, CongTay, GioiHan, DungCho | File mới có sẵn 10 mức theo quy chế 2026-2027 (`MUC_DIEM_QUY_CHE`); BOD sửa trong Cài đặt hoặc bấm nạp lại mức theo quy chế. `GioiHan`: số lần tối đa mỗi người mỗi giai đoạn (trống là không giới hạn). `DungCho`: `react`, `comment` (báo cáo seeding), `gopy` (nút Đã đưa vào sử dụng); mỗi giá trị gắn với tối đa một loại. |
 | BangGhim | TieuDe, DuongDan | Link ghim trên ECOBoard. |
-| GopY | ThoiGian, NoiDung, DaDoc | Góp ý ẩn danh. |
-| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`, riêng UCV trống là `mail`). `GiaoDien`: sáng/tối/theo máy của từng người. |
+| GopY | ThoiGian, NoiDung, DaDoc, HoVaTen, DaDung, NguoiDanhDau | Góp ý. HoVaTen trống là ẩn danh. DaDung: lúc BOD xác nhận góp ý được đưa vào sử dụng (app cộng điểm cho người gửi). |
+| BaoCaoSeeding | ThoiGian, NguoiNop, LinkBai, LucDang, React, Comment, KhongKhop, TrangThai, NguoiHuy | Báo cáo seeding của HR nhóm SUP-SEED. Các dòng điểm của một báo cáo có cùng ThoiGian và NguoiCong bắt đầu bằng "Seeding: "; huỷ báo cáo thì xoá các dòng đó, báo cáo giữ lại với TrangThai Đã huỷ. |
+| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien, BanQuanLy, MaHr, NhomHr | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`, riêng UCV trống là `mail`). `GiaoDien`: sáng/tối/theo máy của từng người. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
 | Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
 | KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai đã kết nối bot Zalo (mọi tài khoản ECODesk đều có mã kết nối). |
@@ -201,7 +202,22 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - ChuDe.html dùng chung cho ECOBoard và ECODesk: tính màu ra mã hex (sáng và tối), hoa lá rơi khắp màn hình, đồ trang trí trong khung chào và đầu trang ECOBoard, lời chúc, màu lá ở màn chờ.
 - Mỗi người tắt được hiệu ứng rơi trên máy mình (Cài đặt, Giao diện sáng hoặc tối). Máy bật "giảm chuyển động" thì không có hiệu ứng.
 
-## Form cộng điểm seeding
+## Xếp hạng và top 15%
+
+- `tongHopBangDiem_` trả về điểm giai đoạn hiện tại, điểm giai đoạn 1 và tổng cả nhiệm kỳ (hai cột sau chỉ có ở giai đoạn 2, cho thành viên chính thức đã ở giai đoạn 1), kèm cờ top 15% của từng bảng.
+- Giai đoạn 1 xếp hạng thành viên chính thức, giai đoạn 2 xếp hạng tất cả. Bảng cả nhiệm kỳ dùng khi xét bù trừ KPI.
+- Số người trong top = số người được xếp hạng × 15%, làm tròn thông thường (`soNguoiTop_`, nhân trước rồi chia để tránh sai số). Người bằng điểm với người cuối trong top cũng được tính; người 0 điểm không được tính.
+
+## Báo cáo seeding trong app
+
+- Thay cho Google Form. BOD xếp HR (hoặc UCV) vào nhóm SUP-SEED ở Cài đặt, Tài khoản HR (cột `NhomHr`). Người đó thấy trang Báo cáo seeding; BOD luôn thấy.
+- Mỗi báo cáo: link bài, giờ đăng, danh sách tên react và comment (mỗi dòng một tên). Tên khớp Tên Facebook trước, không có thì khớp Họ và tên (bỏ dấu, chữ thường). BOD không được cộng.
+- Mỗi bài chỉ một báo cáo (so link sau khi bỏ www/m, tham số và dấu / cuối). Chưa đủ 48 giờ hoặc quá 7 ngày thì chỉ cảnh báo.
+- Người gửi hoặc BOD huỷ được báo cáo: điểm của báo cáo bị gỡ, rồi điền lại được.
+
+## Form cộng điểm seeding (cách cũ)
+
+- Trang Cài đặt chỉ còn hiện phần này khi form đang bật, để BOD tắt sau khi SUP-SEED chuyển sang báo cáo trong app.
 
 - Google Form seeding được liên kết câu trả lời về chính file dữ liệu (Van bấm một lần trong Form). Tab câu trả lời có cột Dấu thời gian, Họ và tên người nộp, Reaction, Comment. Tên tab tuỳ ý: app nhận tab theo mã (sheetId), đổi tên không sao.
 - BOD bật trong Cài đặt, trang "Loại hoạt động và mức điểm" (phần dưới bảng loại): chọn tab và loại hoạt động có sẵn cho từng cột. Điểm mỗi lượt lấy từ bảng LoaiHoatDong. Muốn Reaction và Comment khác điểm thì thêm hai loại riêng (ví dụ Seeding Reaction, Seeding Comment). Lưu ở CaiDat `FormSeeding`.

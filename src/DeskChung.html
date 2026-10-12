@@ -298,11 +298,20 @@ var NAV = {
 var BOTTOM = { KHACH: [], TV: ['home', 'xephang', 'gopy'], HR: ['home', 'xephang', 'task'], UCV: ['home', 'xephang', 'mail'], BOD: ['home', 'diem', 'task', 'mail'] };
 var VAI_TRO = { BOD: 'BOD', HR: 'HR', UCV: 'UCV', TV: 'Thành viên' };
 function vaiTro() { return NGUOI && NAV[NGUOI.vaiTro] ? NGUOI.vaiTro : 'KHACH'; }
+/** Thuộc một nhóm HR do BOD chọn (SUP-SEED, SUP-RES, CRE). */
+function coNhomHr(n) { return !!NGUOI && (NGUOI.nhomHr || []).indexOf(n) >= 0; }
+var BAO_CAO_SEEDING = ['seeding', 'Báo cáo seeding', 'chat'];
+/** Menu của người đang dùng: theo vai trò, thêm Báo cáo seeding cho HR nhóm SUP-SEED (BOD luôn có). */
+function navCuaToi() {
+  var nav = NAV[vaiTro()];
+  if (vaiTro() !== 'BOD' && !coNhomHr('SUP-SEED')) return nav;
+  return nav.map(function (g) { return g[0] === 'Điểm' ? [g[0], g[1].concat([BAO_CAO_SEEDING])] : g; });
+}
 /** Nhãn dưới tên người dùng: BOD hiện chức vụ (nếu danh sách thành viên có ghi), còn lại hiện vai trò. */
 function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : NGUOI.vaiTro === 'HR' && NGUOI.maHr ? VAI_TRO.HR + ' · ' + esc(NGUOI.maHr) : esc(VAI_TRO[NGUOI.vaiTro] || NGUOI.vaiTro); }
 var page = null, sub = null, soGopYMoi = 0, soViecCho = 0;
 var MENU_GON = (function () { try { return localStorage.getItem('eco_menu_gon') === '1'; } catch (e) { return false; } })();
-function flat() { return NAV[vaiTro()].reduce(function (a, g) { return a.concat(g[1]); }, []); }
+function flat() { return navCuaToi().reduce(function (a, g) { return a.concat(g[1]); }, []); }
 function tenTrang(k) { if (k === 'menu') return 'Menu'; if (k === 'thongbao') return 'Thông báo của tôi'; return (flat().filter(function (x) { return x[0] === k; })[0] || [0, 'eco'])[1]; }
 function soHuyHieu(k) { return k === 'gopy' ? soGopYMoi : k === 'mail' ? soViecCho : 0; }
 function huyHieu(k) { var n = soHuyHieu(k); return n ? '<span class="badge">' + n + '</span>' : ''; }
@@ -322,7 +331,7 @@ function shell(khongBao) {
   var nutTren = NGUOI ? '<button class="av" data-p="menu" aria-label="Menu và tài khoản">' + esc(chuCai(NGUOI.ten)) + '</button>' : '<button class="btn sm" data-p="dangnhap">Đăng nhập</button>';
   $('#app').innerHTML = '<div class="app' + (MENU_GON ? ' gon' : '') + (coTab ? '' : ' motab') + '" id="khungapp">' +
     '<aside class="side"><div class="sb-top"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><b class="sb-name">eco</b><button class="sb-thu" id="thugon" title="' + (MENU_GON ? 'Mở rộng menu' : 'Thu gọn menu') + '" aria-label="Thu gọn hoặc mở rộng menu">' + ic('dleft', 18) + '</button></div>' +
-    '<nav class="sb-nav">' + NAV[vaiTro()].map(function (g) {
+    '<nav class="sb-nav">' + navCuaToi().map(function (g) {
       return '<div class="grp">' + g[0] + '</div>' + g[1].map(function (x) { return '<button class="nav" data-p="' + x[0] + '" title="' + x[1] + '"' + (x[0] === page ? ' aria-current="page"' : '') + '>' + ic(x[2]) + '<span class="t">' + x[1] + '</span>' + huyHieu(x[0]) + '</button>'; }).join('');
     }).join('') + '</nav>' +
     '<div class="sb-user">' + nguoiDung + '</div></aside>' +
