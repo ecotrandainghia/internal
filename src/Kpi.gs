@@ -130,8 +130,12 @@ function layKpi(phien) {
   }
   var toi = tv.filter(function (t) { return String(t.HoVaTen).toLowerCase() === String(tk.HoVaTen).toLowerCase(); })[0] || { HoVaTen: String(tk.HoVaTen), Ban: '' };
   var cuaToi = task.filter(function (t) { return t.nguoi === String(tk.HoVaTen); }).sort(function (a, b) { return a.hanChot < b.hanChot ? 1 : a.hanChot > b.hanChot ? -1 : 0; });
+  // COO xem KPI log và KPI task của các thành viên thuộc ban mình phụ trách.
+  var banCoo = String(tk.VaiTro) === 'HR' || String(tk.VaiTro) === 'UCV' ? banCuaHr_(tk.BanQuanLy) : [];
   return {
     laBod: false,
+    banCoo: banCoo,
+    thanhVienBan: banCoo.length ? tv.filter(function (t) { return banCoo.indexOf(nhomBan_(t.Ban)) >= 0; }).map(function (t) { return kpiCuaNguoi_(t, task, quen, moc2, supRes, suKienLog); }) : [],
     kpi: kpiCuaNguoi_(toi, task, quen, moc2, supRes, suKienLog),
     task: cuaToi,
     quen: quen.filter(function (q) { return q.nguoiHr.toLowerCase() === String(tk.HoVaTen).toLowerCase(); }).map(cot)

@@ -224,6 +224,18 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - Chốt sự kiện (`chotSuKienLog`) cộng điểm log vượt: số buổi vượt = phần nguyên của (tham gia − giao cuối), lấy các buổi có mặt muộn nhất (buổi huỷ không được cộng điểm), theo loại hoạt động gắn với log90 / log180. Dòng điểm có NguoiCong `Log: <người chốt>` và ThoiGian = ChotLuc; Mở lại hoặc Huỷ sự kiện gỡ các dòng đó.
 - Trang KPI hiện KPI log cạnh KPI task.
 
+## Tổng kết và certificate (`src/TongKet.gs`, `src/EcoTongKet.html`)
+
+- Trang Tổng kết (BOD, quyền `baocao`): KPI log, KPI task và kết quả certificate của từng thành viên, danh sách khen thưởng top 15% giai đoạn 1, giai đoạn 2 và top cả hai giai đoạn; xuất Excel (tab Certificate, tab Khen thưởng).
+- `xetCertificate_`: log ≥ 80% và task ≥ 80% thì cấp. Mỗi phần ≥ 60% thì xét bù trừ: chính thức xếp theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức, bổ sung xếp theo điểm giai đoạn 2 trong tất cả thành viên; lọt top 40% (`xepHangTop_`, tính cả người bằng điểm, 0 điểm không tính) thì cấp. Phần chưa được giao việc (null) coi như đạt; SUP-RES miễn phần task.
+- KPI task của HR để xét certificate: phần trăm lượt nhắc không quên (`phanTramTaskCert_`); mức 80% dùng đúng điều kiện quên không quá 20%.
+- Trang báo các task chờ đánh giá và sự kiện log chưa chốt, vì kết quả lúc đó còn tạm tính. Ở giai đoạn 1 certificate chỉ là tạm tính.
+- COO (HR hoặc UCV có ban trong BanQuanLy) thấy KPI log và KPI task của thành viên các ban mình phụ trách ở trang KPI.
+
+## Ảnh thành tích (`src/ThanhTich.gs`, `src/EcoAnh.html`)
+
+- Mọi người trừ BOD. `layThanhTich` trả điểm giai đoạn, hạng, top 15%, KPI log, KPI task, số lần được cộng điểm và 3 hoạt động nhiều nhất của chính người đăng nhập. Ảnh 1080 × 1920 vẽ bằng canvas trên trình duyệt (3 màu, bật tắt hạng, KPI, hoạt động), tải về bằng `taiTep` hoặc chia sẻ trực tiếp nếu máy hỗ trợ.
+
 ## Xếp hạng và top 15%
 
 - `tongHopBangDiem_` trả về điểm giai đoạn hiện tại, điểm giai đoạn 1 và tổng cả nhiệm kỳ (hai cột sau chỉ có ở giai đoạn 2, cho thành viên chính thức đã ở giai đoạn 1), kèm cờ top 15% của từng bảng.

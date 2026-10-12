@@ -1,0 +1,71 @@
+<style>
+/* Tổng kết: xét certificate và khen thưởng top 15% (BOD). */
+.tk-the{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tk-the button{background:var(--soft);border:0;border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font:inherit}
+.tk-the button[aria-pressed="true"]{outline:2px solid var(--accent)}
+.tk-the b{display:block;font:700 24px var(--f-num);color:var(--accent)}
+.tk-the span{font-size:12px;color:var(--muted)}
+.tk-kt{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start}
+</style>
+<script>
+/* =================== Tổng kết =================== */
+var TK = { tab: 'cert', loc: 'tat', q: '' };
+function ptTk(x, mien) { return mien ? 'Miễn' : x === null || x === undefined ? '–' : x + '%'; }
+function pillCert(kq) { return '<span class="pill ' + (kq === 'Cấp' ? 'kq-dat' : kq === 'Chưa cấp' ? 'kq-chua' : 'p-info') + '">' + esc(kq) + '</span>'; }
+
+VIEWS.tongket = function () {
+  dangTai();
+  goiPhien('layTongKet').then(function (d) {
+    if (page !== 'tongket') return;
+    var dem = { tat: d.cert.length, cap: 0, butru: 0, chua: 0 };
+    d.cert.forEach(function (c) { if (c.ketQua === 'Cấp') dem.cap++; else if (c.ketQua === 'Chưa cấp') dem.chua++; else dem.butru++; });
+    var canhBao = [];
+    if (!d.gd2) canhBao.push('Đang ở giai đoạn 1 nên kết quả certificate chỉ là tạm tính. Certificate xét ở tổng kết đợt 2, sau khi có điểm giai đoạn 2.');
+    if (d.choDanhGia) canhBao.push(d.choDanhGia + ' task đã xong nhưng chưa được đánh giá, chưa tính vào KPI task. Đánh giá ở trang Task.');
+    if (d.suKienChuaChot.length) canhBao.push('Sự kiện log chưa chốt: ' + d.suKienChuaChot.join(', ') + '. Số buổi được giao cuối của các sự kiện này đang tạm tính.');
+    $('#main').innerHTML = '<div class="head"><div><h2>Tổng kết</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
+      'Log và task từ 80% trở lên thì cấp certificate. Mỗi phần từ 60% trở lên thì xét bù trừ: lọt top 40% bảng xếp hạng bù trừ (chính thức theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức, bổ sung theo điểm giai đoạn 2 trong tất cả thành viên) thì cấp. Phần chưa được giao việc gì coi như đạt.</p></div>' +
+      '<button class="btn ghost sm" id="tk-x">' + ic('sheet', 14) + 'Xuất Excel</button></div>' +
+      canhBao.map(function (c) { return '<div class="note">' + ic('info') + '<span>' + esc(c) + '</span></div>'; }).join('') +
+      '<div class="row" id="tk-tab">' + [['cert', 'Certificate'], ['kt', 'Khen thưởng top 15%']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (TK.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '<span id="tk-m"></span></div><div id="tk"></div>';
+    var veCert = function () {
+      $('#tk').innerHTML = '<div class="tk-the" id="tk-loc">' + [['tat', 'Tất cả thành viên'], ['cap', 'Cấp (đạt cả hai)'], ['butru', 'Cấp nhờ bù trừ'], ['chua', 'Chưa cấp']].map(function (x) {
+        return '<button data-loc="' + x[0] + '" aria-pressed="' + (TK.loc === x[0]) + '"><b>' + dem[x[0]] + '</b><span>' + x[1] + '</span></button>';
+      }).join('') + '</div><div class="xh-tools" style="margin:12px 0 10px"><input type="search" id="tk-q" placeholder="Tìm tên…" value="' + esc(TK.q) + '" aria-label="Tìm thành viên"></div>' +
+        '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Kết quả</th><th>Ban</th><th class="n">KPI log</th><th class="n">KPI task</th><th class="n">Hạng bù trừ</th></tr></thead><tbody id="tk-b"></tbody></table></div></div>';
+      var ve = function () {
+        var q = boDau(TK.q);
+        var ds = d.cert.filter(function (c) {
+          var hop = TK.loc === 'tat' || (TK.loc === 'cap' ? c.ketQua === 'Cấp' : TK.loc === 'chua' ? c.ketQua === 'Chưa cấp' : c.ketQua === 'Cấp nhờ bù trừ');
+          return hop && boDau(c.ten).indexOf(q) >= 0;
+        });
+        $('#tk-b').innerHTML = ds.map(function (c) {
+          var duoi = function (x, mien) { return !mien && x !== null && x !== undefined && x < 80 ? ' style="color:var(--bad)"' : ''; };
+          return '<tr><td>' + esc(c.ten) + (c.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td>' + pillCert(c.ketQua) + '</td><td class="muted">' + esc(c.ban) + '</td>' +
+            '<td class="n" title="Tham gia ' + esc(c.chiTietLog) + ' buổi được giao cuối"><b' + duoi(c.log) + '>' + ptTk(c.log) + '</b></td>' +
+            '<td class="n"' + (c.choDanhGia ? ' title="' + c.choDanhGia + ' task chờ đánh giá"' : '') + '><b' + duoi(c.task, c.mien) + '>' + ptTk(c.task, c.mien) + '</b>' + (c.choDanhGia ? ' <span class="muted">(' + c.choDanhGia + ' chờ)</span>' : '') + '</td>' +
+            '<td class="n">' + (c.buTru ? (c.hangBuTru ? c.hangBuTru + '/' + c.soBuTru : '–') + ' <span class="muted">· ' + c.diemBuTru + 'đ</span>' : '') + '</td></tr>';
+        }).join('') || '<tr><td colspan="6" class="muted">Không có ai.</td></tr>';
+      };
+      ve();
+      $('#tk-q').oninput = function (e) { TK.q = e.target.value; ve(); };
+      $('#tk-loc').onclick = function (e) { var b = e.target.closest('[data-loc]'); if (!b) return; TK.loc = b.getAttribute('data-loc'); $$('#tk-loc button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
+    };
+    var veKt = function () {
+      var bang = function (tieuDe, ds, mo) {
+        return '<div class="card"><div class="ctitle"><h3>' + ic('star', 18) + ' ' + tieuDe + '</h3><span class="hint">' + ds.length + ' người</span></div>' + (mo ? '<p class="hint" style="margin:0 0 8px">' + mo + '</p>' : '') +
+          (ds.length ? '<div class="tscroll"><table class="kpi-bang"><tbody>' + ds.map(function (p, i) { return '<tr><td class="n muted" style="width:30px">' + (i + 1) + '</td><td>' + esc(p.ten) + '</td><td class="muted">' + esc(p.ban) + '</td><td class="n"><b>' + p.diem + '</b></td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="hint" style="margin:0">Chưa có ai.</p>') + '</div>';
+      };
+      $('#tk').innerHTML = '<div class="tk-kt">' + bang('Top 15% giai đoạn 1', d.khenThuong.gd1, 'Chỉ xếp hạng thành viên chính thức.') +
+        (d.gd2 ? bang('Top 15% giai đoạn 2', d.khenThuong.gd2, 'Xếp hạng tất cả thành viên.') + bang('Top cả hai giai đoạn', d.khenThuong.caHai, 'Lọt top 15% ở cả giai đoạn 1 và giai đoạn 2. Điểm là tổng cả nhiệm kỳ.') : '') + '</div>';
+    };
+    (TK.tab === 'kt' ? veKt : veCert)();
+    $('#tk-tab').onclick = function (e) { var b = e.target.closest('[data-tab]'); if (!b) return; TK.tab = b.getAttribute('data-tab'); $$('#tk-tab .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); (TK.tab === 'kt' ? veKt : veCert)(); };
+    $('#tk-x').onclick = function () {
+      var b = this; b.disabled = true; thongBao($('#tk-m'), 'cho', 'Đang tạo file…');
+      goiPhien('xuatExcelTongKet').then(function (f) { b.disabled = false; taiTep(f, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); thongBao($('#tk-m'), 'ok', 'Đã tải ' + f.ten); })
+        .catch(function (err) { b.disabled = false; thongBao($('#tk-m'), 'loi', err.message); });
+    };
+  }).catch(loiTai);
+};
+</script>

@@ -2096,6 +2096,86 @@ function docDangKyLog_(values, toolCu) {
   return buoi.map(function (b) { return { ten: b.ten, dangKy: b.dangKy }; });
 }
 
+/* ===================== Tổng kết và certificate (quy chế 2026-2027, mục II.5, III.4) ===================== */
+
+var TI_LE_BU_TRU = 40, MUC_DAT = 80, MUC_BU_TRU = 60;
+var KQ_CERT = { CAP: 'Cấp', CAP_BU_TRU: 'Cấp nhờ bù trừ', CHUA: 'Chưa cấp' };
+
+/**
+ * Những người trong top tiLe% theo một cột điểm (mặc định 15%). Người bằng điểm với người cuối trong top cũng được tính,
+ * người 0 điểm không được tính. Trả về { top: {tên viết thường: true}, hang: {tên viết thường: hạng} }.
+ */
+function xepHangTop_(ds, khoa, tiLe) {
+  var top = {}, hang = {};
+  var sx = ds.filter(function (p) { return p[khoa] !== null && p[khoa] !== undefined; }).sort(function (a, b) { return b[khoa] - a[khoa]; });
+  sx.forEach(function (p, i) { hang[String(p.ten).toLowerCase()] = i && sx[i - 1][khoa] === p[khoa] ? hang[String(sx[i - 1].ten).toLowerCase()] : i + 1; });
+  var k = Math.round(sx.length * tiLe / 100);
+  if (k) {
+    var nguong = sx[k - 1][khoa];
+    sx.forEach(function (p) { if (p[khoa] > 0 && p[khoa] >= nguong) top[String(p.ten).toLowerCase()] = true; });
+  }
+  return { top: top, hang: hang, so: sx.length };
+}
+
+/**
+ * Phần trăm KPI task để xét certificate. Thành viên ban HR: phần trăm lượt nhắc không quên.
+ * SUP-RES được miễn: null (không xét phần task). Chưa có task nào có kết quả: null.
+ */
+function phanTramTaskCert_(k) {
+  if (k.mien) return null;
+  if (k.hr) return k.hr.luot ? Math.round((k.hr.luot - k.hr.soQuen) * 100 / k.hr.luot + 1e-9) : null;
+  return k.task ? k.task.tiLe : null;
+}
+
+/**
+ * Xét certificate cho từng người.
+ * ds: [{ ten, ban, boSung, kpi (như kpiCuaNguoi_), diemCaKy, diemGd2 }]. diemCaKy: tổng cả nhiệm kỳ (thành viên chính thức),
+ * diemGd2: điểm giai đoạn 2.
+ * - Log ≥ 80% và task ≥ 80% (HR: không quên quá 20%): cấp.
+ * - Mỗi phần ≥ 60%: xét bù trừ. Chính thức xếp theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức; bổ sung xếp theo
+ *   điểm giai đoạn 2 trong tất cả thành viên. Lọt top 40% (tính cả người bằng điểm, 0 điểm không tính) thì cấp.
+ * - Có phần dưới 60%: chưa cấp.
+ * Phần chưa được giao việc gì (null) coi như đạt.
+ */
+function xetCertificate_(ds) {
+  var chinhThuc = ds.filter(function (p) { return !p.boSung; }).map(function (p) { return { ten: p.ten, d: p.diemCaKy === null || p.diemCaKy === undefined ? Number(p.diemGd2) || 0 : p.diemCaKy }; });
+  var tatCa = ds.map(function (p) { return { ten: p.ten, d: Number(p.diemGd2) || 0 }; });
+  var xhCt = xepHangTop_(chinhThuc, 'd', TI_LE_BU_TRU), xhBs = xepHangTop_(tatCa, 'd', TI_LE_BU_TRU);
+  return ds.map(function (p) {
+    var log = p.kpi.log ? p.kpi.log.tiLe : null, task = phanTramTaskCert_(p.kpi);
+    var dat = function (x, muc) { return x === null || x === undefined || x >= muc; };
+    var taskDat = p.kpi.hr ? (p.kpi.hr.luot ? p.kpi.hr.dat : true) : dat(task, MUC_DAT);
+    var kq = { ten: p.ten, ban: p.ban, boSung: !!p.boSung, log: log, task: task, mien: !!p.kpi.mien, buTru: false, top40: false, hangBuTru: null, soBuTru: null, diemBuTru: null };
+    if (dat(log, MUC_DAT) && taskDat) kq.ketQua = KQ_CERT.CAP;
+    else if (dat(log, MUC_BU_TRU) && dat(task, MUC_BU_TRU)) {
+      var xh = p.boSung ? xhBs : xhCt, k = String(p.ten).toLowerCase();
+      kq.buTru = true;
+      kq.top40 = !!xh.top[k];
+      kq.hangBuTru = xh.hang[k] || null;
+      kq.soBuTru = xh.so;
+      kq.diemBuTru = (p.boSung ? tatCa : chinhThuc).filter(function (x) { return String(x.ten).toLowerCase() === k; })[0].d;
+      kq.ketQua = kq.top40 ? KQ_CERT.CAP_BU_TRU : KQ_CERT.CHUA;
+    } else kq.ketQua = KQ_CERT.CHUA;
+    return kq;
+  });
+}
+
+/**
+ * Danh sách khen thưởng theo điểm từ bảng xếp hạng (tongHopBangDiem_): top 15% giai đoạn 1, giai đoạn 2, và người lọt top cả hai.
+ * Ở giai đoạn 1 chỉ có danh sách giai đoạn 1.
+ */
+function danhSachKhenThuong_(bang, gd2) {
+  var lay = function (loc, khoa) {
+    return bang.filter(loc).map(function (p) { return { ten: p.ten, ban: p.ban, diem: p[khoa] }; }).sort(function (a, b) { return b.diem - a.diem; });
+  };
+  if (!gd2) return { gd1: lay(function (p) { return p.top; }, 'diem'), gd2: [], caHai: [] };
+  return {
+    gd1: lay(function (p) { return p.topHk1; }, 'diemHk1'),
+    gd2: lay(function (p) { return p.top; }, 'diem'),
+    caHai: lay(function (p) { return p.topHk1 && p.top; }, 'diemCaKy')
+  };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI, LOAI_TV: LOAI_TV,
@@ -2127,6 +2207,7 @@ if (typeof module !== 'undefined') {
     DUNG_CHO: DUNG_CHO, MUC_DIEM_QUY_CHE: MUC_DIEM_QUY_CHE, loaiDungCho: loaiDungCho_,
     NHOM_HR: NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_,
     TRANG_THAI_BUOI: TRANG_THAI_BUOI, SU_KIEN_CHOT: SU_KIEN_CHOT, SU_KIEN_HUY: SU_KIEN_HUY, khoiLop: khoiLop_, giaoBanDau: giaoBanDau_, chuanHoaSuKienLog: chuanHoaSuKienLog_, chuanHoaBuoiLog: chuanHoaBuoiLog_,
-    soBuoiThucDien: soBuoiThucDien_, giaoCuoi: giaoCuoi_, kpiLogSuKien: kpiLogSuKien_, kpiLogCuaNguoi: kpiLogCuaNguoi_, dongDiemLogVuot: dongDiemLogVuot_, docDangKyLog: docDangKyLog_
+    soBuoiThucDien: soBuoiThucDien_, giaoCuoi: giaoCuoi_, kpiLogSuKien: kpiLogSuKien_, kpiLogCuaNguoi: kpiLogCuaNguoi_, dongDiemLogVuot: dongDiemLogVuot_, docDangKyLog: docDangKyLog_,
+    KQ_CERT: KQ_CERT, xepHangTop: xepHangTop_, phanTramTaskCert: phanTramTaskCert_, xetCertificate: xetCertificate_, danhSachKhenThuong: danhSachKhenThuong_
   };
 }
