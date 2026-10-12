@@ -25,6 +25,7 @@ function layBaoCaoSeeding(phien) {
     comment: muc(DUNG_CHO.COMMENT),
     thieuFb: tv.filter(function (t) { return !chuanTenFb_(t.TenFacebook); }).length,
     laBod: String(tk.VaiTro) === 'BOD',
+    nhac: cacNhacSeedingCua_(tk.Email),
     ds: docBangNhiemKy_('BaoCaoSeeding', 'ThoiGian').map(function (b) {
       return {
         thoiGian: new Date(b.ThoiGian).getTime(), nguoiNop: String(b.NguoiNop), link: String(b.LinkBai),

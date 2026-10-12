@@ -35,7 +35,10 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | BaoCaoSeeding | ThoiGian, NguoiNop, LinkBai, LucDang, React, Comment, KhongKhop, TrangThai, NguoiHuy | Báo cáo seeding của HR nhóm SUP-SEED. Các dòng điểm của một báo cáo có cùng ThoiGian và NguoiCong bắt đầu bằng "Seeding: "; huỷ báo cáo thì xoá các dòng đó, báo cáo giữ lại với TrangThai Đã huỷ. |
 | TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien, BanQuanLy, MaHr, NhomHr | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`, riêng UCV trống là `mail`). `GiaoDien`: sáng/tối/theo máy của từng người. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
-| Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. |
+| Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong, NgayNop, HanGoc, NgayXinGiaHan, ChatLuong, DauHieu, NguoiDanhGia, LucDanhGia, PhanHoi, HrPhuTrach | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. NgayNop: ngày nộp khi đánh dấu xong. HanGoc, NgayXinGiaHan: gia hạn hợp lệ. ChatLuong, DauHieu: BOD đánh giá. HrPhuTrach: HR phụ trách người làm lúc giao task. |
+| PhuTrachHr | HoVaTen, NguoiHr | HR COO phụ trách nhắc deadline cho từng thành viên (BOD chọn trong Cài đặt). |
+| HrQuen | ThoiGian, NguoiHr, Loai, MoTa, ThamChieu, NguoiGhi, NhiemKy, HocKy, TrangThai | Các lần BOD ghi nhận HR quên (nhắc deadline, chúc mừng sinh nhật, báo cáo seeding). Huỷ thì TrangThai = Đã huỷ. |
+| NhacSeeding | ThoiGian, Email, HoVaTen, LinkBai, LucDang, LucNhac, DaNhac | Nhắc 48 giờ HR nhóm SUP-SEED tự đặt. Lịch `nhacSeedingTheoGio` chạy mỗi giờ (tự cài khi có người đặt nhắc). |
 | KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai đã kết nối bot Zalo (mọi tài khoản ECODesk đều có mã kết nối). |
 | ThietBi | Email, DiaChi, Khoa, TenMay, ThoiGian, LayCuoi | Điện thoại/máy đã bật thông báo của app (địa chỉ đẩy tin của trình duyệt và mã riêng của máy). |
 | ThongBao | ThoiGian, Email, TieuDe, NoiDung | Thông báo app đã gửi, để máy lấy nội dung. Tự xoá sau 30 ngày. |
@@ -201,6 +204,14 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - `doGet` gắn `data-chude` vào thẻ html ngay khi tạo trang (Halloween gắn thêm `data-theme="dark"`), nên không bị nháy màu.
 - ChuDe.html dùng chung cho ECOBoard và ECODesk: tính màu ra mã hex (sáng và tối), hoa lá rơi khắp màn hình, đồ trang trí trong khung chào và đầu trang ECOBoard, lời chúc, màu lá ở màn chờ.
 - Mỗi người tắt được hiệu ứng rơi trên máy mình (Cài đặt, Giao diện sáng hoặc tối). Máy bật "giảm chuyển động" thì không có hiệu ứng.
+
+## KPI task và KPI của HR
+
+- Quyền task: mọi BOD như nhau (xem, quản lý task của mọi người trừ BOD; không còn theo chức vụ). HR là COO của ban ghi ở cột BanQuanLy (danh sách ban lấy từ cột Ban, trừ BOD và HR); chưa phân ban thì chỉ thấy task của mình. Thành viên, UCV xem task của mình ở trang KPI.
+- Kết quả từng task (`ketQuaTask_`): đúng hạn so ngày nộp với hạn chót (gia hạn chỉ ghi được khi xin trước hạn ít nhất 24 giờ), chất lượng do BOD chấm; bảng 3 × 3 của quy chế. Không hoàn thành là Không làm, tự Chưa đạt.
+- KPI task (`tongKpiTask_`): số task đạt ÷ số task đã có kết quả, làm tròn. Thành viên bổ sung chỉ tính task giao từ lúc bắt đầu giai đoạn 2. SUP-RES được miễn (không giao task được cho họ).
+- KPI của thành viên ban HR (`kpiHr_`): 2 lượt nhắc cho mỗi task có HrPhuTrach là người đó; đạt khi số lần quên (tab HrQuen) không quá 20% số lượt, làm tròn.
+- Lịch nhắc mặc định (khi chưa ai chỉnh) theo tài liệu training HR: 20:00 trước hạn 1 ngày, 07:00 ngày hạn, 07:00 sau hạn 1 ngày.
 
 ## Xếp hạng và top 15%
 

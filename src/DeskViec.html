@@ -62,7 +62,7 @@ VIEWS.task = function () {
       '<input type="search" id="tq" placeholder="Tìm theo tên task hoặc người phụ trách…" aria-label="Tìm task"></div>' +
       (d.dsNhom.length > 1 ? '<div class="toolbar"><div class="seg" id="tban">' + [''].concat(d.dsNhom).map(function (n) { return '<button data-b="' + esc(n) + '" aria-pressed="' + (n === nhom) + '">' + (n ? esc(n) : 'Mọi ban') + '</button>'; }).join('') + '</div></div>' : '') +
       '<div id="tam"></div><div class="tasks" id="tl"></div>' +
-      '<p class="hint">“Đang mở” gồm mọi task chưa xong, chưa huỷ và chưa bị tính không hoàn thành. “Sắp đến hạn” là còn ' + (d.sapDenHanNgay === 0 ? 'đúng ngày hạn' : d.sapDenHanNgay + ' ngày trở xuống') + '. Trễ quá ' + d.khongHoanThanhSau + ' ngày mà chưa xong thì tính là không hoàn thành, thôi nhắc; muốn cho thêm thời gian thì sửa hạn chót. Task đã xong, đã huỷ hoặc không hoàn thành được giữ ở đây 120 ngày.</p>';
+      '<p class="hint">“Đang mở” gồm mọi task chưa xong, chưa huỷ và chưa bị tính không hoàn thành. “Sắp đến hạn” là còn ' + (d.sapDenHanNgay === 0 ? 'đúng ngày hạn' : d.sapDenHanNgay + ' ngày trở xuống') + '. Trễ quá ' + d.khongHoanThanhSau + ' ngày mà chưa xong thì tính là không hoàn thành, thôi nhắc. Thành viên xin gia hạn trước hạn ít nhất 24 giờ thì bấm Gia hạn. Task đã xong được BOD đánh giá chất lượng, app tự ra Đạt hoặc Chưa đạt. Task đã xong, đã huỷ hoặc không hoàn thành được giữ ở đây 120 ngày.</p>';
 
     var ve = function () {
       var q = boDau(tim);
@@ -71,18 +71,55 @@ VIEWS.task = function () {
       $('#tl').innerHTML = rows.map(function (t) {
         var i = d.task.indexOf(t), mo = laMo(t), st = ST_TASK[t.trangThai] || ['p-mute', ''];
         return '<div class="task ' + st[1] + '"><div><div class="tt">' + esc(t.ten) + '</div>' + (t.moTa ? '<div class="md">' + esc(t.moTa) + '</div>' : '') +
-          '<div class="meta"><span class="pill ' + st[0] + '">' + esc(t.trangThai) + '</span><span>' + ic('users', 14) + ' <b>' + esc(t.nguoi) + '</b></span><span>' + ic('clock', 14) + ' Hạn <b>' + hienNgay(t.hanChot) + '</b></span><span>' + esc(t.kieuTao) + ' bởi ' + esc(t.nguoiTao) + ' · ' + ngayGio(t.thoiGianTao) + '</span></div></div>' +
-          '<div class="act">' + (!t.sua ? (t.nguoi !== NGUOI.ten ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button>' : t.trangThai === 'Đã xong' ? '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>' : '') : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : t.trangThai === 'Không hoàn thành' ? '<button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa hạn</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
+          '<div class="meta"><span class="pill ' + st[0] + '">' + esc(t.trangThai) + '</span>' + pillKetQua(t.ketQua) + '<span>' + ic('users', 14) + ' <b>' + esc(t.nguoi) + '</b></span><span>' + ic('clock', 14) + ' Hạn <b>' + hienNgay(t.hanChot) + '</b>' + (t.hanGoc ? ' (gia hạn từ ' + hienNgay(t.hanGoc) + ')' : '') + '</span>' + (t.ngayNop ? '<span>Nộp ' + hienNgay(t.ngayNop) + (t.dungHan ? ' · ' + esc(t.dungHan) : '') + '</span>' : '') + '<span>' + esc(t.kieuTao) + ' bởi ' + esc(t.nguoiTao) + ' · ' + ngayGio(t.thoiGianTao) + '</span>' + (t.hrPhuTrach ? '<span>HR phụ trách: ' + esc(t.hrPhuTrach) + '</span>' : '') + '</div>' +
+          (t.chatLuong ? '<div class="md">' + esc(t.chatLuong) + ' · ' + esc(t.nguoiDanhGia) + (t.dauHieu ? ': ' + esc(t.dauHieu) : '') + (t.phanHoi ? '<br>Phản hồi của ' + esc(t.nguoi) + ': ' + esc(t.phanHoi) : '') + '</div>' : '') + '</div>' +
+          '<div class="act">' + (NGUOI.vaiTro === 'BOD' && t.trangThai === 'Đã xong' ? '<button class="btn sm" data-dg="' + i + '">' + ic('star', 14) + (t.chatLuong ? 'Sửa đánh giá' : 'Đánh giá') + '</button>' : '') +
+          (t.sua && mo ? '<button class="btn ghost sm" data-gh="' + i + '">Gia hạn</button>' : '') +
+          (NGUOI.vaiTro === 'BOD' && t.trangThai !== 'Đã huỷ' && t.hrPhuTrach ? '<button class="btn ghost sm" data-quen="' + i + '">HR quên nhắc</button>' : '') + (!t.sua ? (t.nguoi !== NGUOI.ten ? '' : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button>' : t.trangThai === 'Đã xong' ? '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>' : '') : mo ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : t.trangThai === 'Không hoàn thành' ? '<button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa hạn</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
       }).join('') || rong(ic('check') + 'Không có task nào.');
       $$('#tl [data-st]').forEach(function (b) {
         b.onclick = function () {
           var t = d.task[Number(b.getAttribute('data-i'))], st = b.getAttribute('data-st');
+          if (st === 'Đã xong') { hopTask(t, 'xong'); return; }
           if (st === 'Đã huỷ' && !xacNhan(b, 'Huỷ thật?')) return;
           b.disabled = true;
           goiPhien('doiTrangThaiTask', t.thoiGianTao, t.nguoi, st).then(function () { VIEWS.task(); }).catch(function (err) { b.disabled = false; thongBao($('#tam'), 'loi', err.message); });
         };
       });
+      $$('#tl [data-dg]').forEach(function (b) { b.onclick = function () { hopTask(d.task[Number(b.getAttribute('data-dg'))], 'danhgia'); }; });
+      $$('#tl [data-gh]').forEach(function (b) { b.onclick = function () { hopTask(d.task[Number(b.getAttribute('data-gh'))], 'giahan'); }; });
+      $$('#tl [data-quen]').forEach(function (b) { b.onclick = function () { hopTask(d.task[Number(b.getAttribute('data-quen'))], 'quen'); }; });
       $$('#tl [data-edit]').forEach(function (b) { b.onclick = function () { moForm(d.task[Number(b.getAttribute('data-edit'))]); }; });
+    };
+
+    /** Hộp nhỏ cho một task: ghi ngày nộp khi xong, đánh giá (BOD), gia hạn, ghi nhận HR quên nhắc. */
+    var hopTask = function (t, kieu) {
+      var CL = ['Hoàn chỉnh', 'Cần chỉnh sửa', 'Làm quá sơ sài'];
+      var cfg = {
+        xong: { tieuDe: 'Đánh dấu đã xong', nut: 'Đã xong', than: '<label class="f">Ngày nộp <small>Ngày người làm nộp sản phẩm. Nộp sau hạn chót thì tính trễ hạn.</small><input type="date" id="hx" value="' + d.homNay + '" max="' + d.homNay + '"></label>' },
+        danhgia: { tieuDe: 'Đánh giá chất lượng', nut: 'Lưu đánh giá', than: '<div class="types" id="hcl">' + CL.map(function (c) { return '<button type="button" class="type" aria-pressed="' + (c === (t.chatLuong || 'Hoàn chỉnh')) + '" data-cl="' + c + '"><b>' + c + '</b></button>'; }).join('') + '</div>' +
+          '<p class="hint" style="margin:0">Hoàn chỉnh: dùng được ngay. Cần chỉnh sửa: làm nghiêm túc nhưng cần điều chỉnh, kể cả khi chưa đúng ý. Làm quá sơ sài: thiếu quá nửa phần việc, làm khác hẳn yêu cầu, nộp bản nháp, file trống hoặc chép nguyên mẫu. Chưa đúng ý không phải là sơ sài.</p>' +
+          '<label class="f">Dấu hiệu, nhận xét <small>Bắt buộc khi chọn Làm quá sơ sài. Người làm đọc được.</small><textarea id="hdh" rows="3" maxlength="1000">' + esc(t.dauHieu) + '</textarea></label>' +
+          '<p class="hint" style="margin:0">Nộp ' + hienNgay(t.ngayNop) + ', hạn ' + hienNgay(t.hanChot) + ': ' + esc(t.dungHan) + '.</p>' },
+        giahan: { tieuDe: 'Gia hạn', nut: 'Lưu gia hạn', than: '<p class="hint" style="margin:0">Chỉ tính là gia hạn khi thành viên xin trước hạn ít nhất 24 giờ (muộn nhất là ngày trước hạn chót ' + hienNgay(t.hanChot) + ') và được chấp thuận. Xin muộn hơn thì không gia hạn, nộp sau hạn là trễ hạn.</p>' +
+          '<div class="grid2"><label class="f">Thành viên xin vào ngày<input type="date" id="hgx" value="' + d.homNay + '" max="' + d.homNay + '"></label><label class="f">Hạn chót mới<input type="date" id="hgm" value="' + congNgay(t.hanChot, 2) + '"></label></div>' },
+        quen: { tieuDe: 'HR quên nhắc', nut: 'Ghi nhận', than: '<p class="hint" style="margin:0">Ghi nhận ' + esc(t.hrPhuTrach) + ' (HR phụ trách ' + esc(t.nguoi) + ') quên một lượt nhắc của task này. Lần quên tính vào KPI của ' + esc(t.hrPhuTrach) + '.</p>' +
+          '<label class="f">Lượt quên<select id="hql"><option>Lượt tối trước hạn 1 ngày</option><option>Lượt sáng ngày hạn</option></select></label>' }
+      }[kieu];
+      moHop({ tieuDe: cfg.tieuDe, than: '<form class="form" id="htf"><p style="margin:0"><b>' + esc(t.ten) + '</b> · ' + esc(t.nguoi) + '</p>' + cfg.than + '<button hidden></button></form>',
+        chan: '<span class="msg" id="htm"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="htb">' + cfg.nut + '</button>' });
+      if ($('#hcl')) $('#hcl').onclick = function (e) { var b = e.target.closest('[data-cl]'); if (!b) return; $$('#hcl .type').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
+      var gui = function (e) {
+        if (e) e.preventDefault();
+        var p = kieu === 'xong' ? goiPhien('doiTrangThaiTask', t.thoiGianTao, t.nguoi, 'Đã xong', $('#hx').value)
+          : kieu === 'danhgia' ? goiPhien('danhGiaTask', t.thoiGianTao, t.nguoi, { chatLuong: $('#hcl [aria-pressed=true]').getAttribute('data-cl'), dauHieu: $('#hdh').value })
+          : kieu === 'giahan' ? goiPhien('giaHanTask', t.thoiGianTao, t.nguoi, { ngayXin: $('#hgx').value, hanMoi: $('#hgm').value })
+          : goiPhien('ghiHrQuen', { loai: 'Nhắc deadline', nguoiHr: t.hrPhuTrach, moTa: $('#hql').value, thamChieu: t.ten + ' (' + t.nguoi + ', hạn ' + hienNgay(t.hanChot) + ')' });
+        $('#htb').disabled = true; thongBao($('#htm'), 'cho', 'Đang lưu…');
+        p.then(function () { dongHop(true); VIEWS.task(); setTimeout(function () { thongBao($('#tam'), 'ok', 'Đã lưu'); }, 900); })
+          .catch(function (err) { $('#htb').disabled = false; thongBao($('#htm'), 'loi', err.message); });
+      };
+      $('#htf').onsubmit = gui; $('#htb').onclick = gui;
     };
 
     var moForm = function (t) {
@@ -331,7 +368,8 @@ var SET = [
     ['sign', 'edit', 'Chữ ký thư', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature'],
     ['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt']]],
   ['Làm log', [['logcfg', 'file', 'File mẫu và thư mục lưu', function () { return CD.log.linkMau ? 'Đã có file mẫu' : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive']]],
-  ['Thành viên', [['sinhnhat', 'clock', 'Lịch sinh nhật', function () { return 'Lịch Google cho nhóm CRE, tự cập nhật mỗi lần tải danh sách'; }, 'sinh nhật lịch calendar google cre chúc mừng chia sẻ']]],
+  ['Thành viên', [['phancong', 'users', 'HR phụ trách thành viên', function () { return 'Mỗi thành viên một HR COO phụ trách nhắc deadline'; }, 'phân công hr coo phụ trách nhắc deadline kpi lượt nhắc quên'],
+    ['sinhnhat', 'clock', 'Lịch sinh nhật', function () { return 'Lịch Google cho nhóm CRE, tự cập nhật mỗi lần tải danh sách'; }, 'sinh nhật lịch calendar google cre chúc mừng chia sẻ']]],
   ['Tài khoản và đăng nhập', [['hr', 'users', 'Tài khoản HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' tài khoản'; }, 'ban nhân sự hr quyền tài khoản phân ban quản lý pg pr ad mã hr'],
     ['ucv', 'users', 'Tài khoản UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' tài khoản'; }, 'UCV ucv tài khoản mail'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại'],
@@ -629,7 +667,10 @@ var SUB = {
         (lich.length > 1 ? '<button type="button" class="ibtn" data-xm="' + i + '" aria-label="Bỏ mốc này">' + ic('x', 14) + '</button>' : '<span></span>') + '</div>';
     };
     var veMoc = function () {
-      $('#dsmoc').innerHTML = lich.map(chonMoc).join('') + (lich.length < 10 ? '<div><button type="button" class="btn ghost sm" id="themmoc">' + ic('plus', 14) + 'Thêm mốc</button></div>' : '');
+      $('#dsmoc').innerHTML = lich.map(chonMoc).join('') + '<div class="row">' + (lich.length < 10 ? '<button type="button" class="btn ghost sm" id="themmoc">' + ic('plus', 14) + 'Thêm mốc</button>' : '') +
+        '<button type="button" class="btn ghost sm" id="lichtr">Dùng lịch theo tài liệu training HR</button></div>';
+      // Tài liệu training HR 2627: tối trước hạn 1 ngày, sáng ngày hạn, sáng sau hạn 1 ngày (nhắc riêng người trễ).
+      $('#lichtr').onclick = function () { lich = [{ ngay: -1, gio: 20, phut: 0 }, { ngay: 0, gio: 7, phut: 0 }, { ngay: 1, gio: 7, phut: 0 }]; veMoc(); thongBao($('#m'), 'cho', 'Đã đổi lịch, bấm Lưu để áp dụng.'); };
       $$('#dsmoc [data-mn]').forEach(function (x) { x.onchange = function () { lich[Number(x.getAttribute('data-mn'))].ngay = x.value === 'T' ? 'T' : Number(x.value); }; });
       $$('#dsmoc [data-mg]').forEach(function (x) { x.onchange = function () { var v = Number(x.value), m = lich[Number(x.getAttribute('data-mg'))]; m.gio = Math.floor(v / 60); m.phut = v % 60; }; });
       $$('#dsmoc [data-xm]').forEach(function (x) { x.onclick = function () { lich.splice(Number(x.getAttribute('data-xm')), 1); veMoc(); }; });
@@ -769,9 +810,9 @@ var SUB = {
     var daCo = {}; CD.taiKhoan.forEach(function (t) { if (t.vaiTro !== 'TV') daCo[t.email.toLowerCase()] = true; });
     var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()] && t.ban.trim().toUpperCase() !== 'BOD'; });
     // HR được phân quản lý một số ban: chỉ thấy, thao tác và được nhắc deadline task của các ban đó.
-    var cacBan = ['PG', 'PR', 'AD'];
-    var chuaAi = vaiTro !== 'HR' || hr.some(function (t) { return !t.banQuanLy.some(function (b) { return cacBan.indexOf(b) >= 0; }); }) ? []
-      : cacBan.filter(function (b) { return !hr.some(function (t) { return t.banQuanLy.indexOf(b) >= 0; }); });
+    var cacBan = [];
+    CD.thanhVien.forEach(function (t) { var n = String(t.ban).trim().split(/\s+/)[0].toUpperCase(); if (n && n !== 'BOD' && n !== 'HR' && cacBan.indexOf(n) < 0) cacBan.push(n); });
+    var chuaAi = vaiTro !== 'HR' ? [] : cacBan.filter(function (b) { return !hr.some(function (t) { return t.banQuanLy.indexOf(b) >= 0; }); });
     // Nhóm HR do BOD chọn: SUP-SEED điền báo cáo seeding, SUP-RES được miễn task ban, CRE lo bonding và sinh nhật.
     var NHOM = [['SUP-SEED', 'điền báo cáo seeding'], ['SUP-RES', 'miễn task ban'], ['CRE', 'bonding, sinh nhật']];
     var phanNhom = function (t, i) {
@@ -783,8 +824,8 @@ var SUB = {
         phanNhom(t, i) + (cacBan.length ? '<span class="hint">COO ban:</span>' + cacBan.map(function (n) { return '<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" data-pb="' + i + '" value="' + esc(n) + '"' + (t.banQuanLy.indexOf(n) >= 0 ? ' checked' : '') + '>' + esc(n) + '</label>'; }).join('') : '') +
         '<button class="btn ghost sm" data-luupb="' + i + '">Lưu</button><span id="pbm' + i + '"></span></div>';
     };
-    $('#subbody').innerHTML = '<div class="note info">' + ic('info') + '<span>Nhóm: <b>SUP-SEED</b> điền báo cáo seeding để cộng điểm, <b>SUP-RES</b> được miễn task ban, <b>CRE</b> lo bonding và chúc mừng sinh nhật. Một người có thể ở nhiều nhóm.</span></div>' + (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>COO quản lý task của PG, PR và AD. HR chỉ thấy, giao và được nhắc deadline task của thành viên các ban mình được phân. Mọi HR cùng quản lý một ban đều được nhắc. Chưa phân ban thì HR quản lý cả ba ban. Task của ban HR do Head HR quản lý và nhắc.</span></div>' : '') +
-      (chuaAi.length ? '<p class="err">Ban ' + chuaAi.join(', ') + ' chưa có HR nào quản lý nên task của ban này chưa được ai nhắc.</p>' : '') +
+    $('#subbody').innerHTML = '<div class="note info">' + ic('info') + '<span>Nhóm: <b>SUP-SEED</b> điền báo cáo seeding để cộng điểm, <b>SUP-RES</b> được miễn task ban, <b>CRE</b> lo bonding và chúc mừng sinh nhật. Một người có thể ở nhiều nhóm.</span></div>' + (vaiTro === 'HR' ? '<div class="note info">' + ic('info') + '<span>COO ban nào thì thấy, nhập, sửa và được nhắc deadline task của thành viên ban đó; mọi COO cùng ban dùng chung. Chưa phân ban thì HR chỉ thấy task của mình. Danh sách ban lấy từ cột Ban của danh sách thành viên. Mỗi thành viên có một HR phụ trách nhắc deadline, chọn ở Cài đặt, HR phụ trách thành viên.</span></div>' : '') +
+      (chuaAi.length ? '<p class="err">Ban ' + chuaAi.join(', ') + ' chưa có COO nên task của ban này chưa được ai nhắc.</p>' : '') +
       '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + phanBan(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
       '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách thành viên</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu mới <small>Không bắt buộc. Bỏ trống thì người đó vẫn đăng nhập bằng mật khẩu đang dùng (hoặc mật khẩu chung của CLB, hoặc Google).</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
@@ -803,6 +844,30 @@ var SUB = {
     $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro, $('#hm') ? $('#hm').value : ''], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
   },
   ucv: function () { SUB.hr('UCV'); },
+  phancong: function () {
+    $('#subbody').innerHTML = '<div class="card">' + cho() + '</div>';
+    goiPhien('layPhanCongHr').then(function (d) {
+      if (sub !== 'phancong') return;
+      var nhom = {};
+      d.thanhVien.forEach(function (t) { (nhom[t.nhom] = nhom[t.nhom] || []).push(t); });
+      $('#subbody').innerHTML = '<div class="note info">' + ic('info') + '<span>Mỗi thành viên có một HR COO phụ trách nhắc deadline. Mỗi task của thành viên đó có 2 lượt nhắc (tối trước hạn 1 ngày, sáng ngày hạn) tính cho HR phụ trách. Task đã giao giữ HR lúc giao; đổi phân công chỉ áp dụng cho task mới.</span></div>' +
+        d.ban.map(function (b) {
+          var hr = d.hr.filter(function (h) { return h.coo.indexOf(b) >= 0; });
+          return '<div class="card"><div class="ctitle"><h3>Ban ' + esc(b) + '</h3><span class="hint">' + (hr.length ? 'COO: ' + esc(hr.map(function (h) { return h.ten; }).join(', ')) : 'Chưa có COO, phân ban ở Tài khoản HR') + '</span></div>' +
+            (nhom[b] || []).map(function (t) {
+              return '<div class="row sb" style="padding:6px 0;border-top:1px solid var(--line)"><span>' + esc(t.ten) + ' <span class="hint">' + esc(t.ban) + '</span></span><select data-pc="' + esc(t.ten) + '" style="max-width:220px" aria-label="HR phụ trách ' + esc(t.ten) + '"><option value="">Chưa phân</option>' +
+                hr.concat(t.hr && !hr.some(function (h) { return h.ten === t.hr; }) ? [{ ten: t.hr }] : []).map(function (h) { return '<option' + (h.ten === t.hr ? ' selected' : '') + '>' + esc(h.ten) + '</option>'; }).join('') + '</select></div>';
+            }).join('') + '</div>';
+        }).join('') +
+        '<div class="row"><button class="btn" id="pc-l">Lưu phân công</button><span id="pc-m"></span></div>';
+      $('#pc-l').onclick = function () {
+        var ds = $$('[data-pc]').map(function (o) { return { ten: o.getAttribute('data-pc'), hr: o.value }; });
+        var b = this; b.disabled = true; thongBao($('#pc-m'), 'cho', 'Đang lưu…');
+        goiPhien('luuPhanCongHr', ds).then(function (n) { b.disabled = false; thongBao($('#pc-m'), 'ok', 'Đã lưu ' + n + ' người'); })
+          .catch(function (err) { b.disabled = false; thongBao($('#pc-m'), 'loi', err.message); });
+      };
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  },
   google: function () {
     $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản app eco có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở app eco qua trang ecotdn.github.io/home hoặc app đã cài.</p>' +
       '<label class="f">Google Client ID <small>Tạo một lần trên Google Cloud bằng tài khoản CLB (xem hướng dẫn bên dưới). Bỏ trống để tắt.</small><input type="text" id="gg-i" value="' + esc(CD.googleClientId) + '" placeholder="1234567890-abc….apps.googleusercontent.com"></label>' +

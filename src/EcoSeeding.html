@@ -25,6 +25,9 @@ VIEWS.seeding = function () {
       'Khi bài đăng đủ 48 giờ, dán tên Facebook của những người đã react và comment. App tự cộng điểm: ' + muc(d.react, 'react') + ', ' + muc(d.comment, 'comment') + ' mỗi bài.</p></div></div>' +
       (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào nên chưa cộng được điểm. BOD cần tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.</span></div>') +
       (!d.react || !d.comment ? '<div class="note">' + ic('info') + '<span>BOD cần chọn loại hoạt động dùng cho react và comment trong Cài đặt, mục Loại hoạt động và mức điểm.</span></div>' : '') +
+      (d.laBod ? '' : '<form class="card form" id="nh"><div class="ctitle"><h3>' + ic('bell', 18) + ' Nhắc tôi khi bài đủ 48 giờ</h3></div><p class="hint" style="margin:0">Thấy thông báo bài mới trên group Messenger thì đặt nhắc ở đây. Đủ 48 giờ app nhắc bạn vào điền báo cáo (theo cách nhận thông báo bạn chọn ở Cài đặt).</p>' +
+        '<div class="grid2"><label class="f">Bài được đăng lúc<input type="datetime-local" id="nh-luc" value="' + oNgayGio(Date.now()) + '" required></label><label class="f">Link bài <small>Không bắt buộc</small><input type="url" id="nh-link" placeholder="https://www.facebook.com/…"></label></div>' +
+        '<div class="row"><button class="btn sm" id="nh-b">Đặt nhắc</button><span id="nh-m"></span></div><div id="nh-ds"></div></form>') +
       '<div class="sd-grid"><form class="card form" id="sdf">' +
       '<label class="f">Link bài đăng<input type="url" id="sd-link" placeholder="https://www.facebook.com/…" required></label>' +
       '<label class="f">Bài được đăng lúc<input type="datetime-local" id="sd-luc" max="' + oNgayGio(Date.now()) + '" required></label>' +
@@ -44,6 +47,23 @@ VIEWS.seeding = function () {
             (b.khongKhop.length ? '<div style="margin-top:6px"><span class="hint">Không khớp thành viên nào (' + b.khongKhop.length + ')</span>' + dsTenNho(b.khongKhop, true) + '</div>' : '')) +
           (coQuyenHuy ? '<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-huy="' + b.thoiGian + '">Huỷ báo cáo</button></div>' : '') + '</div>';
       }).join('') : rong('Chưa có báo cáo nào trong nhiệm kỳ này.')) + '<div id="sd-hm"></div></div></div></div>';
+    var veNhac = function (ds) {
+      if (!$('#nh-ds')) return;
+      $('#nh-ds').innerHTML = ds.length ? '<div class="sd-ten" style="flex-direction:column;align-items:stretch">' + ds.map(function (n) {
+        return '<div class="row sb" style="border-top:1px solid var(--line);padding-top:8px"><span>Nhắc lúc <b>' + ngayGio(n.lucNhac) + '</b>' + (n.link ? ' · <a href="' + esc(n.link) + '" target="_blank" rel="noopener">bài đăng</a>' : '') + '</span><button type="button" class="btn ghost sm" data-nhx="' + n.thoiGian + '">Xoá</button></div>';
+      }).join('') + '</div>' : '';
+      $$('[data-nhx]').forEach(function (b) {
+        b.onclick = function () { b.disabled = true; goiPhien('xoaNhacSeeding', Number(b.getAttribute('data-nhx'))).then(veNhac).catch(function (err) { b.disabled = false; thongBao($('#nh-m'), 'loi', err.message); }); };
+      });
+    };
+    veNhac(d.nhac || []);
+    if ($('#nh')) $('#nh').onsubmit = function (e) {
+      e.preventDefault();
+      var b = $('#nh-b'); b.disabled = true; thongBao($('#nh-m'), 'cho', 'Đang lưu…');
+      goiPhien('datNhacSeeding', { lucDang: new Date($('#nh-luc').value).getTime(), link: $('#nh-link').value.trim() }).then(function (ds) {
+        b.disabled = false; $('#nh-link').value = ''; thongBao($('#nh-m'), 'ok', 'Đã đặt nhắc'); veNhac(ds);
+      }).catch(function (err) { b.disabled = false; thongBao($('#nh-m'), 'loi', err.message); });
+    };
     var yc = function () {
       var luc = $('#sd-luc').value ? new Date($('#sd-luc').value).getTime() : 0;
       return { link: $('#sd-link').value.trim(), lucDang: luc, react: $('#sd-react').value, comment: $('#sd-cmt').value };

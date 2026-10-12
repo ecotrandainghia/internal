@@ -37,7 +37,11 @@ var BANG = {
   BaoCaoSeeding: ['ThoiGian', 'NguoiNop', 'LinkBai', 'LucDang', 'React', 'Comment', 'KhongKhop', 'TrangThai', 'NguoiHuy'],
   TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr', 'NhomHr'],
   CaiDat: ['Khoa', 'GiaTri'],
-  Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
+  Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong',
+    'NgayNop', 'HanGoc', 'NgayXinGiaHan', 'ChatLuong', 'DauHieu', 'NguoiDanhGia', 'LucDanhGia', 'PhanHoi', 'HrPhuTrach'],
+  PhuTrachHr: ['HoVaTen', 'NguoiHr'],
+  HrQuen: ['ThoiGian', 'NguoiHr', 'Loai', 'MoTa', 'ThamChieu', 'NguoiGhi', 'NhiemKy', 'HocKy', 'TrangThai'],
+  NhacSeeding: ['ThoiGian', 'Email', 'HoVaTen', 'LinkBai', 'LucDang', 'LucNhac', 'DaNhac'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
   ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet', 'TuyChon'],
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
@@ -561,7 +565,7 @@ function dongBoTaiKhoan_(taiKhoan, thanhVien) {
 
 /** Chức năng mỗi vai trò được dùng. TV là thành viên thường: xem xếp hạng, lịch sử điểm của mình, gửi góp ý. */
 var QUYEN = {
-  BOD: ['congdiem', 'task', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
+  BOD: ['congdiem', 'task', 'danhgia', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
   HR: ['task', 'guigopy'],
   UCV: ['mail', 'hopthu', 'guigopy'],
   TV: ['guigopy']
@@ -579,44 +583,44 @@ function banQuanLy_(giaTri) {
 }
 
 /** Các ban HR được phân quản lý task. */
-var BAN_HR_QUAN_LY = ['PG', 'PR', 'AD'];
+/** Các ban có COO: mọi nhóm ban trong danh sách thành viên, trừ BOD và HR. Đổi cơ cấu ban thì danh sách tự đổi theo file. */
+function banCoo_(thanhVien) {
+  var ds = [];
+  (thanhVien || []).forEach(function (t) { var n = nhomBan_(t.Ban); if (n && n !== 'BOD' && n !== 'HR' && ds.indexOf(n) < 0) ds.push(n); });
+  return ds.sort(soSanhBan_);
+}
 
-/** Ban HR quản lý: chỉ PG, PR, AD; chưa phân ban thì cả ba. */
+/** Các ban HR này là COO (cột BanQuanLy, trừ BOD và HR). Chưa phân ban thì rỗng. */
 function banCuaHr_(giaTri) {
-  var ds = banQuanLy_(giaTri).filter(function (b) { return BAN_HR_QUAN_LY.indexOf(b) >= 0; });
-  return ds.length ? ds : BAN_HR_QUAN_LY.slice();
+  return banQuanLy_(giaTri).filter(function (b) { return b !== 'BOD' && b !== 'HR'; });
 }
 
 function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toUpperCase(); }
 
 /**
- * Quyền với task của một tài khoản. banCua: { họ tên: ban }. Trả về:
- * - xem(tên), sua(tên): xem được và thao tác được (giao, sửa, đổi trạng thái) task của người đó hay không;
- * - moTa: câu giải thích phạm vi, hiện ở trang Task.
- * HR: thành viên các ban được phân (PG, PR, AD). Head ban: thành viên ban mình.
- * Pres, Vice pres: thao tác task của BOD. Pres, Vice pres và Head HR xem được task mọi ban.
- * BOD chưa có chức vụ rõ: mọi task. Ai cũng xem được và tự xác nhận xong task của chính mình.
+ * Quyền với task của một người (theo tên người phụ trách).
+ * BOD: mọi BOD như nhau, xem và quản lý task của mọi thành viên (BOD không có task).
+ * HR là COO của ban nào thì xem, nhập, sửa task của thành viên ban đó (cột BanQuanLy); chưa được phân ban thì chỉ xem task của mình.
+ * Còn lại: chỉ xem task của mình.
+ * @return {{xem:function(string):boolean, sua:function(string):boolean, moTa:string}}
  */
 function quyenTask_(tk, chucVu, banCua) {
   var toi = String(tk.HoVaTen);
   var ban = function (n) { return chuanChu_(banCua[String(n)]); };
-  var tatCa = function () { return true; };
-  var theo = function (sua, moTa) { return { xem: function (n) { return String(n) === toi || sua(n); }, sua: sua, moTa: moTa }; };
+  var cuaToi = function (n) { return String(n) === toi; };
+  if (String(tk.VaiTro) === 'BOD') {
+    var khongBod = function (n) { return ban(n) !== 'BOD'; };
+    return { xem: khongBod, sua: khongBod, moTa: '' };
+  }
   if (String(tk.VaiTro) === 'HR') {
     var dsBan = banCuaHr_(tk.BanQuanLy);
-    return theo(function (n) { return dsBan.indexOf(nhomBan_(ban(n))) >= 0; }, 'Bạn quản lý task của ban ' + dsBan.join(', ') + '.');
+    var quanLy = function (n) { return dsBan.indexOf(nhomBan_(ban(n))) >= 0; };
+    return {
+      xem: function (n) { return cuaToi(n) || quanLy(n); }, sua: quanLy,
+      moTa: dsBan.length ? 'Bạn là COO ban ' + dsBan.join(', ') + '.' : 'BOD chưa phân ban cho bạn nên bạn chỉ thấy task của mình.'
+    };
   }
-  var cv = chuanChu_(chucVu);
-  if (String(tk.VaiTro) === 'BOD' && /^HEAD /.test(cv)) {
-    var b = cv.slice(5);
-    var cuaBan = function (n) { var x = ban(n); return x === b || (b.indexOf(' ') < 0 && nhomBan_(x) === b); };
-    if (b === 'HR') return { xem: tatCa, sua: cuaBan, moTa: 'Bạn giao và quản lý task của ban HR, xem được task của mọi ban.' };
-    return theo(cuaBan, 'Bạn giao và quản lý task của ban ' + b + '.');
-  }
-  if (String(tk.VaiTro) === 'BOD' && /^(PRES(IDENT)?|VICE[ -]?PRES(IDENT)?|VP)$/.test(cv)) {
-    return { xem: tatCa, sua: function (n) { return ban(n) === 'BOD'; }, moTa: 'Bạn giao và quản lý task của BOD, xem được task của mọi ban.' };
-  }
-  return { xem: tatCa, sua: tatCa, moTa: '' };
+  return { xem: cuaToi, sua: function () { return false; }, moTa: '' };
 }
 
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
@@ -819,18 +823,111 @@ function kiemTraTask_(yeuCau, thanhVien) {
 }
 
 /** Tạo các dòng task, mỗi người phụ trách một dòng. BOD tạo là "Giao task", ban nhân sự tạo là "Nhập task". */
-function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio) {
+function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio, phanCong, mienTask) {
   var k = kiemTraTask_(yeuCau, thanhVien);
   if (k.loi) return { dong: [], loi: k.loi };
+  var mien = k.nguoi.filter(function (n) { return (mienTask || []).some(function (m) { return String(m).toLowerCase() === n.toLowerCase(); }); });
+  if (mien.length) return { dong: [], loi: mien.join(', ') + ' thuộc nhóm SUP-RES, được miễn task ban.' };
   return {
     loi: '',
     dong: k.nguoi.map(function (n) {
       return {
         ThoiGianTao: bayGio, TenTask: k.ten, MoTa: k.moTa, HanChot: k.hanChot, NguoiPhuTrach: n,
-        NguoiTao: nguoiTao, KieuTao: vaiTro === 'BOD' ? 'Giao task' : 'Nhập task', TrangThai: TRANG_THAI_TASK.GIAO, ThoiGianXong: ''
+        NguoiTao: nguoiTao, KieuTao: vaiTro === 'BOD' ? 'Giao task' : 'Nhập task', TrangThai: TRANG_THAI_TASK.GIAO, ThoiGianXong: '',
+        HrPhuTrach: hrPhuTrach_(n, phanCong || [], nguoiTao, vaiTro === 'HR')
       };
     })
   };
+}
+
+/* ===================== KPI task (quy chế mục II.2, II.3) ===================== */
+
+var CHAT_LUONG = { HOAN_CHINH: 'Hoàn chỉnh', CAN_SUA: 'Cần chỉnh sửa', SO_SAI: 'Làm quá sơ sài' };
+var DUNG_HAN = { DUNG: 'Đúng hạn', TRE: 'Trễ hạn', KHONG_LAM: 'Không làm' };
+var KET_QUA = { DAT: 'Đạt', CHUA_DAT: 'Chưa đạt', CHO: 'Chờ đánh giá' };
+/** Hoàn thành khi đạt từ 80% việc được giao; HR quên nhắc tối đa 20% số lượt được phân. */
+var TI_LE_DAT = 80, TI_LE_QUEN_TOI_DA = 20, LUOT_NHAC_MOI_TASK = 2;
+var LOAI_HR_QUEN = ['Nhắc deadline', 'Chúc mừng sinh nhật', 'Báo cáo seeding'];
+
+/**
+ * Đúng hạn hay không của một task: Đã xong thì so ngày nộp với hạn chót (hạn đã gia hạn hợp lệ),
+ * Không hoàn thành là Không làm, còn lại chưa có ('').
+ */
+function dungHanTask_(trangThai, hanChot, ngayNop) {
+  if (trangThai === TRANG_THAI_TASK.KHT) return DUNG_HAN.KHONG_LAM;
+  if (trangThai !== TRANG_THAI_TASK.XONG) return '';
+  return ngayHopLe_(ngayNop) && ngayHopLe_(hanChot) && ngayNop > hanChot ? DUNG_HAN.TRE : DUNG_HAN.DUNG;
+}
+
+/** Kết quả một task theo bảng 3 × 3 (đúng hạn × chất lượng). Đã xong mà BOD chưa đánh giá thì Chờ đánh giá. */
+function ketQuaTask_(dungHan, chatLuong) {
+  if (dungHan === DUNG_HAN.KHONG_LAM) return KET_QUA.CHUA_DAT;
+  if (!dungHan) return '';
+  if (!chatLuong) return KET_QUA.CHO;
+  if (chatLuong === CHAT_LUONG.SO_SAI) return KET_QUA.CHUA_DAT;
+  if (dungHan === DUNG_HAN.TRE && chatLuong === CHAT_LUONG.CAN_SUA) return KET_QUA.CHUA_DAT;
+  return KET_QUA.DAT;
+}
+
+/** Kiểm tra đánh giá chất lượng. "Làm quá sơ sài" bắt buộc ghi rõ dấu hiệu. Trả về '' nếu hợp lệ. */
+function kiemTraDanhGia_(chatLuong, dauHieu) {
+  var hop = Object.keys(CHAT_LUONG).some(function (k) { return CHAT_LUONG[k] === chatLuong; });
+  if (!hop) return 'Chọn mức chất lượng.';
+  if (chatLuong === CHAT_LUONG.SO_SAI && String(dauHieu || '').trim().length < 10) return 'Đánh giá "Làm quá sơ sài" cần ghi rõ dấu hiệu cụ thể (ví dụ: thiếu quá nửa phần việc trong mô tả).';
+  if (String(dauHieu || '').length > 1000) return 'Phần ghi chú dài quá 1000 ký tự.';
+  return '';
+}
+
+/**
+ * Gia hạn được tính là đúng hạn khi thành viên xin trước hạn ít nhất 24 giờ: ngày xin muộn nhất là ngày trước hạn chót
+ * (hạn tính đến hết ngày hạn chót). Trả về '' nếu hợp lệ.
+ */
+function kiemTraGiaHan_(hanChot, hanMoi, ngayXin) {
+  if (!ngayHopLe_(hanMoi)) return 'Chọn hạn chót mới.';
+  if (!ngayHopLe_(ngayXin)) return 'Chọn ngày thành viên xin gia hạn.';
+  if (ngayHopLe_(hanChot) && hanMoi <= hanChot) return 'Hạn mới phải sau hạn hiện tại (' + hienNgay_(hanChot) + ').';
+  if (ngayHopLe_(hanChot) && soNgayGiua_(ngayXin, hanChot) < 1) return 'Thành viên xin gia hạn chưa đủ 24 giờ trước hạn (' + hienNgay_(hanChot) + ') nên không được tính là gia hạn. Nếu nộp sau hạn thì task tính trễ hạn.';
+  return '';
+}
+
+function phanTram_(tu, mau) { return mau ? Math.round(tu * 100 / mau) : null; }
+
+/**
+ * Tổng hợp KPI task của một người. ds: các task của người đó, mỗi task có trangThai và ketQua.
+ * Task đã huỷ không tính. Tỉ lệ = số task đạt ÷ số task đã có kết quả (Đạt hoặc Chưa đạt), làm tròn.
+ */
+function tongKpiTask_(ds) {
+  var kq = { giao: 0, dat: 0, chuaDat: 0, cho: 0, dangLam: 0, tiLe: null };
+  ds.forEach(function (t) {
+    if (t.trangThai === TRANG_THAI_TASK.HUY) return;
+    kq.giao++;
+    if (t.ketQua === KET_QUA.DAT) kq.dat++;
+    else if (t.ketQua === KET_QUA.CHUA_DAT) kq.chuaDat++;
+    else if (t.ketQua === KET_QUA.CHO) kq.cho++;
+    else kq.dangLam++;
+  });
+  kq.tiLe = phanTram_(kq.dat, kq.dat + kq.chuaDat);
+  return kq;
+}
+
+/**
+ * KPI của một HR theo lượt nhắc: mỗi task (không tính task huỷ) của thành viên HR đó phụ trách có 2 lượt.
+ * Số lần quên tối đa = 20% × số lượt, làm tròn. Mọi lần BOD ghi nhận quên (nhắc deadline, sinh nhật, seeding) đều tính.
+ */
+function kpiHr_(task, quen, tenHr) {
+  var k = String(tenHr).toLowerCase();
+  var soTask = task.filter(function (t) { return String(t.hrPhuTrach || '').toLowerCase() === k && t.trangThai !== TRANG_THAI_TASK.HUY; }).length;
+  var soQuen = quen.filter(function (q) { return String(q.NguoiHr || '').toLowerCase() === k && String(q.TrangThai || '') !== 'Đã huỷ'; }).length;
+  var luot = soTask * LUOT_NHAC_MOI_TASK;
+  var toiDa = Math.round(luot * TI_LE_QUEN_TOI_DA / 100);
+  return { soTask: soTask, luot: luot, soQuen: soQuen, toiDa: toiDa, dat: soQuen <= toiDa };
+}
+
+/** HR phụ trách một thành viên: theo bảng phân công; chưa phân công thì là HR đã nhập task (nếu người nhập là HR). */
+function hrPhuTrach_(tenThanhVien, phanCong, nguoiTao, laHr) {
+  var k = String(tenThanhVien).toLowerCase();
+  for (var i = 0; i < phanCong.length; i++) if (String(phanCong[i].HoVaTen).toLowerCase() === k && String(phanCong[i].NguoiHr || '').trim()) return String(phanCong[i].NguoiHr).trim();
+  return laHr ? String(nguoiTao) : '';
 }
 
 /* ===================== Nhắc việc qua Zalo ===================== */
@@ -1775,7 +1872,9 @@ if (typeof module !== 'undefined') {
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
-    trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_,
+    CHAT_LUONG: CHAT_LUONG, DUNG_HAN: DUNG_HAN, KET_QUA: KET_QUA, LOAI_HR_QUEN: LOAI_HR_QUEN, dungHanTask: dungHanTask_, ketQuaTask: ketQuaTask_, kiemTraDanhGia: kiemTraDanhGia_,
+    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, kpiHr: kpiHr_, hrPhuTrach: hrPhuTrach_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
     lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,
