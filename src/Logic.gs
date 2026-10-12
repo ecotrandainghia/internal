@@ -23,22 +23,32 @@ var COT_BAT_BUOC = ['HoVaTen', 'Ban'];
 
 /** Các tab trong file dữ liệu và tên cột của từng tab. */
 var BANG = {
-  ThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }),
-  ThanhVienCu: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['NgayRoi']),
+  ThanhVien: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['LoaiThanhVien', 'DotGiaNhap']),
+  ThanhVienCu: COT_THANH_VIEN.map(function (c) { return c[0]; }).concat(['NgayRoi', 'LoaiThanhVien', 'DotGiaNhap']),
+  LanTai: ['ThoiGian', 'NhiemKy', 'KieuChon', 'Kieu', 'SoThem', 'SoSua', 'SoAn', 'TongSo'],
+  DoiBan: ['ThoiGian', 'HoVaTen', 'BanCu', 'BanMoi'],
+  SinhNhat: ['HoVaTen', 'NgaySinh', 'TieuDe', 'MaSuKien', 'NhiemKy'],
   LichSuDiem: ['ThoiGian', 'HoVaTen', 'LoaiHoatDong', 'TenHoatDong', 'Diem', 'NguoiCong', 'NhiemKy', 'HocKy'],
   KyHoatDong: ['NhiemKy', 'HocKy', 'BatDau', 'KieuTaiLen'],
   LuuTruThanhVien: ['NhiemKy', 'HocKy', 'HoVaTen', 'Ban'],
-  LoaiHoatDong: ['TenLoai', 'Diem', 'CongTay'],
+  LoaiHoatDong: ['TenLoai', 'Diem', 'CongTay', 'GioiHan', 'DungCho'],
   BangGhim: ['TieuDe', 'DuongDan'],
-  GopY: ['ThoiGian', 'NoiDung', 'DaDoc'],
-  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr'],
+  GopY: ['ThoiGian', 'NoiDung', 'DaDoc', 'HoVaTen', 'DaDung', 'NguoiDanhDau'],
+  BaoCaoSeeding: ['ThoiGian', 'NguoiNop', 'LinkBai', 'LucDang', 'React', 'Comment', 'KhongKhop', 'TrangThai', 'NguoiHuy'],
+  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr', 'NhomHr'],
   CaiDat: ['Khoa', 'GiaTri'],
-  Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong'],
+  Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong',
+    'NgayNop', 'HanGoc', 'NgayXinGiaHan', 'ChatLuong', 'DauHieu', 'NguoiDanhGia', 'LucDanhGia', 'PhanHoi', 'HrPhuTrach'],
+  PhuTrachHr: ['HoVaTen', 'NguoiHr'],
+  HrQuen: ['ThoiGian', 'NguoiHr', 'Loai', 'MoTa', 'ThamChieu', 'NguoiGhi', 'NhiemKy', 'HocKy', 'TrangThai'],
+  NhacSeeding: ['ThoiGian', 'Email', 'HoVaTen', 'LinkBai', 'LucDang', 'LucNhac', 'DaNhac'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
   ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet', 'TuyChon'],
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
   LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua', 'MaNhap'],
   FileLog: ['ThoiGian', 'TenFile', 'DuongDan', 'SoNguoi', 'SoBuoi', 'NguoiTao'],
+  SuKienLog: ['ThoiGian', 'TenSuKien', 'SoBuoiDuKien', 'GiaoMacDinh', 'GiaoRieng', 'LinkDangKy', 'NguoiTao', 'TrangThai', 'ChotLuc', 'NguoiChot'],
+  BuoiLog: ['ThoiGian', 'SuKien', 'TenBuoi', 'Ngay', 'ThoiLuong', 'TrangThai', 'DangKy', 'CoMat'],
   ThietBi: ['Email', 'DiaChi', 'Khoa', 'TenMay', 'ThoiGian', 'LayCuoi', 'P256dh', 'Auth'],
   ThongBao: ['ThoiGian', 'Email', 'TieuDe', 'NoiDung']
 };
@@ -57,19 +67,160 @@ function capNhatThanhVienCu_(cu, moi, daRoi, bayGio) {
   roi.forEach(function (t) { moiRoi[k(t)] = true; });
   var ds = daRoi.filter(function (t) { return k(t) && !conLai[k(t)] && !moiRoi[k(t)]; });
   roi.forEach(function (t) {
-    var dong = { NgayRoi: bayGio };
+    var dong = { NgayRoi: bayGio, LoaiThanhVien: t.LoaiThanhVien || '', DotGiaNhap: t.DotGiaNhap || '' };
     COT_THANH_VIEN.forEach(function (c) { dong[c[0]] = t[c[0]] == null ? '' : t[c[0]]; });
     ds.push(dong);
   });
   return { ds: ds, soMoiRoi: roi.length };
 }
 
-/** Ba kiểu tải danh sách thành viên ở phần hậu kỳ. */
+/**
+ * Bốn kiểu tải danh sách thành viên ở phần hậu kỳ. Oday, đợt 1, đợt 2 mỗi nhiệm kỳ chỉ một lần, theo thứ tự đó.
+ * - Oday: thêm thành viên mới (chính thức) trước đợt 1, chưa bắt đầu giai đoạn nào.
+ * - Đợt 1: bắt đầu nhiệm kỳ và giai đoạn 1. Đợt 2: bắt đầu giai đoạn 2, người mới là thành viên bổ sung.
+ * - Cập nhật: sửa thông tin, thêm người bị sót, ẩn người đã rời; không đổi giai đoạn.
+ */
 var KIEU_TAI = {
+  ODAY: 'Sau Oday',
   DOT1: 'Sau tuyển đợt 1',
   DOT2: 'Sau tuyển đợt 2',
   CAP_NHAT: 'Cập nhật'
 };
+var THU_TU_DOT = ['Sau Oday', 'Sau tuyển đợt 1', 'Sau tuyển đợt 2'];
+var TEN_DOT = { 'Sau Oday': 'Oday', 'Sau tuyển đợt 1': 'Đợt 1', 'Sau tuyển đợt 2': 'Đợt 2', 'Cập nhật': 'Cập nhật' };
+var LOAI_TV = { CHINH_THUC: 'Chính thức', BO_SUNG: 'Bổ sung' };
+
+/** Nhiệm kỳ theo năm tải: Oday và đợt 1 lấy năm tải là năm bắt đầu, đợt 2 lấy năm tải là năm kết thúc. */
+function nhiemKyTheoKieu_(ngay, kieu) {
+  var y = ngay.getFullYear();
+  return kieu === KIEU_TAI.DOT2 ? (y - 1) + '-' + y : y + '-' + (y + 1);
+}
+
+/**
+ * Kiểu tải thực sự. Oday, đợt 1, đợt 2 đã làm trong nhiệm kỳ (hoặc đã làm đợt sau nó) thì tự chuyển thành Cập nhật.
+ * @param {Array<Object>} lanTai các dòng LanTai (và KyHoatDong cũ, có NhiemKy và Kieu/KieuTaiLen)
+ * @return {{kieu:string, nhiemKy:string, doiThanhCapNhat:boolean, daLam:Array<string>, dauNhiemKy:boolean}}
+ */
+function kieuTaiThucTe_(kieu, ngay, lanTai) {
+  var nk = kieu === KIEU_TAI.CAP_NHAT ? '' : nhiemKyTheoKieu_(ngay, kieu);
+  var daLamTrong = function (n) {
+    var ds = [];
+    (lanTai || []).forEach(function (l) {
+      var k = String(l.Kieu || l.KieuTaiLen || '');
+      if (String(l.NhiemKy) === n && THU_TU_DOT.indexOf(k) >= 0 && ds.indexOf(k) < 0) ds.push(k);
+    });
+    return ds.sort(function (a, b) { return THU_TU_DOT.indexOf(a) - THU_TU_DOT.indexOf(b); });
+  };
+  if (!nk) return { kieu: kieu, nhiemKy: '', doiThanhCapNhat: false, daLam: [], dauNhiemKy: false };
+  var daLam = daLamTrong(nk);
+  var thuTu = THU_TU_DOT.indexOf(kieu);
+  var trung = daLam.some(function (k) { return THU_TU_DOT.indexOf(k) >= thuTu; });
+  return {
+    kieu: trung ? KIEU_TAI.CAP_NHAT : kieu,
+    nhiemKy: nk,
+    doiThanhCapNhat: trung,
+    daLam: daLam,
+    // Lần tải đầu của nhiệm kỳ (Oday, hoặc đợt 1 khi không có Oday): mọi người đang ở lại thành thành viên chính thức của nhiệm kỳ mới.
+    dauNhiemKy: !trung && kieu !== KIEU_TAI.DOT2 && !daLam.length
+  };
+}
+
+/** Đưa giá trị một ô về chữ để so sánh (ngày thì dạng yyyy-mm-dd). */
+function chuOSoSanh_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]') return isNaN(v.getTime()) ? '' : v.getFullYear() + '-' + (v.getMonth() + 1) + '-' + v.getDate();
+  return String(v == null ? '' : v).trim();
+}
+
+/**
+ * So danh sách mới với danh sách đang có (theo họ tên, không phân biệt hoa thường).
+ * @return {{them:Array<string>, sua:Array<string>, an:Array<string>, doiBan:Array<Object>}}
+ */
+function soSanhDanhSach_(cu, moi) {
+  var k = function (t) { return String(t.HoVaTen || '').trim().toLowerCase(); };
+  var theoTen = {};
+  cu.forEach(function (t) { if (k(t)) theoTen[k(t)] = t; });
+  var conLai = {};
+  var kq = { them: [], sua: [], an: [], doiBan: [] };
+  moi.forEach(function (t) {
+    conLai[k(t)] = true;
+    var c = theoTen[k(t)];
+    if (!c) { kq.them.push(t.HoVaTen); return; }
+    if (COT_THANH_VIEN.some(function (x) { return chuOSoSanh_(c[x[0]]) !== chuOSoSanh_(t[x[0]]); })) kq.sua.push(t.HoVaTen);
+    if (chuOSoSanh_(c.Ban).toUpperCase() !== chuOSoSanh_(t.Ban).toUpperCase()) kq.doiBan.push({ HoVaTen: t.HoVaTen, BanCu: chuOSoSanh_(c.Ban), BanMoi: chuOSoSanh_(t.Ban) });
+  });
+  cu.forEach(function (t) { if (k(t) && !conLai[k(t)]) kq.an.push(t.HoVaTen); });
+  return kq;
+}
+
+/**
+ * Gắn loại thành viên (chính thức hoặc bổ sung) và đợt gia nhập cho danh sách mới.
+ * Người đang có giữ nguyên, trừ lần tải đầu nhiệm kỳ (mọi người thành chính thức của nhiệm kỳ mới).
+ * Người mới: Oday, đợt 1, Cập nhật (người bị sót) là chính thức; đợt 2 là bổ sung.
+ */
+function ganLoaiThanhVien_(moi, cu, kieu, dauNhiemKy) {
+  var theoTen = {};
+  cu.forEach(function (t) { theoTen[String(t.HoVaTen || '').trim().toLowerCase()] = t; });
+  return moi.map(function (t) {
+    var x = {};
+    Object.keys(t).forEach(function (k) { x[k] = t[k]; });
+    var c = theoTen[String(t.HoVaTen).trim().toLowerCase()];
+    if (c && !dauNhiemKy) {
+      x.LoaiThanhVien = c.LoaiThanhVien === LOAI_TV.BO_SUNG ? LOAI_TV.BO_SUNG : LOAI_TV.CHINH_THUC;
+      x.DotGiaNhap = String(c.DotGiaNhap || '');
+    } else if (c) {
+      x.LoaiThanhVien = LOAI_TV.CHINH_THUC; x.DotGiaNhap = '';
+    } else {
+      x.LoaiThanhVien = kieu === KIEU_TAI.DOT2 ? LOAI_TV.BO_SUNG : LOAI_TV.CHINH_THUC;
+      x.DotGiaNhap = kieu === KIEU_TAI.CAP_NHAT ? '' : TEN_DOT[kieu];
+    }
+    return x;
+  });
+}
+
+/** Ngày sinh từ ô sheet: ngày, hoặc chữ dd/mm/yyyy, dd-mm-yyyy, d/m, yyyy-mm-dd. Trả về { ngay, thang } hoặc null. */
+function docNgaySinh_(v) {
+  var d = null, m = null;
+  if (Object.prototype.toString.call(v) === '[object Date]') { if (isNaN(v.getTime())) return null; d = v.getDate(); m = v.getMonth() + 1; }
+  else {
+    var s = String(v == null ? '' : v).trim(), x;
+    if ((x = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) { d = +x[3]; m = +x[2]; }
+    else if ((x = s.match(/^(\d{1,2})[-/.](\d{1,2})(?:[-/.](\d{2,4}))?$/))) { d = +x[1]; m = +x[2]; }
+  }
+  if (!m || m < 1 || m > 12 || !d || d < 1 || d > [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]) return null;
+  return { ngay: d, thang: m };
+}
+
+/** Tên lịch sinh nhật của nhiệm kỳ, ví dụ "Sinh nhật 2627" cho 2026-2027. */
+function tenLichSinhNhat_(nhiemKy) {
+  var p = String(nhiemKy).split('-');
+  return 'Sinh nhật ' + (p.length === 2 ? p[0].slice(-2) + p[1].slice(-2) : nhiemKy);
+}
+
+/**
+ * Việc cần làm để lịch sinh nhật khớp danh sách thành viên.
+ * @param {Array<Object>} daCo các dòng tab SinhNhat của nhiệm kỳ này
+ * @return {{tao:Array<Object>, xoa:Array<Object>, soGiu:number, thieuNgay:Array<string>}}
+ */
+function keHoachSinhNhat_(thanhVien, daCo) {
+  var cu = {};
+  daCo.forEach(function (r) { cu[String(r.HoVaTen).trim().toLowerCase()] = r; });
+  var kq = { tao: [], xoa: [], soGiu: 0, thieuNgay: [] };
+  var conLai = {};
+  thanhVien.forEach(function (t) {
+    var k = String(t.HoVaTen).trim().toLowerCase();
+    var ns = docNgaySinh_(t.NgaySinh);
+    if (!ns) { kq.thieuNgay.push(t.HoVaTen); return; }
+    conLai[k] = true;
+    var ngay = ('0' + ns.ngay).slice(-2) + '/' + ('0' + ns.thang).slice(-2);
+    var tieuDe = 'Sinh nhật ' + t.HoVaTen + (t.Ban ? ' (' + t.Ban + ')' : '');
+    var r = cu[k];
+    if (r && String(r.NgaySinh) === ngay && String(r.TieuDe) === tieuDe && r.MaSuKien) { kq.soGiu++; return; }
+    if (r && r.MaSuKien) kq.xoa.push(r);
+    kq.tao.push({ HoVaTen: t.HoVaTen, NgaySinh: ngay, TieuDe: tieuDe, ngay: ns.ngay, thang: ns.thang, moTa: [t.Lop ? 'Lớp ' + t.Lop : '', t.LinkFacebook ? String(t.LinkFacebook) : ''].filter(String).join('\n') });
+  });
+  daCo.forEach(function (r) { if (!conLai[String(r.HoVaTen).trim().toLowerCase()] && r.MaSuKien) kq.xoa.push(r); });
+  return kq;
+}
 
 /** Bỏ dấu tiếng Việt. */
 function boDau_(s) {
@@ -198,11 +349,9 @@ function tenNhiemKy_(ngay) {
  * @return {?{NhiemKy:string, HocKy:number}} kỳ mới, hoặc null nếu kiểu tải không mở kỳ mới
  */
 function tinhKyMoi_(kyHienTai, kieu, ngay) {
-  if (kieu === KIEU_TAI.DOT1) return { NhiemKy: tenNhiemKy_(ngay), HocKy: 1 };
-  if (kieu === KIEU_TAI.DOT2) {
-    return { NhiemKy: kyHienTai ? String(kyHienTai.NhiemKy) : tenNhiemKy_(ngay), HocKy: 2 };
-  }
-  return null;
+  if (kieu === KIEU_TAI.DOT1) return { NhiemKy: nhiemKyTheoKieu_(ngay, kieu), HocKy: 1 };
+  if (kieu === KIEU_TAI.DOT2) return { NhiemKy: nhiemKyTheoKieu_(ngay, kieu), HocKy: 2 };
+  return null; // Oday và Cập nhật không mở giai đoạn mới
 }
 
 /** Biến các dòng của một tab (có dòng tiêu đề) thành danh sách đối tượng. */
@@ -267,8 +416,34 @@ function cungKy_(dong, nhiemKy, hocKy) {
   return String(dong.NhiemKy) === String(nhiemKy) && Number(dong.HocKy) === Number(hocKy);
 }
 
+/** Tỉ lệ khen thưởng theo điểm: top 15% mỗi giai đoạn (quy chế III.4). */
+var TI_LE_TOP = 15;
+
+/** Số người trong top: tổng số người được xếp hạng × 15%, làm tròn thông thường (nhân trước để tránh sai số, ví dụ 70 × 15% = 10,5 → 11). */
+function soNguoiTop_(n) {
+  return Math.round(n * TI_LE_TOP / 100);
+}
+
+/**
+ * Những người trong top 15% theo một cột điểm. Người bằng điểm với người cuối cùng trong top cũng được tính.
+ * Người 0 điểm không được tính vào top.
+ * @param {Array<Object>} ds những người được xếp hạng
+ * @param {string} khoa tên cột điểm
+ * @return {Object} { tên viết thường: true }
+ */
+function topTheoDiem_(ds, khoa) {
+  var kq = {}, k = soNguoiTop_(ds.length);
+  if (!k) return kq;
+  var sx = ds.slice().sort(function (a, b) { return b[khoa] - a[khoa]; });
+  var nguong = sx[k - 1][khoa];
+  sx.forEach(function (p) { if (p[khoa] > 0 && p[khoa] >= nguong) kq[String(p.ten).toLowerCase()] = true; });
+  return kq;
+}
+
 /**
  * Dữ liệu công khai cho app eco. Chỉ có họ tên, lớp, ban và điểm.
+ * Mỗi giai đoạn một bảng xếp hạng: giai đoạn 1 chỉ có thành viên chính thức, giai đoạn 2 có tất cả.
+ * Ở giai đoạn 2 có thêm điểm giai đoạn 1 và tổng cả nhiệm kỳ (chỉ thành viên chính thức đã ở giai đoạn 1).
  * @param {Array<Object>} thanhVien
  * @param {Array<Object>} lichSu các dòng LichSuDiem
  * @param {?Object} ky kỳ hiện tại
@@ -276,34 +451,51 @@ function cungKy_(dong, nhiemKy, hocKy) {
  */
 function tongHopBangDiem_(thanhVien, lichSu, ky, luuTru) {
   if (!ky) return [];
+  var gd2 = Number(ky.HocKy) === 2;
   var tong = {};
   var tongHk1 = {};
   lichSu.forEach(function (d) {
     var ten = String(d.HoVaTen).toLowerCase();
     var diem = Number(d.Diem) || 0;
     if (cungKy_(d, ky.NhiemKy, ky.HocKy)) tong[ten] = (tong[ten] || 0) + diem;
-    if (Number(ky.HocKy) === 2 && cungKy_(d, ky.NhiemKy, 1)) tongHk1[ten] = (tongHk1[ten] || 0) + diem;
+    if (gd2 && cungKy_(d, ky.NhiemKy, 1)) tongHk1[ten] = (tongHk1[ten] || 0) + diem;
   });
   var coHk1 = {};
-  if (Number(ky.HocKy) === 2) {
+  if (gd2) {
     luuTru.forEach(function (d) {
       if (cungKy_(d, ky.NhiemKy, 1)) coHk1[String(d.HoVaTen).toLowerCase()] = true;
     });
   }
-  return thanhVien.map(function (tv) {
+  var ds = thanhVien.map(function (tv) {
     var ten = String(tv.HoVaTen).toLowerCase();
+    var boSung = tv.LoaiThanhVien === LOAI_TV.BO_SUNG;
+    var diemHk1 = coHk1[ten] && !boSung ? (tongHk1[ten] || 0) : null;
     return {
       ten: String(tv.HoVaTen),
       lop: String(tv.Lop || ''),
       ban: String(tv.Ban || ''),
       nhom: nhomBan_(tv.Ban),
       diem: tong[ten] || 0,
-      diemHk1: coHk1[ten] ? (tongHk1[ten] || 0) : null
+      diemHk1: diemHk1,
+      diemCaKy: diemHk1 === null ? null : diemHk1 + (tong[ten] || 0),
+      boSung: boSung
     };
   });
+  // Giai đoạn 1 chỉ xếp hạng thành viên chính thức; giai đoạn 2 xếp hạng tất cả.
+  var top = topTheoDiem_(ds.filter(function (p) { return gd2 || !p.boSung; }), 'diem');
+  var coDiemHk1 = ds.filter(function (p) { return p.diemHk1 !== null; });
+  var topHk1 = topTheoDiem_(coDiemHk1, 'diemHk1');
+  var topCaKy = topTheoDiem_(coDiemHk1, 'diemCaKy');
+  ds.forEach(function (p) {
+    var k = p.ten.toLowerCase();
+    p.top = !!top[k];
+    p.topHk1 = !!topHk1[k];
+    p.topCaKy = !!topCaKy[k];
+  });
+  return ds;
 }
 
-/** Lịch sử cộng điểm công khai của một người trong một học kỳ, mới nhất trước. */
+/** Lịch sử cộng điểm công khai của một người trong một giai đoạn, mới nhất trước. */
 function lichSuCongKhai_(lichSu, ten, nhiemKy, hocKy) {
   var k = String(ten).toLowerCase();
   return lichSu.filter(function (d) {
@@ -375,7 +567,7 @@ function dongBoTaiKhoan_(taiKhoan, thanhVien) {
 
 /** Chức năng mỗi vai trò được dùng. TV là thành viên thường: xem xếp hạng, lịch sử điểm của mình, gửi góp ý. */
 var QUYEN = {
-  BOD: ['congdiem', 'task', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
+  BOD: ['congdiem', 'task', 'danhgia', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
   HR: ['task', 'guigopy'],
   UCV: ['mail', 'hopthu', 'guigopy'],
   TV: ['guigopy']
@@ -393,44 +585,44 @@ function banQuanLy_(giaTri) {
 }
 
 /** Các ban HR được phân quản lý task. */
-var BAN_HR_QUAN_LY = ['PG', 'PR', 'AD'];
+/** Các ban có COO: mọi nhóm ban trong danh sách thành viên, trừ BOD và HR. Đổi cơ cấu ban thì danh sách tự đổi theo file. */
+function banCoo_(thanhVien) {
+  var ds = [];
+  (thanhVien || []).forEach(function (t) { var n = nhomBan_(t.Ban); if (n && n !== 'BOD' && n !== 'HR' && ds.indexOf(n) < 0) ds.push(n); });
+  return ds.sort(soSanhBan_);
+}
 
-/** Ban HR quản lý: chỉ PG, PR, AD; chưa phân ban thì cả ba. */
+/** Các ban HR này là COO (cột BanQuanLy, trừ BOD và HR). Chưa phân ban thì rỗng. */
 function banCuaHr_(giaTri) {
-  var ds = banQuanLy_(giaTri).filter(function (b) { return BAN_HR_QUAN_LY.indexOf(b) >= 0; });
-  return ds.length ? ds : BAN_HR_QUAN_LY.slice();
+  return banQuanLy_(giaTri).filter(function (b) { return b !== 'BOD' && b !== 'HR'; });
 }
 
 function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' ').toUpperCase(); }
 
 /**
- * Quyền với task của một tài khoản. banCua: { họ tên: ban }. Trả về:
- * - xem(tên), sua(tên): xem được và thao tác được (giao, sửa, đổi trạng thái) task của người đó hay không;
- * - moTa: câu giải thích phạm vi, hiện ở trang Task.
- * HR: thành viên các ban được phân (PG, PR, AD). Head ban: thành viên ban mình.
- * Pres, Vice pres: thao tác task của BOD. Pres, Vice pres và Head HR xem được task mọi ban.
- * BOD chưa có chức vụ rõ: mọi task. Ai cũng xem được và tự xác nhận xong task của chính mình.
+ * Quyền với task của một người (theo tên người phụ trách).
+ * BOD: mọi BOD như nhau, xem và quản lý task của mọi thành viên (BOD không có task).
+ * HR là COO của ban nào thì xem, nhập, sửa task của thành viên ban đó (cột BanQuanLy); chưa được phân ban thì chỉ xem task của mình.
+ * Còn lại: chỉ xem task của mình.
+ * @return {{xem:function(string):boolean, sua:function(string):boolean, moTa:string}}
  */
 function quyenTask_(tk, chucVu, banCua) {
   var toi = String(tk.HoVaTen);
   var ban = function (n) { return chuanChu_(banCua[String(n)]); };
-  var tatCa = function () { return true; };
-  var theo = function (sua, moTa) { return { xem: function (n) { return String(n) === toi || sua(n); }, sua: sua, moTa: moTa }; };
+  var cuaToi = function (n) { return String(n) === toi; };
+  if (String(tk.VaiTro) === 'BOD') {
+    var khongBod = function (n) { return ban(n) !== 'BOD'; };
+    return { xem: khongBod, sua: khongBod, moTa: '' };
+  }
   if (String(tk.VaiTro) === 'HR') {
     var dsBan = banCuaHr_(tk.BanQuanLy);
-    return theo(function (n) { return dsBan.indexOf(nhomBan_(ban(n))) >= 0; }, 'Bạn quản lý task của ban ' + dsBan.join(', ') + '.');
+    var quanLy = function (n) { return dsBan.indexOf(nhomBan_(ban(n))) >= 0; };
+    return {
+      xem: function (n) { return cuaToi(n) || quanLy(n); }, sua: quanLy,
+      moTa: dsBan.length ? 'Bạn là COO ban ' + dsBan.join(', ') + '.' : 'BOD chưa phân ban cho bạn nên bạn chỉ thấy task của mình.'
+    };
   }
-  var cv = chuanChu_(chucVu);
-  if (String(tk.VaiTro) === 'BOD' && /^HEAD /.test(cv)) {
-    var b = cv.slice(5);
-    var cuaBan = function (n) { var x = ban(n); return x === b || (b.indexOf(' ') < 0 && nhomBan_(x) === b); };
-    if (b === 'HR') return { xem: tatCa, sua: cuaBan, moTa: 'Bạn giao và quản lý task của ban HR, xem được task của mọi ban.' };
-    return theo(cuaBan, 'Bạn giao và quản lý task của ban ' + b + '.');
-  }
-  if (String(tk.VaiTro) === 'BOD' && /^(PRES(IDENT)?|VICE[ -]?PRES(IDENT)?|VP)$/.test(cv)) {
-    return { xem: tatCa, sua: function (n) { return ban(n) === 'BOD'; }, moTa: 'Bạn giao và quản lý task của BOD, xem được task của mọi ban.' };
-  }
-  return { xem: tatCa, sua: tatCa, moTa: '' };
+  return { xem: cuaToi, sua: function () { return false; }, moTa: '' };
 }
 
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
@@ -446,8 +638,8 @@ function kiemTraMatKhauMoi_(mk) {
  * Điểm lấy theo loại hoạt động tại lúc cộng; người được cộng phải có trong danh sách thành viên.
  * @return {{dong:Array<Object>, loi:string}}
  */
-function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio) {
-  if (!ky) return { dong: [], loi: 'Chưa có học kỳ nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.' };
+function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio, lichSu) {
+  if (!ky) return { dong: [], loi: 'Chưa có giai đoạn nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.' };
   var loai = null;
   loaiHoatDong.forEach(function (l) { if (String(l.TenLoai) === String(yeuCau.loai)) loai = l; });
   if (!loai) return { dong: [], loi: 'Không có loại hoạt động "' + yeuCau.loai + '".' };
@@ -469,22 +661,87 @@ function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio
       NguoiCong: nguoiCong, NhiemKy: String(ky.NhiemKy), HocKy: Number(ky.HocKy)
     });
   });
+  var vuot = vuotGioiHan_(dong, loaiHoatDong, lichSu || [], ky);
+  if (vuot) return { dong: [], loi: vuot };
   return { dong: dong, loi: '' };
 }
 
-/** Kiểm tra danh sách loại hoạt động do BOD sửa. */
+/** Số lần tối đa mỗi người được cộng một loại trong một giai đoạn (0 là không giới hạn). */
+function gioiHanLoai_(l) {
+  var n = Math.floor(Number(l && l.GioiHan));
+  return n > 0 ? n : 0;
+}
+
+/**
+ * Kiểm tra giới hạn số lần mỗi giai đoạn (ví dụ góp ý được dùng tối đa 2 lần).
+ * dongMoi: các dòng sắp ghi. Trả về câu báo lỗi, hoặc '' nếu không ai vượt.
+ */
+function vuotGioiHan_(dongMoi, loaiHoatDong, lichSu, ky) {
+  var gioiHan = {};
+  loaiHoatDong.forEach(function (l) { var n = gioiHanLoai_(l); if (n) gioiHan[String(l.TenLoai)] = n; });
+  var dem = {};
+  var khoa = function (d) { return String(d.LoaiHoatDong) + '|' + String(d.HoVaTen).toLowerCase(); };
+  lichSu.forEach(function (d) { if (gioiHan[String(d.LoaiHoatDong)] && cungKy_(d, ky.NhiemKy, ky.HocKy)) dem[khoa(d)] = (dem[khoa(d)] || 0) + 1; });
+  var vuot = {}, thuTu = [];
+  dongMoi.forEach(function (d) {
+    var n = gioiHan[String(d.LoaiHoatDong)];
+    if (!n) return;
+    dem[khoa(d)] = (dem[khoa(d)] || 0) + 1;
+    if (dem[khoa(d)] > n) {
+      var l = String(d.LoaiHoatDong);
+      if (!vuot[l]) { vuot[l] = []; thuTu.push(l); }
+      if (vuot[l].indexOf(d.HoVaTen) < 0) vuot[l].push(d.HoVaTen);
+    }
+  });
+  if (!thuTu.length) return '';
+  return thuTu.map(function (l) { return '"' + l + '" chỉ cộng tối đa ' + gioiHan[l] + ' lần mỗi giai đoạn. Đã đủ: ' + vuot[l].join(', ') + '.'; }).join(' ');
+}
+
+/** Loại hoạt động gắn với chức năng tự cộng của app. Mỗi chức năng gắn với tối đa một loại. */
+var DUNG_CHO = { GOP_Y: 'gopy', REACT: 'react', COMMENT: 'comment', LOG_90: 'log90', LOG_180: 'log180' };
+var TEN_DUNG_CHO = { gopy: 'Góp ý được dùng', react: 'Seeding: react', comment: 'Seeding: comment', log90: 'Log vượt (buổi 90 phút)', log180: 'Log vượt (buổi 180 phút)' };
+
+/** Mức điểm theo quy chế KPI 2026-2027 (mục III.3). BOD nạp vào bảng loại hoạt động bằng một nút trong Cài đặt. */
+var MUC_DIEM_QUY_CHE = [
+  { ten: 'React bài đăng trong vòng 48 giờ', diem: 1, congTay: false, dungCho: 'react' },
+  { ten: 'Comment bài đăng trong vòng 48 giờ', diem: 2, congTay: false, dungCho: 'comment' },
+  { ten: 'Làm staff ca ngắn (giờ ra chơi)', diem: 3, congTay: true },
+  { ten: 'Tham gia bonding', diem: 5, congTay: true },
+  { ten: 'Góp ý được CLB đưa vào sử dụng', diem: 10, congTay: false, gioiHan: 2, dungCho: 'gopy' },
+  { ten: 'Làm log vượt số buổi được giao (buổi 90 phút)', diem: 20, congTay: false, dungCho: 'log90' },
+  { ten: 'Làm log vượt số buổi được giao (buổi 180 phút)', diem: 40, congTay: false, dungCho: 'log180' },
+  { ten: 'Đại diện CLB tham gia cuộc thi', diem: 40, congTay: true },
+  { ten: 'Tham dự sự kiện của CLB hoặc của đối tác', diem: 40, congTay: true },
+  { ten: 'Làm staff 1 buổi (sự kiện lớn)', diem: 50, congTay: true }
+];
+
+/** Loại hoạt động đang gắn với một chức năng tự cộng (DUNG_CHO), hoặc null. */
+function loaiDungCho_(loaiHoatDong, dungCho) {
+  for (var i = 0; i < loaiHoatDong.length; i++) if (String(loaiHoatDong[i].DungCho || '') === dungCho) return loaiHoatDong[i];
+  return null;
+}
+
+/** Kiểm tra danh sách loại hoạt động do BOD sửa. Điểm không âm (chỉ cộng, không trừ). */
 function chuanHoaLoaiHoatDong_(ds) {
   var kq = [];
-  var daCo = {};
+  var daCo = {}, daGan = {};
   for (var i = 0; i < (ds || []).length; i++) {
     var ten = String(ds[i].ten == null ? '' : ds[i].ten).trim();
     var diem = Number(ds[i].diem);
     if (!ten) continue;
     if (daCo[ten.toLowerCase()]) return { ds: [], loi: 'Loại "' + ten + '" bị trùng.' };
     if (!isFinite(diem) || diem < 0) return { ds: [], loi: 'Điểm của "' + ten + '" phải là số không âm.' };
+    var gh = ds[i].gioiHan == null || String(ds[i].gioiHan).trim() === '' ? 0 : Number(ds[i].gioiHan);
+    if (!(gh >= 0) || Math.floor(gh) !== gh) return { ds: [], loi: 'Số lần tối đa của "' + ten + '" phải là số nguyên dương, hoặc để trống nếu không giới hạn.' };
+    var dc = String(ds[i].dungCho || '');
+    if (dc && !TEN_DUNG_CHO[dc]) dc = '';
+    if (dc && daGan[dc]) return { ds: [], loi: '"' + TEN_DUNG_CHO[dc] + '" đang gắn với hai loại: ' + daGan[dc] + ' và ' + ten + '. Chỉ chọn một.' };
+    if (dc) daGan[dc] = ten;
     daCo[ten.toLowerCase()] = true;
-    // CongTay = false: chỉ hiện trên app eco (ví dụ điểm cộng tự động qua form), BOD không chọn được khi cộng điểm.
-    kq.push({ TenLoai: ten, Diem: diem, CongTay: ds[i].congTay === false ? 'khong' : 'co' });
+    // CongTay = false: chỉ hiện trên app eco (ví dụ điểm app tự cộng qua báo cáo seeding), BOD không chọn được khi cộng điểm.
+    var dong = { TenLoai: ten, Diem: diem, CongTay: ds[i].congTay === false ? 'khong' : 'co' };
+    if (gh || dc) { dong.GioiHan = gh || ''; dong.DungCho = dc; }
+    kq.push(dong);
   }
   if (!kq.length) return { ds: [], loi: 'Cần ít nhất một loại hoạt động.' };
   return { ds: kq, loi: '' };
@@ -568,18 +825,111 @@ function kiemTraTask_(yeuCau, thanhVien) {
 }
 
 /** Tạo các dòng task, mỗi người phụ trách một dòng. BOD tạo là "Giao task", ban nhân sự tạo là "Nhập task". */
-function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio) {
+function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio, phanCong, mienTask) {
   var k = kiemTraTask_(yeuCau, thanhVien);
   if (k.loi) return { dong: [], loi: k.loi };
+  var mien = k.nguoi.filter(function (n) { return (mienTask || []).some(function (m) { return String(m).toLowerCase() === n.toLowerCase(); }); });
+  if (mien.length) return { dong: [], loi: mien.join(', ') + ' thuộc nhóm SUP-RES, được miễn task ban.' };
   return {
     loi: '',
     dong: k.nguoi.map(function (n) {
       return {
         ThoiGianTao: bayGio, TenTask: k.ten, MoTa: k.moTa, HanChot: k.hanChot, NguoiPhuTrach: n,
-        NguoiTao: nguoiTao, KieuTao: vaiTro === 'BOD' ? 'Giao task' : 'Nhập task', TrangThai: TRANG_THAI_TASK.GIAO, ThoiGianXong: ''
+        NguoiTao: nguoiTao, KieuTao: vaiTro === 'BOD' ? 'Giao task' : 'Nhập task', TrangThai: TRANG_THAI_TASK.GIAO, ThoiGianXong: '',
+        HrPhuTrach: hrPhuTrach_(n, phanCong || [], nguoiTao, vaiTro === 'HR')
       };
     })
   };
+}
+
+/* ===================== KPI task (quy chế mục II.2, II.3) ===================== */
+
+var CHAT_LUONG = { HOAN_CHINH: 'Hoàn chỉnh', CAN_SUA: 'Cần chỉnh sửa', SO_SAI: 'Làm quá sơ sài' };
+var DUNG_HAN = { DUNG: 'Đúng hạn', TRE: 'Trễ hạn', KHONG_LAM: 'Không làm' };
+var KET_QUA = { DAT: 'Đạt', CHUA_DAT: 'Chưa đạt', CHO: 'Chờ đánh giá' };
+/** Hoàn thành khi đạt từ 80% việc được giao; HR quên nhắc tối đa 20% số lượt được phân. */
+var TI_LE_DAT = 80, TI_LE_QUEN_TOI_DA = 20, LUOT_NHAC_MOI_TASK = 2;
+var LOAI_HR_QUEN = ['Nhắc deadline', 'Chúc mừng sinh nhật', 'Báo cáo seeding'];
+
+/**
+ * Đúng hạn hay không của một task: Đã xong thì so ngày nộp với hạn chót (hạn đã gia hạn hợp lệ),
+ * Không hoàn thành là Không làm, còn lại chưa có ('').
+ */
+function dungHanTask_(trangThai, hanChot, ngayNop) {
+  if (trangThai === TRANG_THAI_TASK.KHT) return DUNG_HAN.KHONG_LAM;
+  if (trangThai !== TRANG_THAI_TASK.XONG) return '';
+  return ngayHopLe_(ngayNop) && ngayHopLe_(hanChot) && ngayNop > hanChot ? DUNG_HAN.TRE : DUNG_HAN.DUNG;
+}
+
+/** Kết quả một task theo bảng 3 × 3 (đúng hạn × chất lượng). Đã xong mà BOD chưa đánh giá thì Chờ đánh giá. */
+function ketQuaTask_(dungHan, chatLuong) {
+  if (dungHan === DUNG_HAN.KHONG_LAM) return KET_QUA.CHUA_DAT;
+  if (!dungHan) return '';
+  if (!chatLuong) return KET_QUA.CHO;
+  if (chatLuong === CHAT_LUONG.SO_SAI) return KET_QUA.CHUA_DAT;
+  if (dungHan === DUNG_HAN.TRE && chatLuong === CHAT_LUONG.CAN_SUA) return KET_QUA.CHUA_DAT;
+  return KET_QUA.DAT;
+}
+
+/** Kiểm tra đánh giá chất lượng. "Làm quá sơ sài" bắt buộc ghi rõ dấu hiệu. Trả về '' nếu hợp lệ. */
+function kiemTraDanhGia_(chatLuong, dauHieu) {
+  var hop = Object.keys(CHAT_LUONG).some(function (k) { return CHAT_LUONG[k] === chatLuong; });
+  if (!hop) return 'Chọn mức chất lượng.';
+  if (chatLuong === CHAT_LUONG.SO_SAI && String(dauHieu || '').trim().length < 10) return 'Đánh giá "Làm quá sơ sài" cần ghi rõ dấu hiệu cụ thể (ví dụ: thiếu quá nửa phần việc trong mô tả).';
+  if (String(dauHieu || '').length > 1000) return 'Phần ghi chú dài quá 1000 ký tự.';
+  return '';
+}
+
+/**
+ * Gia hạn được tính là đúng hạn khi thành viên xin trước hạn ít nhất 24 giờ: ngày xin muộn nhất là ngày trước hạn chót
+ * (hạn tính đến hết ngày hạn chót). Trả về '' nếu hợp lệ.
+ */
+function kiemTraGiaHan_(hanChot, hanMoi, ngayXin) {
+  if (!ngayHopLe_(hanMoi)) return 'Chọn hạn chót mới.';
+  if (!ngayHopLe_(ngayXin)) return 'Chọn ngày thành viên xin gia hạn.';
+  if (ngayHopLe_(hanChot) && hanMoi <= hanChot) return 'Hạn mới phải sau hạn hiện tại (' + hienNgay_(hanChot) + ').';
+  if (ngayHopLe_(hanChot) && soNgayGiua_(ngayXin, hanChot) < 1) return 'Thành viên xin gia hạn chưa đủ 24 giờ trước hạn (' + hienNgay_(hanChot) + ') nên không được tính là gia hạn. Nếu nộp sau hạn thì task tính trễ hạn.';
+  return '';
+}
+
+function phanTram_(tu, mau) { return mau ? Math.round(tu * 100 / mau) : null; }
+
+/**
+ * Tổng hợp KPI task của một người. ds: các task của người đó, mỗi task có trangThai và ketQua.
+ * Task đã huỷ không tính. Tỉ lệ = số task đạt ÷ số task đã có kết quả (Đạt hoặc Chưa đạt), làm tròn.
+ */
+function tongKpiTask_(ds) {
+  var kq = { giao: 0, dat: 0, chuaDat: 0, cho: 0, dangLam: 0, tiLe: null };
+  ds.forEach(function (t) {
+    if (t.trangThai === TRANG_THAI_TASK.HUY) return;
+    kq.giao++;
+    if (t.ketQua === KET_QUA.DAT) kq.dat++;
+    else if (t.ketQua === KET_QUA.CHUA_DAT) kq.chuaDat++;
+    else if (t.ketQua === KET_QUA.CHO) kq.cho++;
+    else kq.dangLam++;
+  });
+  kq.tiLe = phanTram_(kq.dat, kq.dat + kq.chuaDat);
+  return kq;
+}
+
+/**
+ * KPI của một HR theo lượt nhắc: mỗi task (không tính task huỷ) của thành viên HR đó phụ trách có 2 lượt.
+ * Số lần quên tối đa = 20% × số lượt, làm tròn. Mọi lần BOD ghi nhận quên (nhắc deadline, sinh nhật, seeding) đều tính.
+ */
+function kpiHr_(task, quen, tenHr) {
+  var k = String(tenHr).toLowerCase();
+  var soTask = task.filter(function (t) { return String(t.hrPhuTrach || '').toLowerCase() === k && t.trangThai !== TRANG_THAI_TASK.HUY; }).length;
+  var soQuen = quen.filter(function (q) { return String(q.NguoiHr || '').toLowerCase() === k && String(q.TrangThai || '') !== 'Đã huỷ'; }).length;
+  var luot = soTask * LUOT_NHAC_MOI_TASK;
+  var toiDa = Math.round(luot * TI_LE_QUEN_TOI_DA / 100);
+  return { soTask: soTask, luot: luot, soQuen: soQuen, toiDa: toiDa, dat: soQuen <= toiDa };
+}
+
+/** HR phụ trách một thành viên: theo bảng phân công; chưa phân công thì là HR đã nhập task (nếu người nhập là HR). */
+function hrPhuTrach_(tenThanhVien, phanCong, nguoiTao, laHr) {
+  var k = String(tenThanhVien).toLowerCase();
+  for (var i = 0; i < phanCong.length; i++) if (String(phanCong[i].HoVaTen).toLowerCase() === k && String(phanCong[i].NguoiHr || '').trim()) return String(phanCong[i].NguoiHr).trim();
+  return laHr ? String(nguoiTao) : '';
 }
 
 /* ===================== Nhắc việc qua Zalo ===================== */
@@ -1360,7 +1710,7 @@ function goiYLoaiSeeding_(tenCot, loaiHoatDong) {
 function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGio) {
   var nguoiNop = cot.nguoiNop >= 0 ? String(dong[cot.nguoiNop] == null ? '' : dong[cot.nguoiNop]).trim() : '';
   var kq = { dong: [], khongKhop: [], nguoiNop: nguoiNop, loi: '' };
-  if (!ky) { kq.loi = 'Chưa có học kỳ nào nên chưa cộng được. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.'; return kq; }
+  if (!ky) { kq.loi = 'Chưa có giai đoạn nào nên chưa cộng được. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.'; return kq; }
   var loaiTheoTen = {};
   loaiHoatDong.forEach(function (l) { loaiTheoTen[String(l.TenLoai)] = l; });
   var theoFb = {};
@@ -1391,6 +1741,105 @@ function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGi
   return kq;
 }
 
+/* ===================== Báo cáo seeding trong app (HR SUP-SEED) ===================== */
+
+/** Nhóm HR do BOD chọn cho từng người, ngoài COO (COO là các ban ở cột BanQuanLy). */
+var NHOM_HR = ['SUP-SEED', 'SUP-RES', 'CRE'];
+
+/** Đọc ô NhomHr ("SUP-SEED, CRE") thành danh sách nhóm hợp lệ. */
+function nhomHr_(giaTri) {
+  var ds = [];
+  String(giaTri == null ? '' : giaTri).split(/[,;]/).forEach(function (x) {
+    var n = chuanChu_(x).replace(/\s+/g, '');
+    if (NHOM_HR.indexOf(n) >= 0 && ds.indexOf(n) < 0) ds.push(n);
+  });
+  return ds;
+}
+
+/** Được điền báo cáo seeding: BOD, hoặc người được BOD xếp vào nhóm SUP-SEED. */
+function duocBaoCaoSeeding_(tk) {
+  return !!tk && (String(tk.VaiTro) === 'BOD' || nhomHr_(tk.NhomHr).indexOf('SUP-SEED') >= 0);
+}
+
+/** Link bài đăng để so trùng: bỏ giao thức, www/m/web, dấu / cuối, phần # và tham số (trừ link dạng .php cần tham số). */
+function chuanLinkBai_(link) {
+  var s = String(link || '').trim().toLowerCase().replace(/#.*$/, '').replace(/^https?:\/\//, '').replace(/^(www|m|web|mbasic)\./, '');
+  var q = s.indexOf('?');
+  if (q >= 0 && s.slice(0, q).indexOf('.php') < 0) s = s.slice(0, q);
+  return s.replace(/\/+$/, '');
+}
+
+/**
+ * Dò các dòng tên (mỗi dòng một tên Facebook) với thành viên: khớp Tên Facebook trước, không có thì khớp Họ và tên.
+ * Không phân biệt dấu, hoa thường, ký tự lạ. Trả về { ten: [họ tên, không trùng], khongKhop: [dòng không khớp ai] }.
+ */
+function khopTenSeeding_(chuoi, thanhVien) {
+  var theoFb = {}, theoTen = {};
+  thanhVien.forEach(function (tv) {
+    var k = chuanTenFb_(tv.TenFacebook);
+    if (k) (theoFb[k] = theoFb[k] || []).push(String(tv.HoVaTen));
+    var t = chuanTenFb_(tv.HoVaTen);
+    if (t) (theoTen[t] = theoTen[t] || []).push(String(tv.HoVaTen));
+  });
+  var kq = { ten: [], khongKhop: [] };
+  String(chuoi == null ? '' : chuoi).split(/\r?\n/).forEach(function (dong) {
+    var k = chuanTenFb_(dong);
+    if (!k) return;
+    var ai = theoFb[k] || theoTen[k];
+    if (!ai) { var goc = String(dong).trim(); if (kq.khongKhop.indexOf(goc) < 0) kq.khongKhop.push(goc); return; }
+    ai.forEach(function (ten) { if (kq.ten.indexOf(ten) < 0) kq.ten.push(ten); });
+  });
+  return kq;
+}
+
+/**
+ * Một báo cáo seeding thành các dòng cộng điểm.
+ * yc = { link, lucDang (mili giây), react (mỗi dòng một tên), comment }.
+ * thanhVien: người được cộng (không có BOD). baoCaoCu: các dòng BaoCaoSeeding đã có (để chặn trùng bài).
+ * Trả về { dong, bao (dòng BaoCaoSeeding), react, comment, khongKhop, canhBao, loi }.
+ */
+function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, baoCaoCu, lichSu) {
+  var kq = { dong: [], bao: null, react: [], comment: [], khongKhop: [], canhBao: [], loi: '' };
+  var loi = function (s) { kq.loi = s; return kq; };
+  if (!ky) return loi('Chưa có giai đoạn nào nên chưa cộng được. BOD cần tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.');
+  yc = yc || {};
+  var link = String(yc.link || '').trim();
+  if (!linkHopLe_(link)) return loi('Dán link bài đăng (bắt đầu bằng https://).');
+  var lucDang = Number(yc.lucDang);
+  if (!lucDang || isNaN(new Date(lucDang).getTime())) return loi('Chọn thời gian bài được đăng.');
+  if (lucDang > bayGio.getTime() + 5 * 60000) return loi('Thời gian đăng bài đang ở tương lai. Kiểm tra lại ngày giờ.');
+  var khoaLink = chuanLinkBai_(link);
+  var trung = (baoCaoCu || []).filter(function (b) { return String(b.TrangThai || '') !== 'Đã huỷ' && chuanLinkBai_(b.LinkBai) === khoaLink; })[0];
+  if (trung) return loi('Bài này đã có báo cáo của ' + String(trung.NguoiNop) + '. Muốn sửa thì nhờ BOD huỷ báo cáo cũ rồi điền lại.');
+  var loaiReact = loaiDungCho_(loaiHoatDong, DUNG_CHO.REACT), loaiComment = loaiDungCho_(loaiHoatDong, DUNG_CHO.COMMENT);
+  var r = khopTenSeeding_(yc.react, thanhVien), c = khopTenSeeding_(yc.comment, thanhVien);
+  if (r.ten.length && !loaiReact) return loi('Chưa có loại hoạt động dùng cho react. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
+  if (c.ten.length && !loaiComment) return loi('Chưa có loại hoạt động dùng cho comment. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
+  if (!r.ten.length && !c.ten.length && !r.khongKhop.length && !c.khongKhop.length) return loi('Bạn chưa dán tên ai.');
+  kq.react = r.ten; kq.comment = c.ten;
+  r.khongKhop.concat(c.khongKhop).forEach(function (x) { if (kq.khongKhop.indexOf(x) < 0) kq.khongKhop.push(x); });
+  var gio = (bayGio.getTime() - lucDang) / 3600000;
+  if (gio < 48) kq.canhBao.push('Bài mới đăng được ' + Math.floor(gio) + ' giờ, chưa đủ 48 giờ. Ai react hoặc comment sau lúc gửi sẽ không được cộng.');
+  if (gio > 24 * 7) kq.canhBao.push('Bài đã đăng hơn 7 ngày. Chỉ ghi những người react hoặc comment trong 48 giờ đầu.');
+  var them = function (ds, loai) {
+    ds.forEach(function (ten) {
+      kq.dong.push({
+        ThoiGian: bayGio, HoVaTen: ten, LoaiHoatDong: String(loai.TenLoai), TenHoatDong: link.slice(0, 200), Diem: Number(loai.Diem) || 0,
+        NguoiCong: 'Seeding: ' + nguoiNop, NhiemKy: String(ky.NhiemKy), HocKy: Number(ky.HocKy)
+      });
+    });
+  };
+  if (loaiReact) them(r.ten, loaiReact);
+  if (loaiComment) them(c.ten, loaiComment);
+  var vuot = vuotGioiHan_(kq.dong, loaiHoatDong, lichSu || [], ky);
+  if (vuot) return loi(vuot);
+  kq.bao = {
+    ThoiGian: bayGio, NguoiNop: nguoiNop, LinkBai: link, LucDang: new Date(lucDang),
+    React: r.ten.join(', '), Comment: c.ten.join(', '), KhongKhop: kq.khongKhop.join(', ').slice(0, 2000), TrangThai: 'Đã cộng', NguoiHuy: ''
+  };
+  return kq;
+}
+
 /** Giao diện theo mùa và ngày lễ do BOD chọn (trống là giao diện xanh mặc định). Tên, màu, hình nằm ở ChuDe.html. */
 var CHU_DE = ['xuan', 'ha', 'thu', 'dong', 'tet', 'phunu', 'traidat', 'quockhanh', 'trungthu', 'halloween', 'nhagiao', 'giangsinh'];
 /** Giao diện luôn tối (bất kể người dùng chọn sáng hay tối). */
@@ -1412,9 +1861,246 @@ function chuanHoaCachNhan_(giaTri) {
   return kq.length ? kq : ['zalo'];
 }
 
+/* ===================== KPI log (quy chế 2026-2027, mục II.1) ===================== */
+
+/**
+ * Mỗi sự kiện log có số buổi dự kiến và số buổi giao cho từng thành viên (mặc định, hoặc riêng theo ban, theo khối lớp).
+ * Buổi huỷ vì hết việc làm số buổi được giao cuối giảm theo tỉ lệ; buổi huỷ vì lý do khác tính là đã tham gia
+ * với người đã đăng ký buổi đó. Đạt khi số buổi đã tham gia ≥ 80% tổng số buổi được giao cuối.
+ */
+var TRANG_THAI_BUOI = { CHUA: 'Chưa diễn ra', DIEN_RA: 'Đã diễn ra', HUY_HET_VIEC: 'Huỷ vì hết việc', HUY_KHAC: 'Huỷ vì lý do khác', XOA: 'Đã xoá' };
+var THOI_LUONG_BUOI = [90, 180];
+var SU_KIEN_CHOT = 'Đã chốt', SU_KIEN_HUY = 'Đã huỷ';
+var TOI_DA_BUOI_LOG = 200;
+
+/** Khối lớp từ cột Lớp: "9A1" -> 9, "10 Anh" -> 10. Không đọc được thì 0. */
+function khoiLop_(lop) {
+  var m = /^\s*(\d{1,2})(?!\d)/.exec(String(lop == null ? '' : lop));
+  return m ? Number(m[1]) : 0;
+}
+
+/** Đọc cột GiaoRieng (chuỗi JSON) thành danh sách { loai: 'ban' | 'khoi', gia, so }. */
+function docGiaoRieng_(v) {
+  var ds = v;
+  if (typeof v === 'string') { try { ds = v.trim() ? JSON.parse(v) : []; } catch (e) { ds = []; } }
+  return Array.isArray(ds) ? ds.filter(function (r) { return r && (r.loai === 'ban' || r.loai === 'khoi'); }) : [];
+}
+
+/**
+ * Số buổi giao ban đầu cho một thành viên. Ưu tiên: theo khối lớp, rồi theo ban, rồi mặc định.
+ * Quy định theo ban khớp cả tên ban đầy đủ ("PR CAP") lẫn nhóm ban ("PR").
+ */
+function giaoBanDau_(suKien, tv) {
+  var rieng = docGiaoRieng_(suKien.GiaoRieng);
+  var khoi = khoiLop_(tv.Lop), ban = String(tv.Ban || '').trim().toUpperCase(), nhom = nhomBan_(tv.Ban);
+  for (var i = 0; i < rieng.length; i++) if (rieng[i].loai === 'khoi' && khoi && Number(rieng[i].gia) === khoi) return Number(rieng[i].so) || 0;
+  for (var j = 0; j < rieng.length; j++) {
+    var g = String(rieng[j].gia || '').trim().toUpperCase();
+    if (rieng[j].loai === 'ban' && g && (g === ban || g === nhom)) return Number(rieng[j].so) || 0;
+  }
+  return Number(suKien.GiaoMacDinh) || 0;
+}
+
+/** Kiểm tra sự kiện log do BOD nhập. Trả về { dong, loi }. */
+function chuanHoaSuKienLog_(yc) {
+  yc = yc || {};
+  var ten = String(yc.ten || '').trim();
+  if (!ten) return { loi: 'Bạn chưa đặt tên sự kiện.' };
+  if (ten.length > 150) return { loi: 'Tên sự kiện dài quá 150 ký tự.' };
+  var duKien = Number(yc.soBuoiDuKien);
+  if (!(duKien >= 1 && duKien <= TOI_DA_BUOI_LOG) || Math.floor(duKien) !== duKien) return { loi: 'Số buổi dự kiến phải là số nguyên từ 1 đến ' + TOI_DA_BUOI_LOG + '.' };
+  var soGiao = function (v, ten2) {
+    var n = String(v == null ? '' : v).trim() === '' ? NaN : Number(v);
+    if (!(n >= 0) || Math.floor(n) !== n) return { loi: 'Số buổi giao ' + ten2 + ' phải là số nguyên không âm.' };
+    if (n > duKien) return { loi: 'Số buổi giao ' + ten2 + ' (' + n + ') nhiều hơn số buổi dự kiến (' + duKien + ').' };
+    return { so: n };
+  };
+  var mac = soGiao(yc.giaoMacDinh, 'mặc định');
+  if (mac.loi) return { loi: mac.loi };
+  var rieng = [], daCo = {};
+  var ds = yc.giaoRieng || [];
+  for (var i = 0; i < ds.length; i++) {
+    var r = ds[i] || {};
+    var loai = r.loai === 'khoi' ? 'khoi' : 'ban';
+    var gia = loai === 'khoi' ? Number(r.gia) : String(r.gia || '').trim().toUpperCase();
+    if (loai === 'khoi' && !(gia >= 1 && gia <= 12 && Math.floor(gia) === gia)) return { loi: 'Khối lớp phải là số từ 1 đến 12.' };
+    if (loai === 'ban' && !gia) return { loi: 'Bạn chưa chọn ban cho một dòng giao riêng.' };
+    var nhan = loai === 'khoi' ? 'cho khối ' + gia : 'cho ban ' + gia;
+    var so = soGiao(r.so, nhan);
+    if (so.loi) return { loi: so.loi };
+    if (daCo[loai + gia]) return { loi: 'Số buổi giao ' + nhan + ' bị nhập hai lần.' };
+    daCo[loai + gia] = true;
+    rieng.push({ loai: loai, gia: gia, so: so.so });
+  }
+  return {
+    loi: '',
+    dong: { TenSuKien: ten, SoBuoiDuKien: duKien, GiaoMacDinh: mac.so, GiaoRieng: rieng.length ? JSON.stringify(rieng) : '' }
+  };
+}
+
+/** Kiểm tra một buổi log. Trả về { dong, loi }. */
+function chuanHoaBuoiLog_(yc) {
+  yc = yc || {};
+  var ten = String(yc.ten || '').trim();
+  if (!ten) return { loi: 'Bạn chưa đặt tên buổi.' };
+  if (ten.length > 100) return { loi: 'Tên buổi dài quá 100 ký tự.' };
+  var ngay = String(yc.ngay || '').trim();
+  if (ngay && !ngayHopLe_(ngay)) return { loi: 'Ngày của buổi không hợp lệ.' };
+  var tl = Number(yc.thoiLuong);
+  if (THOI_LUONG_BUOI.indexOf(tl) < 0) return { loi: 'Thời lượng buổi là 90 hoặc 180 phút.' };
+  var tt = String(yc.trangThai || TRANG_THAI_BUOI.CHUA);
+  if ([TRANG_THAI_BUOI.CHUA, TRANG_THAI_BUOI.DIEN_RA, TRANG_THAI_BUOI.HUY_HET_VIEC, TRANG_THAI_BUOI.HUY_KHAC].indexOf(tt) < 0) return { loi: 'Trạng thái buổi không hợp lệ.' };
+  var ds = function (v) {
+    var kq = [], co = {};
+    (Array.isArray(v) ? v : tachTen_(v)).forEach(function (n) { n = String(n).trim(); if (n && !co[n.toLowerCase()]) { co[n.toLowerCase()] = true; kq.push(n); } });
+    return kq;
+  };
+  return { loi: '', dong: { TenBuoi: ten, Ngay: ngay, ThoiLuong: tl, TrangThai: tt, DangKy: ds(yc.dangKy).join(', '), CoMat: ds(yc.coMat).join(', ') } };
+}
+
+/** Tách ô danh sách tên (ngăn cách bằng dấu phẩy). */
+function tachTen_(s) {
+  return String(s == null ? '' : s).split(',').map(function (x) { return x.trim(); }).filter(String);
+}
+
+function coTen_(ds, ten) {
+  var k = String(ten).trim().toLowerCase();
+  for (var i = 0; i < ds.length; i++) if (String(ds[i]).trim().toLowerCase() === k) return true;
+  return false;
+}
+
+/** Buổi tính vào sự kiện (bỏ buổi đã xoá), xếp theo ngày rồi theo lúc tạo. */
+function buoiHieuLuc_(buoi) {
+  return buoi.filter(function (b) { return String(b.TrangThai) !== TRANG_THAI_BUOI.XOA; }).sort(function (a, b) {
+    var na = String(a.Ngay || ''), nb = String(b.Ngay || '');
+    if (na !== nb) return na < nb ? -1 : 1;
+    return Number(a.ThoiGian) - Number(b.ThoiGian);
+  });
+}
+
+/**
+ * Số buổi thực diễn ra. Sau khi chốt: số buổi đã diễn ra hoặc huỷ vì lý do khác.
+ * Trước khi chốt: số buổi dự kiến trừ số buổi đã huỷ vì hết việc.
+ */
+function soBuoiThucDien_(suKien, buoi) {
+  var ds = buoiHieuLuc_(buoi);
+  if (String(suKien.TrangThai) === SU_KIEN_CHOT) {
+    return ds.filter(function (b) { return b.TrangThai === TRANG_THAI_BUOI.DIEN_RA || b.TrangThai === TRANG_THAI_BUOI.HUY_KHAC; }).length;
+  }
+  return Math.max(0, Number(suKien.SoBuoiDuKien) - ds.filter(function (b) { return b.TrangThai === TRANG_THAI_BUOI.HUY_HET_VIEC; }).length);
+}
+
+/** Số buổi được giao cuối = thực diễn × (giao ban đầu ÷ dự kiến), không bao giờ lớn hơn giao ban đầu. Giữ số lẻ. */
+function giaoCuoi_(giao, duKien, thucDien) {
+  if (!giao || !duKien) return 0;
+  return Math.min(giao, thucDien * giao / duKien);
+}
+
+/**
+ * KPI log của một người trong một sự kiện.
+ * thamGia: buổi đã diễn ra có mặt, và buổi huỷ vì lý do khác mà người đó đã đăng ký.
+ * vuot: các buổi được cộng điểm làm vượt, là những buổi có mặt muộn nhất vượt quá số buổi được giao cuối
+ * (chỉ tính buổi thực sự diễn ra).
+ */
+function kpiLogSuKien_(suKien, buoi, tv) {
+  var ten = String(tv.HoVaTen);
+  var giao = giaoBanDau_(suKien, tv);
+  var ds = buoiHieuLuc_(buoi);
+  var thamGia = [], coMat = [];
+  ds.forEach(function (b) {
+    if (b.TrangThai === TRANG_THAI_BUOI.DIEN_RA && coTen_(tachTen_(b.CoMat), ten)) { thamGia.push(b); coMat.push(b); }
+    else if (b.TrangThai === TRANG_THAI_BUOI.HUY_KHAC && coTen_(tachTen_(b.DangKy), ten)) thamGia.push(b);
+  });
+  var cuoi = giaoCuoi_(giao, Number(suKien.SoBuoiDuKien), soBuoiThucDien_(suKien, buoi));
+  var soVuot = Math.min(coMat.length, Math.max(0, Math.floor(thamGia.length - cuoi + 1e-9)));
+  return { giao: giao, giaoCuoi: cuoi, thamGia: thamGia.length, vuot: soVuot ? coMat.slice(coMat.length - soVuot) : [] };
+}
+
+/** Làm tròn số buổi được giao cuối để hiện (tối đa 2 chữ số thập phân). */
+function hienSoBuoi_(x) { return Math.round(x * 100) / 100; }
+
+/**
+ * KPI log của một người qua các sự kiện của nhiệm kỳ (sự kiện đã huỷ không tính).
+ * dsSuKien: mỗi sự kiện kèm mảng buoi. Thành viên bổ sung chỉ tính sự kiện tạo từ lúc bắt đầu giai đoạn 2 (moc2).
+ * Trả về { giaoCuoi, thamGia, tiLe, chiTiet[] }; tiLe null khi chưa được giao buổi nào.
+ */
+function kpiLogCuaNguoi_(tv, dsSuKien, moc2) {
+  var boSung = tv.LoaiThanhVien === LOAI_TV.BO_SUNG;
+  var kq = { giaoCuoi: 0, thamGia: 0, tiLe: null, chiTiet: [] };
+  dsSuKien.forEach(function (s) {
+    if (String(s.TrangThai) === SU_KIEN_HUY) return;
+    if (boSung && new Date(s.ThoiGian).getTime() < moc2) return;
+    var k = kpiLogSuKien_(s, s.buoi || [], tv);
+    if (!k.giao) return;
+    kq.giaoCuoi += k.giaoCuoi;
+    kq.thamGia += k.thamGia;
+    kq.chiTiet.push({ suKien: new Date(s.ThoiGian).getTime(), ten: String(s.TenSuKien), daChot: String(s.TrangThai) === SU_KIEN_CHOT, giao: k.giao, giaoCuoi: hienSoBuoi_(k.giaoCuoi), thamGia: k.thamGia, vuot: k.vuot.length });
+  });
+  kq.tiLe = kq.giaoCuoi > 0 ? Math.round(kq.thamGia * 100 / kq.giaoCuoi + 1e-9) : null;
+  kq.giaoCuoi = hienSoBuoi_(kq.giaoCuoi);
+  return kq;
+}
+
+/**
+ * Các dòng LichSuDiem cộng điểm log vượt khi chốt sự kiện: mỗi buổi vượt một dòng, buổi 90 phút và 180 phút
+ * theo hai loại hoạt động gắn với log90, log180. Trả về { dong, loi }.
+ */
+function dongDiemLogVuot_(suKien, buoi, thanhVien, loaiHoatDong, ky, nguoiCong, bayGio) {
+  var dong = [];
+  var loai = { 90: loaiDungCho_(loaiHoatDong, DUNG_CHO.LOG_90), 180: loaiDungCho_(loaiHoatDong, DUNG_CHO.LOG_180) };
+  var thieu = {};
+  thanhVien.forEach(function (tv) {
+    kpiLogSuKien_(suKien, buoi, tv).vuot.forEach(function (b) {
+      var tl = Number(b.ThoiLuong) === 180 ? 180 : 90;
+      if (!loai[tl]) { thieu[tl] = true; return; }
+      dong.push({
+        ThoiGian: bayGio, HoVaTen: String(tv.HoVaTen), LoaiHoatDong: String(loai[tl].TenLoai),
+        TenHoatDong: (String(suKien.TenSuKien) + ' · ' + String(b.TenBuoi)).slice(0, 200), Diem: Number(loai[tl].Diem) || 0,
+        NguoiCong: nguoiCong, NhiemKy: ky ? String(ky.NhiemKy) : '', HocKy: ky ? Number(ky.HocKy) : ''
+      });
+    });
+  });
+  var tl = Object.keys(thieu);
+  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.' };
+  if (dong.length && !ky) return { dong: [], loi: 'Chưa có giai đoạn nào nên chưa cộng được điểm log vượt.' };
+  return { dong: dong, loi: '' };
+}
+
+/**
+ * Đọc đăng ký từ file đăng ký log (giá trị của một tab).
+ * toolCu: tab "Đăng ký log" của tool cũ: dòng 4 là tên buổi từ cột E đến trước cột Ghi chú, từ dòng 5 là họ tên ở cột A.
+ * Mẫu khác: dòng tiêu đề có cột Họ và tên; các cột có tiêu đề sau cột Họ tên, Ban, SĐT là các buổi.
+ * Trả về [{ ten, dangKy: [họ tên] }].
+ */
+function docDangKyLog_(values, toolCu) {
+  var dongTieuDe, cotTen, cotDau;
+  if (toolCu) { dongTieuDe = 3; cotTen = 0; cotDau = 4; }
+  else {
+    var td = timTieuDeMauLog_(values);
+    if (!td) return [];
+    dongTieuDe = td.dong; cotTen = td.cot.ten;
+    cotDau = Math.max.apply(null, Object.keys(td.cot).map(function (k) { return td.cot[k]; })) + 1;
+  }
+  var tieuDe = values[dongTieuDe] || [];
+  var buoi = [];
+  for (var c = cotDau; c < tieuDe.length; c++) {
+    var ten = String(tieuDe[c] == null ? '' : tieuDe[c]).trim();
+    if (chuanHoaTenCot_(ten) === 'ghichu') break;
+    if (ten) buoi.push({ cot: c, ten: ten, dangKy: [] });
+  }
+  for (var r = dongTieuDe + 1; r < values.length; r++) {
+    var nguoi = String(values[r][cotTen] == null ? '' : values[r][cotTen]).trim();
+    if (!nguoi) continue;
+    buoi.forEach(function (b) { var v = values[r][b.cot]; if (v === true || String(v).toUpperCase() === 'TRUE') b.dangKy.push(nguoi); });
+  }
+  return buoi.map(function (b) { return { ten: b.ten, dangKy: b.dangKy }; });
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
-    COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI,
+    COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI, LOAI_TV: LOAI_TV,
+    nhiemKyTheoKieu: nhiemKyTheoKieu_, kieuTaiThucTe: kieuTaiThucTe_, soSanhDanhSach: soSanhDanhSach_, ganLoaiThanhVien: ganLoaiThanhVien_,
+    docNgaySinh: docNgaySinh_, tenLichSinhNhat: tenLichSinhNhat_, keHoachSinhNhat: keHoachSinhNhat_,
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
@@ -1423,7 +2109,9 @@ if (typeof module !== 'undefined') {
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
-    trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_,
+    CHAT_LUONG: CHAT_LUONG, DUNG_HAN: DUNG_HAN, KET_QUA: KET_QUA, LOAI_HR_QUEN: LOAI_HR_QUEN, dungHanTask: dungHanTask_, ketQuaTask: ketQuaTask_, kiemTraDanhGia: kiemTraDanhGia_,
+    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, kpiHr: kpiHr_, hrPhuTrach: hrPhuTrach_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
     lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,
@@ -1434,6 +2122,11 @@ if (typeof module !== 'undefined') {
     base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_,
     CHU_DE: CHU_DE, chuDeHopLe: chuDeHopLe_, thuocTinhChuDe: thuocTinhChuDe_,
-    COT_DA_CONG_FORM: COT_DA_CONG_FORM, chuanTenFb: chuanTenFb_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_
+    COT_DA_CONG_FORM: COT_DA_CONG_FORM, chuanTenFb: chuanTenFb_,
+    TI_LE_TOP: TI_LE_TOP, soNguoiTop: soNguoiTop_, topTheoDiem: topTheoDiem_, vuotGioiHan: vuotGioiHan_, gioiHanLoai: gioiHanLoai_,
+    DUNG_CHO: DUNG_CHO, MUC_DIEM_QUY_CHE: MUC_DIEM_QUY_CHE, loaiDungCho: loaiDungCho_,
+    NHOM_HR: NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_,
+    TRANG_THAI_BUOI: TRANG_THAI_BUOI, SU_KIEN_CHOT: SU_KIEN_CHOT, SU_KIEN_HUY: SU_KIEN_HUY, khoiLop: khoiLop_, giaoBanDau: giaoBanDau_, chuanHoaSuKienLog: chuanHoaSuKienLog_, chuanHoaBuoiLog: chuanHoaBuoiLog_,
+    soBuoiThucDien: soBuoiThucDien_, giaoCuoi: giaoCuoi_, kpiLogSuKien: kpiLogSuKien_, kpiLogCuaNguoi: kpiLogCuaNguoi_, dongDiemLogVuot: dongDiemLogVuot_, docDangKyLog: docDangKyLog_
   };
 }

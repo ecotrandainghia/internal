@@ -182,6 +182,10 @@ function ghiKetNoiZalo_(ten, chatId, tenZalo) {
 /** Lịch nhắc deadline. Chưa lưu lịch mới thì đổi từ cài đặt cũ (một danh sách giờ chung) để cách nhắc không đổi. */
 function caiDatNhacZalo_() {
   var lich = chuanHoaLichNhac_(layCaiDat_('LichNhac'));
+  if ((!lich || !lich.length) && layCaiDat_('ZaloGioNhac') === null && layCaiDat_('ZaloNhacSapDenHan') === null) {
+    // Chưa ai chỉnh lịch: dùng lịch trong tài liệu training HR (tối trước hạn 1 ngày, sáng ngày hạn, sáng sau hạn 1 ngày).
+    lich = [{ ngay: -1, gio: 20, phut: 0 }, { ngay: 0, gio: 7, phut: 0 }, { ngay: 1, gio: 7, phut: 0 }];
+  }
   if (!lich || !lich.length) {
     var sap = layCaiDat_('ZaloNhacSapDenHan');
     lich = lichNhacTuCaiDatCu_(soNgaySapDenHan_(), chuanHoaDsGio_(layCaiDat_('ZaloGioNhac')),

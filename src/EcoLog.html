@@ -1,0 +1,180 @@
+<style>
+/* Làm log: sự kiện log, buổi, điểm danh, chốt (KPI log theo quy chế 2026-2027). */
+.lg-sk{display:grid;gap:10px}
+.lg-sk.huy{opacity:.55}
+.lg-buoi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;border-top:1px solid var(--line);padding:10px 0}
+.lg-buoi:first-child{border-top:0}
+.lg-dd td.c,.lg-dd th.c{text-align:center;width:90px}
+.lg-gr{display:grid;grid-template-columns:120px minmax(0,1fr) 110px 40px;gap:8px;align-items:center}
+@media (max-width:600px){.lg-gr{grid-template-columns:1fr 1fr}}
+</style>
+<script>
+/* =================== Làm log =================== */
+var LOG = { tab: 'sukien', d: null };
+var TT_BUOI = { 'Chưa diễn ra': 'p-mute', 'Đã diễn ra': 'p-ok', 'Huỷ vì hết việc': 'p-warn', 'Huỷ vì lý do khác': 'p-info' };
+function dauTrangLog() {
+  return '<div class="head"><div><h2>Làm log</h2><p class="lead">' + (LOG.tab === 'file' ? 'Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi. Ai có link file đều mở và đăng ký được.' :
+    'Mỗi sự kiện có số buổi dự kiến và số buổi giao cho từng thành viên. Điểm danh từng buổi; buổi huỷ vì hết việc làm số buổi được giao cuối giảm theo tỉ lệ, buổi huỷ vì lý do khác tính là đã tham gia với người đã đăng ký. Đạt KPI log khi tham gia từ 80% tổng số buổi được giao cuối.') + '</p></div></div>' +
+    '<div class="row" id="lg-tab">' + [['sukien', 'Sự kiện và điểm danh'], ['file', 'Tạo file đăng ký']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (LOG.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+}
+function ganTabLog() {
+  $('#lg-tab').onclick = function (e) { var b = e.target.closest('[data-tab]'); if (!b || b.getAttribute('data-tab') === LOG.tab) return; LOG.tab = b.getAttribute('data-tab'); VIEWS.log(); };
+}
+VIEWS.log = function () { if (LOG.tab === 'file') veTaoFileLog(); else veSuKienLog(); };
+
+function moTaGiao(s) {
+  return 'Giao ' + s.giaoMacDinh + ' buổi' + s.giaoRieng.map(function (r) { return ', ' + (r.loai === 'khoi' ? 'khối ' : '') + esc(r.gia) + ': ' + r.so; }).join('');
+}
+function theSuKien(s) {
+  var mo = !s.trangThai;
+  var pill = s.trangThai === 'Đã chốt' ? '<span class="pill p-ok">Đã chốt</span>' : s.trangThai === 'Đã huỷ' ? '<span class="pill p-mute">Đã huỷ</span>' : '<span class="pill p-info">Đang diễn ra</span>';
+  var nut = function (k, chu, ghost) { return '<button class="btn ' + (ghost === false ? '' : 'ghost ') + 'sm" data-' + k + '="' + s.ma + '">' + chu + '</button>'; };
+  return '<div class="card lg-sk' + (s.trangThai === 'Đã huỷ' ? ' huy' : '') + '"><div class="ctitle"><h3>' + esc(s.ten) + '</h3>' + pill + '</div>' +
+    '<span class="hint">Dự kiến ' + s.duKien + ' buổi · ' + (s.trangThai === 'Đã chốt' ? 'Thực diễn ' + s.thucDien + ' buổi' : 'Còn ' + s.thucDien + ' buổi sau khi trừ buổi huỷ vì hết việc') + ' · ' + moTaGiao(s) + ' · ' + s.ketQua.length + ' người được giao' +
+    (s.nguoiChot ? ' · ' + esc(s.nguoiChot) + ' chốt lúc ' + ngayDayDu(s.chotLuc) : '') + (s.link ? ' · <a href="' + esc(s.link) + '" target="_blank" rel="noopener">file đăng ký</a>' : '') + '</span>' +
+    (s.trangThai === 'Đã huỷ' ? '' : '<div>' + (s.buoi.length ? s.buoi.map(function (b) {
+      return '<div class="lg-buoi"><div><b>' + esc(b.ten) + '</b> <span class="pill ' + (TT_BUOI[b.trangThai] || 'p-mute') + '">' + esc(b.trangThai) + '</span><div class="hint">' + (b.ngay ? hienNgay(b.ngay) + ' · ' : '') + b.thoiLuong + ' phút · Đăng ký ' + b.dangKy.length + ' · Có mặt ' + b.coMat.length + '</div></div>' +
+        (mo ? '<button class="btn ghost sm" data-bu="' + s.ma + ':' + b.ma + '">Điểm danh</button>' : '') + '</div>';
+    }).join('') : '<p class="hint" style="margin:0">Chưa có buổi nào. Thêm từng buổi hoặc nhập từ file đăng ký log.</p>') + '</div>' +
+      '<div class="row">' + (mo ? nut('them', ic('plus', 14) + 'Thêm buổi') + nut('nhap', 'Nhập đăng ký từ file') : '') + nut('kq', 'Kết quả từng người') +
+      (mo ? nut('sua', 'Sửa') + nut('chot', 'Chốt sự kiện', false) : s.trangThai === 'Đã chốt' ? nut('molai', 'Mở lại') : '') + nut('huy', 'Huỷ sự kiện') + '<span data-skm="' + s.ma + '"></span></div>') + '</div>';
+}
+
+function veSuKienLog() {
+  dangTai();
+  goiPhien('layLog').then(function (d) {
+    if (page !== 'log' || LOG.tab !== 'sukien') return;
+    LOG.d = d;
+    $('#main').innerHTML = dauTrangLog() +
+      (!d.coLoai[90] || !d.coLoai[180] ? '<div class="note">' + ic('info') + '<span>Chưa chọn loại hoạt động cho điểm log vượt buổi ' + [90, 180].filter(function (x) { return !d.coLoai[x]; }).join(' và ') + ' phút nên chưa chốt được sự kiện có người làm vượt. Chọn trong Cài đặt, mục Loại hoạt động và mức điểm, cột App tự cộng.</span></div>' : '') +
+      '<div class="row"><button class="btn sm" id="sk-moi">' + ic('plus', 14) + 'Tạo sự kiện</button></div>' +
+      '<div style="display:grid;gap:14px">' + (d.suKien.length ? d.suKien.map(theSuKien).join('') : rong('Chưa có sự kiện log nào trong nhiệm kỳ này.')) + '</div>';
+    ganTabLog();
+    var tim = function (ma) { return d.suKien.filter(function (s) { return String(s.ma) === String(ma); })[0]; };
+    var bao = function (ma, loai, chu) { thongBao($('[data-skm="' + ma + '"]'), loai, chu); };
+    $('#sk-moi').onclick = function () { hopSuKien(null); };
+    var gan = function (k, f) { $$('[data-' + k + ']').forEach(function (b) { b.onclick = function () { f(tim(b.getAttribute('data-' + k)), b); }; }); };
+    gan('sua', function (s) { hopSuKien(s); });
+    gan('them', function (s) { hopBuoi(s, null); });
+    gan('kq', hopKetQuaLog);
+    gan('nhap', hopNhapDangKy);
+    $$('[data-bu]').forEach(function (b) {
+      var p = b.getAttribute('data-bu').split(':'), s = tim(p[0]);
+      b.onclick = function () { hopBuoi(s, s.buoi.filter(function (x) { return String(x.ma) === p[1]; })[0]); };
+    });
+    var lam = function (ham, cauHoi, xong) {
+      return function (s, b) {
+        if (!xacNhan(b, cauHoi)) return;
+        b.disabled = true; bao(s.ma, 'cho', 'Đang lưu…');
+        goiPhien(ham, s.ma).then(function (kq) { XH.d = null; VIEWS.log(); if (xong) setTimeout(function () { bao(s.ma, 'ok', xong(kq)); }, 900); })
+          .catch(function (err) { b.disabled = false; bao(s.ma, 'loi', err.message); });
+      };
+    };
+    gan('chot', lam('chotSuKienLog', 'Chốt và cộng điểm log vượt?', function (kq) { return kq.soBuoi ? 'Đã chốt, cộng ' + kq.diem + ' điểm log vượt cho ' + kq.soNguoi + ' người' : 'Đã chốt, không ai làm vượt'; }));
+    gan('molai', lam('moLaiSuKienLog', 'Mở lại và gỡ điểm log vượt?'));
+    gan('huy', lam('huySuKienLog', 'Huỷ sự kiện này?'));
+  }).catch(loiTai);
+}
+
+function hopSuKien(s) {
+  var d = LOG.d, rieng = s ? s.giaoRieng.map(function (r) { return { loai: r.loai, gia: r.gia, so: r.so }; }) : [];
+  moHop({ tieuDe: s ? 'Sửa sự kiện log' : 'Tạo sự kiện log', lop: 'rong',
+    than: '<form class="form" id="skf"><label class="f">Tên sự kiện<input type="text" id="sk-t" maxlength="150" value="' + esc(s ? s.ten : '') + '" placeholder="Ví dụ: Oday 2026"></label>' +
+      '<div class="grid2"><label class="f">Số buổi dự kiến<input type="number" min="1" step="1" id="sk-dk" value="' + (s ? s.duKien : '') + '"></label><label class="f">Số buổi giao mỗi người <small>Mặc định, áp dụng cho ai không có số riêng</small><input type="number" min="0" step="1" id="sk-g" value="' + (s ? s.giaoMacDinh : '') + '"></label></div>' +
+      '<div class="f"><b style="font-size:13px">Số buổi giao riêng</b><span class="hint">Theo khối lớp (ưu tiên) hoặc theo ban. Giao 0 buổi là ban hoặc khối đó không phải làm log sự kiện này.</span><div id="sk-r" style="display:grid;gap:8px;margin-top:6px"></div><div><button type="button" class="btn ghost sm" id="sk-ra">' + ic('plus', 14) + 'Thêm dòng</button></div></div>' +
+      '<label class="f">Link file đăng ký <small>Không bắt buộc</small><input type="url" id="sk-l" list="sk-fl" value="' + esc(s ? s.link : '') + '" placeholder="https://docs.google.com/spreadsheets/d/…"><datalist id="sk-fl">' + d.file.map(function (f) { return '<option value="' + esc(f.link) + '">' + esc(f.ten) + '</option>'; }).join('') + '</datalist></label><button hidden></button></form>',
+    chan: '<span class="msg" id="sk-m"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="sk-b">Lưu</button>' });
+  var docR = function () { rieng = $$('[data-rl]').map(function (x, i) { return { loai: x.value, gia: $('[data-rg="' + i + '"]').value, so: $('[data-rs="' + i + '"]').value }; }); };
+  var veR = function () {
+    $('#sk-r').innerHTML = rieng.map(function (r, i) {
+      return '<div class="lg-gr"><select data-rl aria-label="Theo"><option value="ban"' + (r.loai === 'ban' ? ' selected' : '') + '>Ban</option><option value="khoi"' + (r.loai === 'khoi' ? ' selected' : '') + '>Khối lớp</option></select>' +
+        (r.loai === 'khoi' ? '<input type="number" min="1" max="12" data-rg="' + i + '" value="' + esc(r.gia) + '" placeholder="Ví dụ: 9" aria-label="Khối">' :
+          '<select data-rg="' + i + '" aria-label="Ban">' + d.dsBan.concat(['PG', 'PR', 'AD', 'HR'].filter(function (x) { return d.dsBan.indexOf(x) < 0; })).map(function (b) { return '<option' + (b === r.gia ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>') +
+        '<input type="number" min="0" step="1" data-rs="' + i + '" value="' + esc(r.so) + '" placeholder="Số buổi" aria-label="Số buổi"><button type="button" class="ibtn" data-rx="' + i + '" aria-label="Xoá dòng">' + ic('x', 16) + '</button></div>';
+    }).join('');
+    $$('[data-rl]').forEach(function (x) { x.onchange = function () { docR(); ve2(); }; });
+    $$('[data-rx]').forEach(function (x) { x.onclick = function () { docR(); rieng.splice(Number(x.getAttribute('data-rx')), 1); veR(); }; });
+  };
+  var ve2 = function () { rieng.forEach(function (r) { if (r.loai === 'khoi' && isNaN(Number(r.gia))) r.gia = ''; }); veR(); };
+  veR();
+  $('#sk-ra').onclick = function () { docR(); rieng.push({ loai: 'ban', gia: d.dsBan[0] || 'PG', so: '' }); veR(); };
+  var gui = function (e) {
+    if (e) e.preventDefault();
+    docR();
+    $('#sk-b').disabled = true; thongBao($('#sk-m'), 'cho', 'Đang lưu…');
+    goiPhien('luuSuKienLog', { ma: s ? s.ma : 0, ten: $('#sk-t').value, soBuoiDuKien: Number($('#sk-dk').value), giaoMacDinh: $('#sk-g').value, giaoRieng: rieng, link: $('#sk-l').value })
+      .then(function () { dongHop(true); VIEWS.log(); }).catch(function (err) { $('#sk-b').disabled = false; thongBao($('#sk-m'), 'loi', err.message); });
+  };
+  $('#skf').onsubmit = gui; $('#sk-b').onclick = gui;
+}
+
+function hopBuoi(s, b) {
+  var d = LOG.d, dk = {}, cm = {}, loc = 'giao', q = '';
+  var giao = {}; s.ketQua.forEach(function (k) { giao[k.ten] = 1; });
+  if (b) { b.dangKy.forEach(function (n) { dk[n] = 1; }); b.coMat.forEach(function (n) { cm[n] = 1; }); }
+  var ds = d.thanhVien.slice();
+  Object.keys(dk).concat(Object.keys(cm)).forEach(function (n) { if (!ds.some(function (t) { return t.ten === n; })) ds.push({ ten: n, ban: 'Không có trong danh sách' }); });
+  var tt = ['Chưa diễn ra', 'Đã diễn ra', 'Huỷ vì hết việc', 'Huỷ vì lý do khác'];
+  moHop({ tieuDe: (b ? 'Điểm danh · ' + b.ten : 'Thêm buổi') + ' · ' + s.ten, lop: 'rong', giu: true,
+    than: '<div class="grid2"><label class="f">Tên buổi<input type="text" id="bu-t" maxlength="100" value="' + esc(b ? b.ten : 'Buổi ' + (s.buoi.length + 1)) + '"></label><label class="f">Ngày<input type="date" id="bu-n" value="' + esc(b ? b.ngay : '') + '"></label>' +
+      '<label class="f">Thời lượng<select id="bu-l"><option value="90">90 phút</option><option value="180"' + (b && b.thoiLuong === 180 ? ' selected' : '') + '>180 phút</option></select></label>' +
+      '<label class="f">Trạng thái<select id="bu-s">' + tt.map(function (x) { return '<option' + ((b ? b.trangThai : tt[0]) === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label></div>' +
+      '<div class="xh-tools"><input type="search" id="bu-q" placeholder="Tìm tên…" aria-label="Tìm thành viên"><div class="row" id="bu-loc">' + [['giao', 'Được giao'], ['dk', 'Đã đăng ký'], ['tat', 'Tất cả']].map(function (x) { return '<button type="button" class="chip" data-loc="' + x[0] + '" aria-pressed="' + (x[0] === loc) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
+      '<p class="hint" id="bu-dem" style="margin:0"></p><div class="tscroll"><table class="lg-dd"><thead><tr><th>Thành viên</th><th class="c">Đăng ký</th><th class="c">Có mặt</th></tr></thead><tbody id="bu-ds"></tbody></table></div>',
+    chan: '<span class="msg" id="bu-m"></span>' + (b ? '<button class="btn ghost" id="bu-x">Xoá buổi</button>' : '') + '<button class="btn ghost" data-dong>Đóng</button><button class="btn" id="bu-b">Lưu</button>' });
+  var dem = function () { $('#bu-dem').textContent = 'Đăng ký ' + Object.keys(dk).length + ' người · Có mặt ' + Object.keys(cm).length + ' người'; };
+  var ve = function () {
+    var k = boDau(q);
+    $('#bu-ds').innerHTML = ds.filter(function (t) { return (loc === 'tat' || (loc === 'dk' ? dk[t.ten] : giao[t.ten] || dk[t.ten] || cm[t.ten])) && boDau(t.ten).indexOf(k) >= 0; }).map(function (t) {
+      return '<tr><td>' + esc(t.ten) + ' <span class="muted">' + esc(t.ban) + '</span></td><td class="c"><input type="checkbox" data-dk="' + esc(t.ten) + '"' + (dk[t.ten] ? ' checked' : '') + ' aria-label="Đăng ký"></td><td class="c"><input type="checkbox" data-cm="' + esc(t.ten) + '"' + (cm[t.ten] ? ' checked' : '') + ' aria-label="Có mặt"></td></tr>';
+    }).join('') || '<tr><td colspan="3" class="muted">Không có ai.</td></tr>';
+    dem();
+  };
+  ve();
+  $('#bu-ds').onchange = function (e) {
+    var x = e.target, ten = x.getAttribute('data-dk') || x.getAttribute('data-cm'), m = x.hasAttribute('data-dk') ? dk : cm;
+    if (x.checked) m[ten] = 1; else delete m[ten];
+    dem();
+  };
+  $('#bu-q').oninput = function (e) { q = e.target.value; ve(); };
+  $('#bu-loc').onclick = function (e) { var c = e.target.closest('[data-loc]'); if (!c) return; loc = c.getAttribute('data-loc'); $$('#bu-loc .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === c); }); ve(); };
+  $('#bu-b').onclick = function () {
+    $('#bu-b').disabled = true; thongBao($('#bu-m'), 'cho', 'Đang lưu…');
+    goiPhien('luuBuoiLog', { suKien: s.ma, ma: b ? b.ma : 0, ten: $('#bu-t').value, ngay: $('#bu-n').value, thoiLuong: Number($('#bu-l').value), trangThai: $('#bu-s').value, dangKy: Object.keys(dk), coMat: Object.keys(cm) })
+      .then(function () { dongHop(true); VIEWS.log(); }).catch(function (err) { $('#bu-b').disabled = false; thongBao($('#bu-m'), 'loi', err.message); });
+  };
+  if ($('#bu-x')) $('#bu-x').onclick = function () {
+    var x = this; if (!xacNhan(x, 'Xoá buổi này?')) return;
+    x.disabled = true;
+    goiPhien('xoaBuoiLog', s.ma, b.ma).then(function () { dongHop(true); VIEWS.log(); }).catch(function (err) { x.disabled = false; thongBao($('#bu-m'), 'loi', err.message); });
+  };
+}
+
+function hopKetQuaLog(s) {
+  moHop({ tieuDe: 'Kết quả · ' + s.ten, lop: 'rong',
+    than: '<p class="hint" style="margin:0">' + (s.trangThai === 'Đã chốt' ? 'Số buổi được giao cuối = ' + s.thucDien + ' buổi thực diễn × số buổi giao ÷ ' + s.duKien + ' buổi dự kiến.' : 'Chưa chốt: số buổi được giao cuối tạm tính theo số buổi dự kiến trừ buổi huỷ vì hết việc. Điểm log vượt cộng khi chốt.') + '</p>' +
+      '<div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th><th class="n">Giao</th><th class="n">Giao cuối</th><th class="n">Đã tham gia</th><th class="n">Buổi vượt</th></tr></thead><tbody>' +
+      (s.ketQua.map(function (k) { return '<tr><td>' + esc(k.ten) + '</td><td class="muted">' + esc(k.ban) + '</td><td class="n">' + k.giao + '</td><td class="n">' + String(k.giaoCuoi).replace('.', ',') + '</td><td class="n"><b>' + k.thamGia + '</b></td><td class="n">' + (k.vuot || '') + '</td></tr>'; }).join('') || '<tr><td colspan="6" class="muted">Chưa giao cho ai.</td></tr>') + '</tbody></table></div>' });
+}
+
+function hopNhapDangKy(s) {
+  var d = LOG.d;
+  moHop({ tieuDe: 'Nhập đăng ký · ' + s.ten,
+    than: '<form class="form" id="nhf"><p class="hint" style="margin:0">App đọc file đăng ký log (tab Đăng ký log, hoặc tab đầu có cột Họ và tên). Buổi trùng tên được cập nhật danh sách đăng ký, buổi chưa có được tạo mới (90 phút, chưa diễn ra).</p>' +
+      (d.file.length ? '<label class="f">File đã tạo gần đây<select id="nh-f"><option value="">Chọn file…</option>' + d.file.map(function (f) { return '<option value="' + esc(f.link) + '"' + (f.link === s.link ? ' selected' : '') + '>' + esc(f.ten) + '</option>'; }).join('') + '</select></label>' : '') +
+      '<label class="f">Hoặc dán link<input type="url" id="nh-u" value="' + esc(s.link) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label><div id="nh-kq"></div><button hidden></button></form>',
+    chan: '<span class="msg" id="nh-m"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="nh-b">Nhập</button>' });
+  if ($('#nh-f')) $('#nh-f').onchange = function () { if (this.value) $('#nh-u').value = this.value; };
+  var gui = function (e) {
+    if (e) e.preventDefault();
+    $('#nh-b').disabled = true; thongBao($('#nh-m'), 'cho', 'Đang đọc file…');
+    goiPhien('nhapDangKyLog', s.ma, $('#nh-u').value).then(function (kq) {
+      $('#nh-m').innerHTML = '';
+      $('#nh-kq').innerHTML = '<div class="note info" style="display:block"><p style="margin:0">Đã tạo ' + kq.soMoi + ' buổi mới, cập nhật ' + kq.soSua + ' buổi.</p>' + (kq.khongKhop.length ? '<p class="hint" style="margin:6px 0 0">Tên không khớp danh sách thành viên (vẫn được ghi, sửa trong file rồi nhập lại nếu cần): ' + kq.khongKhop.map(esc).join(', ') + '</p>' : '') + '</div>';
+      $('#nh-b').textContent = 'Xong'; $('#nh-b').disabled = false;
+      $('#nh-b').onclick = function () { dongHop(true); VIEWS.log(); };
+    }).catch(function (err) { $('#nh-b').disabled = false; thongBao($('#nh-m'), 'loi', err.message); });
+  };
+  $('#nhf').onsubmit = gui; $('#nh-b').onclick = gui;
+}
+</script>

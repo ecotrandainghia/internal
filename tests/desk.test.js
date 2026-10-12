@@ -25,7 +25,7 @@ test('taoDongCongDiem lấy điểm theo loại, bỏ người trùng, chuẩn t
 
 test('taoDongCongDiem báo lỗi rõ ràng', () => {
   const now = new Date();
-  assert.match(L.taoDongCongDiem({ loai: 'Staff', nguoi: ['Nguyễn A'] }, TV, LOAI, 'X', null, now).loi, /Chưa có học kỳ/);
+  assert.match(L.taoDongCongDiem({ loai: 'Staff', nguoi: ['Nguyễn A'] }, TV, LOAI, 'X', null, now).loi, /Chưa có giai đoạn/);
   assert.match(L.taoDongCongDiem({ loai: 'Bay', nguoi: ['Nguyễn A'] }, TV, LOAI, 'X', KY, now).loi, /Không có loại/);
   assert.match(L.taoDongCongDiem({ loai: 'Staff', nguoi: [] }, TV, LOAI, 'X', KY, now).loi, /chưa chọn/);
   assert.match(L.taoDongCongDiem({ loai: 'Staff', nguoi: ['Người Lạ'] }, TV, LOAI, 'X', KY, now).loi, /Người Lạ/);

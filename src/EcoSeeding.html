@@ -1,0 +1,105 @@
+<style>
+/* Báo cáo seeding: HR nhóm SUP-SEED (và BOD) điền sau 48 giờ kể từ lúc bài được đăng. */
+.sd-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.sd-grid{grid-template-columns:1fr}}
+.sd-ten{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.sd-ten span{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--soft)}
+.sd-ten span.kk{background:var(--warn-bg);color:var(--warn)}
+.sd-bc{border-top:1px solid var(--line);padding:12px 0}
+.sd-bc:first-child{border-top:0;padding-top:0}
+.sd-bc.huy{opacity:.6}
+.sd-bc a{word-break:break-all}
+</style>
+<script>
+/* =================== Báo cáo seeding =================== */
+/** Giờ trên máy dạng yyyy-MM-ddTHH:mm cho ô chọn ngày giờ. */
+function oNgayGio(ms) { var d = new Date(ms); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + 'T' + p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+function dsTenNho(ds, kk) { return ds.length ? '<div class="sd-ten">' + ds.map(function (t) { return '<span' + (kk ? ' class="kk"' : '') + '>' + esc(t) + '</span>'; }).join('') + '</div>' : ''; }
+
+VIEWS.seeding = function () {
+  dangTai();
+  goiPhien('layBaoCaoSeeding').then(function (d) {
+    if (page !== 'seeding') return;
+    var muc = function (m, ten) { return m ? ten + ' +' + m.diem + ' điểm' : ten + ' chưa có mức điểm'; };
+    $('#main').innerHTML = '<div class="head"><div><h2>Báo cáo seeding</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
+      'Khi bài đăng đủ 48 giờ, dán tên Facebook của những người đã react và comment. App tự cộng điểm: ' + muc(d.react, 'react') + ', ' + muc(d.comment, 'comment') + ' mỗi bài.</p></div></div>' +
+      (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào nên chưa cộng được điểm. BOD cần tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.</span></div>') +
+      (!d.react || !d.comment ? '<div class="note">' + ic('info') + '<span>BOD cần chọn loại hoạt động dùng cho react và comment trong Cài đặt, mục Loại hoạt động và mức điểm.</span></div>' : '') +
+      (d.laBod ? '' : '<form class="card form" id="nh"><div class="ctitle"><h3>' + ic('bell', 18) + ' Nhắc tôi khi bài đủ 48 giờ</h3></div><p class="hint" style="margin:0">Thấy thông báo bài mới trên group Messenger thì đặt nhắc ở đây. Đủ 48 giờ app nhắc bạn vào điền báo cáo (theo cách nhận thông báo bạn chọn ở Cài đặt).</p>' +
+        '<div class="grid2"><label class="f">Bài được đăng lúc<input type="datetime-local" id="nh-luc" value="' + oNgayGio(Date.now()) + '" required></label><label class="f">Link bài <small>Không bắt buộc</small><input type="url" id="nh-link" placeholder="https://www.facebook.com/…"></label></div>' +
+        '<div class="row"><button class="btn sm" id="nh-b">Đặt nhắc</button><span id="nh-m"></span></div><div id="nh-ds"></div></form>') +
+      '<div class="sd-grid"><form class="card form" id="sdf">' +
+      '<label class="f">Link bài đăng<input type="url" id="sd-link" placeholder="https://www.facebook.com/…" required></label>' +
+      '<label class="f">Bài được đăng lúc<input type="datetime-local" id="sd-luc" max="' + oNgayGio(Date.now()) + '" required></label>' +
+      '<label class="f">Những người đã react <small>Mỗi dòng một tên Facebook, dán nguyên danh sách cũng được</small><textarea id="sd-react" rows="7"></textarea></label>' +
+      '<label class="f">Những người đã comment <small>Mỗi dòng một tên Facebook. Một người comment nhiều lần vẫn chỉ ghi một lần.</small><textarea id="sd-cmt" rows="5"></textarea></label>' +
+      (d.thieuFb ? '<p class="hint" style="margin:0">' + d.thieuFb + ' thành viên chưa có Tên Facebook trong danh sách. Với họ, app so theo họ và tên.</p>' : '') +
+      '<div class="row"><button class="btn ghost" id="sd-xem" type="submit">Xem trước</button><span id="sd-m"></span></div><div id="sd-kq"></div></form>' +
+      '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Báo cáo gần đây</h3></div><div id="sd-ds">' +
+      (d.ds.length ? d.ds.map(function (b) {
+        var coQuyenHuy = !b.daHuy && (d.laBod || b.nguoiNop === NGUOI.ten);
+        return '<div class="sd-bc' + (b.daHuy ? ' huy' : '') + '"><div class="row sb"><b>' + esc(b.nguoiNop) + '</b><span class="hint">' + ngayDayDu(b.thoiGian) + '</span></div>' +
+          '<a href="' + esc(b.link) + '" target="_blank" rel="noopener" class="hint">' + esc(b.link) + '</a>' +
+          (b.lucDang ? '<div class="hint">Đăng lúc ' + ngayDayDu(b.lucDang) + '</div>' : '') +
+          (b.daHuy ? '<div class="hint">Đã huỷ' + (b.nguoiHuy ? ' bởi ' + esc(b.nguoiHuy) : '') + ', điểm đã được gỡ.</div>' :
+            '<div style="margin-top:6px"><span class="hint">React (' + b.react.length + ')</span>' + dsTenNho(b.react) + '</div>' +
+            '<div style="margin-top:6px"><span class="hint">Comment (' + b.comment.length + ')</span>' + dsTenNho(b.comment) + '</div>' +
+            (b.khongKhop.length ? '<div style="margin-top:6px"><span class="hint">Không khớp thành viên nào (' + b.khongKhop.length + ')</span>' + dsTenNho(b.khongKhop, true) + '</div>' : '')) +
+          (coQuyenHuy ? '<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-huy="' + b.thoiGian + '">Huỷ báo cáo</button></div>' : '') + '</div>';
+      }).join('') : rong('Chưa có báo cáo nào trong nhiệm kỳ này.')) + '<div id="sd-hm"></div></div></div></div>';
+    var veNhac = function (ds) {
+      if (!$('#nh-ds')) return;
+      $('#nh-ds').innerHTML = ds.length ? '<div class="sd-ten" style="flex-direction:column;align-items:stretch">' + ds.map(function (n) {
+        return '<div class="row sb" style="border-top:1px solid var(--line);padding-top:8px"><span>Nhắc lúc <b>' + ngayGio(n.lucNhac) + '</b>' + (n.link ? ' · <a href="' + esc(n.link) + '" target="_blank" rel="noopener">bài đăng</a>' : '') + '</span><button type="button" class="btn ghost sm" data-nhx="' + n.thoiGian + '">Xoá</button></div>';
+      }).join('') + '</div>' : '';
+      $$('[data-nhx]').forEach(function (b) {
+        b.onclick = function () { b.disabled = true; goiPhien('xoaNhacSeeding', Number(b.getAttribute('data-nhx'))).then(veNhac).catch(function (err) { b.disabled = false; thongBao($('#nh-m'), 'loi', err.message); }); };
+      });
+    };
+    veNhac(d.nhac || []);
+    if ($('#nh')) $('#nh').onsubmit = function (e) {
+      e.preventDefault();
+      var b = $('#nh-b'); b.disabled = true; thongBao($('#nh-m'), 'cho', 'Đang lưu…');
+      goiPhien('datNhacSeeding', { lucDang: new Date($('#nh-luc').value).getTime(), link: $('#nh-link').value.trim() }).then(function (ds) {
+        b.disabled = false; $('#nh-link').value = ''; thongBao($('#nh-m'), 'ok', 'Đã đặt nhắc'); veNhac(ds);
+      }).catch(function (err) { b.disabled = false; thongBao($('#nh-m'), 'loi', err.message); });
+    };
+    var yc = function () {
+      var luc = $('#sd-luc').value ? new Date($('#sd-luc').value).getTime() : 0;
+      return { link: $('#sd-link').value.trim(), lucDang: luc, react: $('#sd-react').value, comment: $('#sd-cmt').value };
+    };
+    var an = function () { $('#sd-kq').innerHTML = ''; };
+    ['#sd-link', '#sd-luc', '#sd-react', '#sd-cmt'].forEach(function (s) { $(s).addEventListener('input', an); });
+    $('#sdf').onsubmit = function (e) {
+      e.preventDefault();
+      var nut = $('#sd-xem'); nut.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang dò tên…'); an();
+      var y = yc();
+      goiPhien('xemTruocBaoCaoSeeding', y).then(function (kq) {
+        nut.disabled = false; $('#sd-m').innerHTML = '';
+        $('#sd-kq').innerHTML = '<div class="note info" style="display:block;margin-top:4px">' +
+          kq.canhBao.map(function (c) { return '<p class="err" style="margin:0 0 8px">' + esc(c) + '</p>'; }).join('') +
+          '<div><b>React: ' + kq.react.length + ' người</b>' + dsTenNho(kq.react) + '</div>' +
+          '<div style="margin-top:8px"><b>Comment: ' + kq.comment.length + ' người</b>' + dsTenNho(kq.comment) + '</div>' +
+          (kq.khongKhop.length ? '<div style="margin-top:8px"><b>Không khớp thành viên nào: ' + kq.khongKhop.length + ' tên</b> <span class="hint">Sai chính tả, đổi tên Facebook hoặc không phải thành viên. Sửa rồi bấm Xem trước lại, hoặc bỏ qua.</span>' + dsTenNho(kq.khongKhop, true) + '</div>' : '') +
+          '<p style="margin:10px 0 0">Gửi sẽ cộng ' + kq.soLuot + ' lượt, tổng ' + kq.diem + ' điểm.</p>' +
+          '<div class="row" style="margin-top:10px"><button type="button" class="btn" id="sd-gui">' + ic('star', 16) + 'Gửi và cộng điểm</button><span id="sd-gm"></span></div></div>';
+        $('#sd-gui').onclick = function () {
+          var g = this; g.disabled = true; thongBao($('#sd-gm'), 'cho', 'Đang gửi…');
+          goiPhien('guiBaoCaoSeeding', y).then(function (r) {
+            XH.d = null; VIEWS.seeding();
+            setTimeout(function () { thongBao($('#sd-m'), 'ok', 'Đã cộng ' + r.soLuot + ' lượt cho ' + r.soNguoi + ' người'); }, 900);
+          }).catch(function (err) { g.disabled = false; thongBao($('#sd-gm'), 'loi', err.message); });
+        };
+      }).catch(function (err) { nut.disabled = false; thongBao($('#sd-m'), 'loi', err.message); });
+    };
+    $$('[data-huy]').forEach(function (b) {
+      b.onclick = function () {
+        if (!xacNhan(b, 'Huỷ và gỡ điểm?')) return;
+        b.disabled = true;
+        goiPhien('huyBaoCaoSeeding', Number(b.getAttribute('data-huy'))).then(function () { XH.d = null; VIEWS.seeding(); })
+          .catch(function (err) { b.disabled = false; thongBao($('#sd-hm'), 'loi', err.message); });
+      };
+    });
+  }).catch(loiTai);
+};
+</script>

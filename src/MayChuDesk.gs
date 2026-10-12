@@ -96,7 +96,7 @@ function dungMatKhau_(tk, matKhau) {
 function thongTinNguoiDung_(tk) {
   var vaiTro = String(tk.VaiTro);
   var gd = String(tk.GiaoDien || '');
-  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua_(tk) : '', maHr: vaiTro === 'HR' ? String(tk.MaHr || '').trim() : '', gmail: vaiTro === 'BOD' ? linkGmail_('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
+  return { email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua_(tk) : '', maHr: vaiTro === 'HR' ? String(tk.MaHr || '').trim() : '', nhomHr: nhomHr_(tk.NhomHr), gmail: vaiTro === 'BOD' ? linkGmail_('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto' };
 }
 
 /** Chức vụ ghi trong danh sách thành viên (tìm theo email, rồi theo họ tên). */
@@ -190,7 +190,7 @@ function congDiem(phien, yeuCau) {
   var tk = canDangNhap_(phien, 'congdiem');
   var khoa = layKhoa_();
   try {
-    var kq = taoDongCongDiem_(yeuCau, docBang_('ThanhVien').filter(khongPhaiBod_), docBang_('LoaiHoatDong').filter(loaiCongTay_), String(tk.HoVaTen), layKyHienTai_(), new Date());
+    var kq = taoDongCongDiem_(yeuCau, docBang_('ThanhVien').filter(khongPhaiBod_), docBang_('LoaiHoatDong').filter(loaiCongTay_), String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
     if (kq.loi) throw new Error(kq.loi);
     themDong_('LichSuDiem', kq.dong);
     xoaBoNhoTam_();
@@ -223,8 +223,40 @@ function xoaDongDiem(phien, thoiGianMs, hoVaTen) {
 function layGopY(phien) {
   canDangNhap_(phien, 'gopy');
   return docBangNhiemKy_('GopY', 'ThoiGian').map(function (g) {
-    return { thoiGian: new Date(g.ThoiGian).getTime(), noiDung: String(g.NoiDung), daDoc: g.DaDoc === true || g.DaDoc === 'TRUE' };
+    return {
+      thoiGian: new Date(g.ThoiGian).getTime(), noiDung: String(g.NoiDung), daDoc: g.DaDoc === true || g.DaDoc === 'TRUE',
+      ten: String(g.HoVaTen || ''), daDung: g.DaDung ? new Date(g.DaDung).getTime() : 0, nguoiDanhDau: String(g.NguoiDanhDau || '')
+    };
   }).sort(function (a, b) { return b.thoiGian - a.thoiGian; });
+}
+
+/** BOD xác nhận góp ý có ghi tên đã được đưa vào sử dụng: cộng điểm cho người gửi (theo loại gắn với góp ý, có giới hạn mỗi giai đoạn). */
+function danhDauGopYDuocDung(phien, thoiGianMs) {
+  var tk = canDangNhap_(phien, 'gopy');
+  return voiKhoa_(function () {
+    var sh = bangDuLieu_('GopY');
+    var v = sh.getDataRange().getValues(), td = v[0];
+    var cT = td.indexOf('ThoiGian'), cTen = td.indexOf('HoVaTen'), cDung = td.indexOf('DaDung'), cNg = td.indexOf('NguoiDanhDau'), cDoc = td.indexOf('DaDoc');
+    for (var r = 1; r < v.length; r++) {
+      if (new Date(v[r][cT]).getTime() !== Number(thoiGianMs)) continue;
+      var ten = String(v[r][cTen] || '').trim();
+      if (!ten) throw new Error('Góp ý này không ghi tên nên không cộng điểm được.');
+      if (v[r][cDung]) throw new Error('Góp ý này đã được đánh dấu trước đó.');
+      var loaiHd = docBang_('LoaiHoatDong');
+      var loai = loaiDungCho_(loaiHd, DUNG_CHO.GOP_Y);
+      if (!loai) throw new Error('Chưa có loại hoạt động dùng cho góp ý. Chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
+      var kq = taoDongCongDiem_({ loai: String(loai.TenLoai), tenHoatDong: String(v[r][td.indexOf('NoiDung')]).slice(0, 80), nguoi: [ten] },
+        docBang_('ThanhVien').filter(khongPhaiBod_), loaiHd, String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
+      if (kq.loi) throw new Error(kq.loi);
+      themDong_('LichSuDiem', kq.dong);
+      sh.getRange(r + 1, cDung + 1).setValue(new Date());
+      sh.getRange(r + 1, cNg + 1).setValue(String(tk.HoVaTen));
+      sh.getRange(r + 1, cDoc + 1).setValue(true);
+      xoaBoNhoTam_();
+      return { ten: ten, diem: Number(loai.Diem) || 0 };
+    }
+    throw new Error('Không tìm thấy góp ý này.');
+  });
 }
 
 function danhDauDaDoc(phien, thoiGianMs) {
@@ -246,7 +278,8 @@ function layCaiDatDesk(phien) {
   canDangNhap_(phien, 'caidat');
   var tv = docThanhVien_();
   return {
-    loai: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, congTay: loaiCongTay_(l) }; }),
+    loai: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, congTay: loaiCongTay_(l), gioiHan: gioiHanLoai_(l), dungCho: String(l.DungCho || '') }; }),
+    mucDiemQuyChe: MUC_DIEM_QUY_CHE,
     quyChe: String(layCaiDat_('QuyChe') || ''),
     baoGopY: baoGopYQuaMail_(),
     baoThuChoDuyet: batSuKien_('BaoThuChoDuyet'),
@@ -266,7 +299,7 @@ function layCaiDatDesk(phien) {
       var n = dongBoNguoiNhanZalo_();
       return { coBot: !!layTokenZalo_(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
     })(),
-    taiKhoan: docBang_('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy), maHr: String(t.MaHr || '') }; }),
+    taiKhoan: docBang_('TaiKhoan').map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy), maHr: String(t.MaHr || ''), nhomHr: nhomHr_(t.NhomHr) }; }),
     thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), email: String(t.Email || '') }; })
   };
 }
@@ -382,7 +415,17 @@ function luuBanQuanLy(phien, email, dsBan, maHr) {
     if (ma.loi) throw new Error(ma.loi);
     ghiCotTaiKhoan_(tk.Email, 'MaHr', ma.ma);
   }
-  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).filter(function (b) { return BAN_HR_QUAN_LY.indexOf(b) >= 0; }).join(', '));
+  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).filter(function (b) { return banCoo_(docBang_('ThanhVien')).indexOf(b) >= 0; }).join(', '));
+  return true;
+}
+
+/** Nhóm HR của một người (SUP-SEED, SUP-RES, CRE). HR và UCV đều được xếp nhóm. */
+function luuNhomHr(phien, email, ds) {
+  canDangNhap_(phien, 'caidat');
+  var tk = timTaiKhoan_(email);
+  if (!tk || ['HR', 'UCV'].indexOf(String(tk.VaiTro)) < 0) throw new Error('Chỉ xếp nhóm cho tài khoản HR hoặc UCV.');
+  bangDuLieu_('TaiKhoan'); // thêm cột NhomHr nếu sheet còn bản cũ
+  ghiCotTaiKhoan_(String(tk.Email), 'NhomHr', nhomHr_((ds || []).join(',')).join(', '));
   return true;
 }
 
@@ -394,6 +437,7 @@ function goTaiKhoan(phien, email) {
   if (tk.VaiTro === 'BOD') throw new Error('Quyền BOD đi theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại.');
   ghiCotTaiKhoan_(String(tk.Email), 'VaiTro', 'TV');
   ghiCotTaiKhoan_(String(tk.Email), 'BanQuanLy', '');
+  ghiCotTaiKhoan_(String(tk.Email), 'NhomHr', '');
   return true;
 }
 
@@ -448,11 +492,18 @@ function docTask_() {
   return docBangNhiemKy_('Task', 'ThoiGianTao').map(function (t) {
     var han = ngayChuoi_(t.HanChot);
     var luu = String(t.TrangThai || TRANG_THAI_TASK.GIAO);
+    var trangThai = trangThaiTask_(luu, han, hom, sap, kht);
+    var xong = t.ThoiGianXong ? new Date(t.ThoiGianXong).getTime() : null;
+    // Task cũ chưa có ngày nộp: lấy ngày bấm Đã xong.
+    var ngayNop = ngayChuoi_(t.NgayNop) || (xong ? ngayChuoi_(new Date(xong)) : '');
+    var chatLuong = String(t.ChatLuong || ''), dungHan = dungHanTask_(trangThai, han, ngayNop);
     return {
       thoiGianTao: new Date(t.ThoiGianTao).getTime(), ten: String(t.TenTask), moTa: String(t.MoTa || ''), hanChot: han,
       nguoi: String(t.NguoiPhuTrach), nguoiTao: String(t.NguoiTao), kieuTao: String(t.KieuTao),
-      trangThaiLuu: luu, trangThai: trangThaiTask_(luu, han, hom, sap, kht),
-      thoiGianXong: t.ThoiGianXong ? new Date(t.ThoiGianXong).getTime() : null
+      trangThaiLuu: luu, trangThai: trangThai, thoiGianXong: xong,
+      ngayNop: trangThai === TRANG_THAI_TASK.XONG ? ngayNop : '', hanGoc: ngayChuoi_(t.HanGoc), ngayXinGiaHan: ngayChuoi_(t.NgayXinGiaHan),
+      chatLuong: chatLuong, dauHieu: String(t.DauHieu || ''), nguoiDanhGia: String(t.NguoiDanhGia || ''), phanHoi: String(t.PhanHoi || ''),
+      hrPhuTrach: String(t.HrPhuTrach || ''), dungHan: dungHan, ketQua: ketQuaTask_(dungHan, chatLuong)
     };
   });
 }
@@ -491,7 +542,7 @@ function taoTask(phien, yeuCau) {
   var khoa = layKhoa_();
   var kq;
   try {
-    kq = taoDongTask_(yeuCau, docBang_('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date());
+    kq = taoDongTask_(yeuCau, docBang_('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date(), docBang_('PhuTrachHr'), tenSupRes_());
     if (kq.loi) throw new Error(kq.loi);
     themDong_('Task', kq.dong);
   } finally {
@@ -536,8 +587,10 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
 }
 
 /** Đánh dấu Đã xong, Đã huỷ, hoặc mở lại (Đã giao). Người phụ trách tự xác nhận xong (hoặc mở lại) task của mình. */
-function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
+function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai, ngayNop) {
   var tk = canDangNhap_(phien, 'task');
+  var nop = ngayNop ? String(ngayNop) : homNay_();
+  if (trangThai === TRANG_THAI_TASK.XONG && (!ngayHopLe_(nop) || nop > homNay_())) throw new Error('Ngày nộp chưa đúng (không được sau hôm nay).');
   if ([TRANG_THAI_TASK.XONG, TRANG_THAI_TASK.HUY, TRANG_THAI_TASK.GIAO].indexOf(trangThai) < 0) throw new Error('Trạng thái không hợp lệ.');
   var cuaToi = String(nguoi) === String(tk.HoVaTen) && trangThai !== TRANG_THAI_TASK.HUY;
   if (!cuaToi) kiemTraDuocGiao_(quyenTaskCua_(tk), nguoi);
@@ -551,6 +604,8 @@ function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai) {
     }
     sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
     sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
+    sh.getRange(dong, td.indexOf('NgayNop') + 1).setValue(trangThai === TRANG_THAI_TASK.XONG ? nop : '');
+    if (trangThai !== TRANG_THAI_TASK.XONG) ['ChatLuong', 'DauHieu', 'NguoiDanhGia', 'LucDanhGia'].forEach(function (c) { sh.getRange(dong, td.indexOf(c) + 1).setValue(''); });
     var r = v[dong - 1];
     return { ten: String(r[td.indexOf('TenTask')]), nguoiTao: String(r[td.indexOf('NguoiTao')]), kieuTao: String(r[td.indexOf('KieuTao')]) };
   });
@@ -613,7 +668,7 @@ function layTrangChu(phien) {
     ghim: docBang_('BangGhim').filter(function (g) { return linkHopLe_(g.DuongDan); })
       .map(function (g) { return { tieuDe: String(g.TieuDe || g.DuongDan), link: String(g.DuongDan).trim() }; }),
     quyChe: String(layCaiDat_('QuyChe') || ''),
-    loaiHoatDong: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, tuDong: !loaiCongTay_(l) }; })
+    loaiHoatDong: docBang_('LoaiHoatDong').map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0, tuDong: !loaiCongTay_(l), gioiHan: gioiHanLoai_(l) }; })
   };
   if (vaiTro !== 'BOD') {
     // Điểm và hạng của chính mình (BOD không tham gia cộng điểm).
@@ -646,4 +701,31 @@ function layTrangChu(phien) {
   var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
   kq.thongBao = toi ? { cach: toi.cach, soMay: toi.soMay, daKetNoiZalo: !!toi.chatId } : null;
   return kq;
+}
+
+/* ===================== Lịch sinh nhật ===================== */
+
+/** Tình trạng lịch sinh nhật của nhiệm kỳ hiện tại, cho mục Cài đặt. */
+function layLichSinhNhat(phien) {
+  canDangNhap_(phien, 'caidat');
+  var ky = layKyHienTai_();
+  if (!ky) return { nhiemKy: '', coLich: false, soSuKien: 0 };
+  var nk = String(ky.NhiemKy), cal = null;
+  try { cal = layLichSinhNhat_(nk, false); } catch (e) {
+    return { nhiemKy: nk, coLich: false, soSuKien: 0, loi: 'Tài khoản CLB chưa cấp quyền Google Calendar cho app. Mở Apps Script, chạy hàm khoiTaoCoSoDuLieu một lần và bấm Cho phép.' };
+  }
+  return {
+    nhiemKy: nk, ten: cal ? cal.getName() : tenLichSinhNhat_(nk), coLich: !!cal,
+    soSuKien: docBang_('SinhNhat').filter(function (r) { return String(r.NhiemKy) === nk; }).length,
+    linkCaiDat: cal ? 'https://calendar.google.com/calendar/u/0/r/settings/calendar/' + Utilities.base64Encode(cal.getId()).replace(/=+$/, '') : ''
+  };
+}
+
+/** Đồng bộ lại lịch sinh nhật ngay (ví dụ lần trước chưa xong, hoặc vừa cấp quyền Calendar). */
+function dongBoSinhNhatNgay(phien) {
+  canDangNhap_(phien, 'caidat');
+  var ky = layKyHienTai_();
+  if (!ky) throw new Error('Chưa có nhiệm kỳ. Lịch sinh nhật bắt đầu từ lần tải "Sau tuyển đợt 1".');
+  var kq = dongBoSinhNhat_(docBang_('ThanhVien'), String(ky.NhiemKy));
+  return { soTao: kq.soTao, soXoa: kq.soXoa, soGiu: kq.soGiu, conLai: kq.conLai, thieuNgay: kq.thieuNgay };
 }
