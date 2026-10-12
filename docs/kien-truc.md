@@ -45,6 +45,8 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet, TuyChon | Mỗi thao tác mail của UCV (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. TuyChon (JSON) ghi thư viết dạng HTML và có trích dẫn thư cũ hay không. |
 | DanhBa | Nhom, Ten, Email, GhiChu | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
 | FileLog | ThoiGian, TenFile, DuongDan, SoNguoi, SoBuoi, NguoiTao | Các file đăng ký log đã tạo. |
+| SuKienLog | ThoiGian, TenSuKien, SoBuoiDuKien, GiaoMacDinh, GiaoRieng, LinkDangKy, NguoiTao, TrangThai, ChotLuc, NguoiChot | Sự kiện log. GiaoRieng là JSON `[{loai: 'ban'|'khoi', gia, so}]`. TrangThai trống (đang diễn ra), Đã chốt hoặc Đã huỷ. |
+| BuoiLog | ThoiGian, SuKien, TenBuoi, Ngay, ThoiLuong, TrangThai, DangKy, CoMat | Buổi của một sự kiện (SuKien = ThoiGian của sự kiện, ms). DangKy, CoMat là họ tên cách nhau bằng dấu phẩy. Buổi xoá chỉ đổi TrangThai thành Đã xoá. |
 | LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua, MaNhap | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. MaNhap là mã thư nháp Gmail; đến giờ gửi mới đọc lại thư nháp nên sửa trong Gmail trước giờ gửi vẫn được. |
 
 Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần dùng đầu tiên.
@@ -212,6 +214,15 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 - KPI task (`tongKpiTask_`): số task đạt ÷ số task đã có kết quả, làm tròn. Thành viên bổ sung chỉ tính task giao từ lúc bắt đầu giai đoạn 2. SUP-RES được miễn (không giao task được cho họ).
 - KPI của thành viên ban HR (`kpiHr_`): 2 lượt nhắc cho mỗi task có HrPhuTrach là người đó; đạt khi số lần quên (tab HrQuen) không quá 20% số lượt, làm tròn.
 - Lịch nhắc mặc định (khi chưa ai chỉnh) theo tài liệu training HR: 20:00 trước hạn 1 ngày, 07:00 ngày hạn, 07:00 sau hạn 1 ngày.
+
+## KPI log (`src/KpiLog.gs`, `src/EcoLog.html`)
+
+- BOD tạo sự kiện ở trang Làm log: số buổi dự kiến, số buổi giao mặc định, số buổi giao riêng theo khối lớp (ưu tiên, đọc từ cột Lớp) hoặc theo ban (khớp tên ban hoặc nhóm ban).
+- Buổi có trạng thái Chưa diễn ra, Đã diễn ra, Huỷ vì hết việc, Huỷ vì lý do khác. Người đăng ký nhập tay hoặc từ file đăng ký log (`nhapDangKyLog`, đọc tab Đăng ký log của tool cũ hoặc tab đầu có cột Họ và tên).
+- Số buổi được giao cuối = thực diễn × giao ÷ dự kiến, không lớn hơn giao, giữ số lẻ. Trước khi chốt, thực diễn = dự kiến trừ số buổi huỷ vì hết việc; sau khi chốt, thực diễn = số buổi đã diễn ra hoặc huỷ vì lý do khác.
+- Đã tham gia = buổi đã diễn ra có mặt + buổi huỷ vì lý do khác đã đăng ký. KPI log = tổng tham gia ÷ tổng giao cuối, làm tròn %, đạt từ 80%. Thành viên bổ sung chỉ tính sự kiện tạo từ đầu giai đoạn 2.
+- Chốt sự kiện (`chotSuKienLog`) cộng điểm log vượt: số buổi vượt = phần nguyên của (tham gia − giao cuối), lấy các buổi có mặt muộn nhất (buổi huỷ không được cộng điểm), theo loại hoạt động gắn với log90 / log180. Dòng điểm có NguoiCong `Log: <người chốt>` và ThoiGian = ChotLuc; Mở lại hoặc Huỷ sự kiện gỡ các dòng đó.
+- Trang KPI hiện KPI log cạnh KPI task.
 
 ## Xếp hạng và top 15%
 

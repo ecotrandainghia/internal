@@ -86,10 +86,10 @@ function taskTinhKpi_(task, tv, moc2) {
   return task.filter(function (t) { return t.nguoi === ten && (!boSung || t.thoiGianTao >= moc2); });
 }
 
-/** Thông tin KPI task của một người (để hiện). HR tính theo lượt nhắc, SUP-RES được miễn. */
-function kpiCuaNguoi_(tv, task, quen, moc2, supRes) {
+/** Thông tin KPI log và KPI task của một người (để hiện). Task: HR tính theo lượt nhắc, SUP-RES được miễn. */
+function kpiCuaNguoi_(tv, task, quen, moc2, supRes, suKienLog) {
   var ten = String(tv.HoVaTen);
-  var kq = { ten: ten, ban: String(tv.Ban || ''), nhom: nhomBan_(tv.Ban), boSung: tv.LoaiThanhVien === LOAI_TV.BO_SUNG };
+  var kq = { ten: ten, ban: String(tv.Ban || ''), nhom: nhomBan_(tv.Ban), boSung: tv.LoaiThanhVien === LOAI_TV.BO_SUNG, log: kpiLogCuaNguoi_(tv, suKienLog || [], moc2) };
   if (supRes.indexOf(ten) >= 0) { kq.mien = true; return kq; }
   if (nhomBan_(tv.Ban) === 'HR') { kq.hr = kpiHr_(task.filter(function (t) { return !kq.boSung || t.thoiGianTao >= moc2; }), quen, ten); return kq; }
   kq.task = tongKpiTask_(taskTinhKpi_(task, tv, moc2));
@@ -107,13 +107,13 @@ function docHrQuen_() {
 }
 
 /**
- * Trang KPI. BOD: bảng KPI task của mọi thành viên, KPI của HR, các lần HR quên.
- * Người khác: task và KPI của mình (HR có thêm KPI nhắc deadline).
+ * Trang KPI. BOD: bảng KPI log và KPI task của mọi thành viên, KPI của HR, các lần HR quên.
+ * Người khác: KPI log, task và KPI của mình (HR có thêm KPI nhắc deadline).
  */
 function layKpi(phien) {
   var tk = canDangNhap_(phien);
   var laBod = String(tk.VaiTro) === 'BOD';
-  var task = docTask_(), quen = docHrQuen_(), moc2 = batDauGiaiDoan2_(), supRes = tenSupRes_();
+  var task = docTask_(), quen = docHrQuen_(), moc2 = batDauGiaiDoan2_(), supRes = tenSupRes_(), suKienLog = docSuKienLog_();
   var tv = docThanhVien_().filter(khongPhaiBod_);
   var cot = function (q) { return { thoiGian: q.thoiGian, nguoiHr: q.nguoiHr, loai: q.loai, moTa: q.moTa, thamChieu: q.thamChieu, nguoiGhi: q.nguoiGhi, daHuy: q.daHuy }; };
   if (laBod) {
@@ -122,7 +122,7 @@ function layKpi(phien) {
     return {
       laBod: true,
       moc2: moc2,
-      thanhVien: tv.map(function (t) { return kpiCuaNguoi_(t, task, quen, moc2, supRes); }),
+      thanhVien: tv.map(function (t) { return kpiCuaNguoi_(t, task, quen, moc2, supRes, suKienLog); }),
       hr: hr,
       quen: quen.map(cot),
       loaiQuen: LOAI_HR_QUEN
@@ -132,7 +132,7 @@ function layKpi(phien) {
   var cuaToi = task.filter(function (t) { return t.nguoi === String(tk.HoVaTen); }).sort(function (a, b) { return a.hanChot < b.hanChot ? 1 : a.hanChot > b.hanChot ? -1 : 0; });
   return {
     laBod: false,
-    kpi: kpiCuaNguoi_(toi, task, quen, moc2, supRes),
+    kpi: kpiCuaNguoi_(toi, task, quen, moc2, supRes, suKienLog),
     task: cuaToi,
     quen: quen.filter(function (q) { return q.nguoiHr.toLowerCase() === String(tk.HoVaTen).toLowerCase(); }).map(cot)
   };

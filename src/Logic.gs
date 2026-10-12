@@ -47,6 +47,8 @@ var BANG = {
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
   LichGui: ['ThoiGianTao', 'ThoiGianGui', 'TieuDe', 'NoiDung', 'NguoiNhan', 'MoTaNguon', 'NguoiTao', 'TrangThai', 'KetQua', 'MaNhap'],
   FileLog: ['ThoiGian', 'TenFile', 'DuongDan', 'SoNguoi', 'SoBuoi', 'NguoiTao'],
+  SuKienLog: ['ThoiGian', 'TenSuKien', 'SoBuoiDuKien', 'GiaoMacDinh', 'GiaoRieng', 'LinkDangKy', 'NguoiTao', 'TrangThai', 'ChotLuc', 'NguoiChot'],
+  BuoiLog: ['ThoiGian', 'SuKien', 'TenBuoi', 'Ngay', 'ThoiLuong', 'TrangThai', 'DangKy', 'CoMat'],
   ThietBi: ['Email', 'DiaChi', 'Khoa', 'TenMay', 'ThoiGian', 'LayCuoi', 'P256dh', 'Auth'],
   ThongBao: ['ThoiGian', 'Email', 'TieuDe', 'NoiDung']
 };
@@ -696,8 +698,8 @@ function vuotGioiHan_(dongMoi, loaiHoatDong, lichSu, ky) {
 }
 
 /** Loại hoạt động gắn với chức năng tự cộng của app. Mỗi chức năng gắn với tối đa một loại. */
-var DUNG_CHO = { GOP_Y: 'gopy', REACT: 'react', COMMENT: 'comment' };
-var TEN_DUNG_CHO = { gopy: 'Góp ý được dùng', react: 'Seeding: react', comment: 'Seeding: comment' };
+var DUNG_CHO = { GOP_Y: 'gopy', REACT: 'react', COMMENT: 'comment', LOG_90: 'log90', LOG_180: 'log180' };
+var TEN_DUNG_CHO = { gopy: 'Góp ý được dùng', react: 'Seeding: react', comment: 'Seeding: comment', log90: 'Log vượt (buổi 90 phút)', log180: 'Log vượt (buổi 180 phút)' };
 
 /** Mức điểm theo quy chế KPI 2026-2027 (mục III.3). BOD nạp vào bảng loại hoạt động bằng một nút trong Cài đặt. */
 var MUC_DIEM_QUY_CHE = [
@@ -706,8 +708,8 @@ var MUC_DIEM_QUY_CHE = [
   { ten: 'Làm staff ca ngắn (giờ ra chơi)', diem: 3, congTay: true },
   { ten: 'Tham gia bonding', diem: 5, congTay: true },
   { ten: 'Góp ý được CLB đưa vào sử dụng', diem: 10, congTay: false, gioiHan: 2, dungCho: 'gopy' },
-  { ten: 'Làm log vượt số buổi được giao (buổi 90 phút)', diem: 20, congTay: true },
-  { ten: 'Làm log vượt số buổi được giao (buổi 180 phút)', diem: 40, congTay: true },
+  { ten: 'Làm log vượt số buổi được giao (buổi 90 phút)', diem: 20, congTay: false, dungCho: 'log90' },
+  { ten: 'Làm log vượt số buổi được giao (buổi 180 phút)', diem: 40, congTay: false, dungCho: 'log180' },
   { ten: 'Đại diện CLB tham gia cuộc thi', diem: 40, congTay: true },
   { ten: 'Tham dự sự kiện của CLB hoặc của đối tác', diem: 40, congTay: true },
   { ten: 'Làm staff 1 buổi (sự kiện lớn)', diem: 50, congTay: true }
@@ -1859,6 +1861,241 @@ function chuanHoaCachNhan_(giaTri) {
   return kq.length ? kq : ['zalo'];
 }
 
+/* ===================== KPI log (quy chế 2026-2027, mục II.1) ===================== */
+
+/**
+ * Mỗi sự kiện log có số buổi dự kiến và số buổi giao cho từng thành viên (mặc định, hoặc riêng theo ban, theo khối lớp).
+ * Buổi huỷ vì hết việc làm số buổi được giao cuối giảm theo tỉ lệ; buổi huỷ vì lý do khác tính là đã tham gia
+ * với người đã đăng ký buổi đó. Đạt khi số buổi đã tham gia ≥ 80% tổng số buổi được giao cuối.
+ */
+var TRANG_THAI_BUOI = { CHUA: 'Chưa diễn ra', DIEN_RA: 'Đã diễn ra', HUY_HET_VIEC: 'Huỷ vì hết việc', HUY_KHAC: 'Huỷ vì lý do khác', XOA: 'Đã xoá' };
+var THOI_LUONG_BUOI = [90, 180];
+var SU_KIEN_CHOT = 'Đã chốt', SU_KIEN_HUY = 'Đã huỷ';
+var TOI_DA_BUOI_LOG = 200;
+
+/** Khối lớp từ cột Lớp: "9A1" -> 9, "10 Anh" -> 10. Không đọc được thì 0. */
+function khoiLop_(lop) {
+  var m = /^\s*(\d{1,2})(?!\d)/.exec(String(lop == null ? '' : lop));
+  return m ? Number(m[1]) : 0;
+}
+
+/** Đọc cột GiaoRieng (chuỗi JSON) thành danh sách { loai: 'ban' | 'khoi', gia, so }. */
+function docGiaoRieng_(v) {
+  var ds = v;
+  if (typeof v === 'string') { try { ds = v.trim() ? JSON.parse(v) : []; } catch (e) { ds = []; } }
+  return Array.isArray(ds) ? ds.filter(function (r) { return r && (r.loai === 'ban' || r.loai === 'khoi'); }) : [];
+}
+
+/**
+ * Số buổi giao ban đầu cho một thành viên. Ưu tiên: theo khối lớp, rồi theo ban, rồi mặc định.
+ * Quy định theo ban khớp cả tên ban đầy đủ ("PR CAP") lẫn nhóm ban ("PR").
+ */
+function giaoBanDau_(suKien, tv) {
+  var rieng = docGiaoRieng_(suKien.GiaoRieng);
+  var khoi = khoiLop_(tv.Lop), ban = String(tv.Ban || '').trim().toUpperCase(), nhom = nhomBan_(tv.Ban);
+  for (var i = 0; i < rieng.length; i++) if (rieng[i].loai === 'khoi' && khoi && Number(rieng[i].gia) === khoi) return Number(rieng[i].so) || 0;
+  for (var j = 0; j < rieng.length; j++) {
+    var g = String(rieng[j].gia || '').trim().toUpperCase();
+    if (rieng[j].loai === 'ban' && g && (g === ban || g === nhom)) return Number(rieng[j].so) || 0;
+  }
+  return Number(suKien.GiaoMacDinh) || 0;
+}
+
+/** Kiểm tra sự kiện log do BOD nhập. Trả về { dong, loi }. */
+function chuanHoaSuKienLog_(yc) {
+  yc = yc || {};
+  var ten = String(yc.ten || '').trim();
+  if (!ten) return { loi: 'Bạn chưa đặt tên sự kiện.' };
+  if (ten.length > 150) return { loi: 'Tên sự kiện dài quá 150 ký tự.' };
+  var duKien = Number(yc.soBuoiDuKien);
+  if (!(duKien >= 1 && duKien <= TOI_DA_BUOI_LOG) || Math.floor(duKien) !== duKien) return { loi: 'Số buổi dự kiến phải là số nguyên từ 1 đến ' + TOI_DA_BUOI_LOG + '.' };
+  var soGiao = function (v, ten2) {
+    var n = String(v == null ? '' : v).trim() === '' ? NaN : Number(v);
+    if (!(n >= 0) || Math.floor(n) !== n) return { loi: 'Số buổi giao ' + ten2 + ' phải là số nguyên không âm.' };
+    if (n > duKien) return { loi: 'Số buổi giao ' + ten2 + ' (' + n + ') nhiều hơn số buổi dự kiến (' + duKien + ').' };
+    return { so: n };
+  };
+  var mac = soGiao(yc.giaoMacDinh, 'mặc định');
+  if (mac.loi) return { loi: mac.loi };
+  var rieng = [], daCo = {};
+  var ds = yc.giaoRieng || [];
+  for (var i = 0; i < ds.length; i++) {
+    var r = ds[i] || {};
+    var loai = r.loai === 'khoi' ? 'khoi' : 'ban';
+    var gia = loai === 'khoi' ? Number(r.gia) : String(r.gia || '').trim().toUpperCase();
+    if (loai === 'khoi' && !(gia >= 1 && gia <= 12 && Math.floor(gia) === gia)) return { loi: 'Khối lớp phải là số từ 1 đến 12.' };
+    if (loai === 'ban' && !gia) return { loi: 'Bạn chưa chọn ban cho một dòng giao riêng.' };
+    var nhan = loai === 'khoi' ? 'cho khối ' + gia : 'cho ban ' + gia;
+    var so = soGiao(r.so, nhan);
+    if (so.loi) return { loi: so.loi };
+    if (daCo[loai + gia]) return { loi: 'Số buổi giao ' + nhan + ' bị nhập hai lần.' };
+    daCo[loai + gia] = true;
+    rieng.push({ loai: loai, gia: gia, so: so.so });
+  }
+  return {
+    loi: '',
+    dong: { TenSuKien: ten, SoBuoiDuKien: duKien, GiaoMacDinh: mac.so, GiaoRieng: rieng.length ? JSON.stringify(rieng) : '' }
+  };
+}
+
+/** Kiểm tra một buổi log. Trả về { dong, loi }. */
+function chuanHoaBuoiLog_(yc) {
+  yc = yc || {};
+  var ten = String(yc.ten || '').trim();
+  if (!ten) return { loi: 'Bạn chưa đặt tên buổi.' };
+  if (ten.length > 100) return { loi: 'Tên buổi dài quá 100 ký tự.' };
+  var ngay = String(yc.ngay || '').trim();
+  if (ngay && !ngayHopLe_(ngay)) return { loi: 'Ngày của buổi không hợp lệ.' };
+  var tl = Number(yc.thoiLuong);
+  if (THOI_LUONG_BUOI.indexOf(tl) < 0) return { loi: 'Thời lượng buổi là 90 hoặc 180 phút.' };
+  var tt = String(yc.trangThai || TRANG_THAI_BUOI.CHUA);
+  if ([TRANG_THAI_BUOI.CHUA, TRANG_THAI_BUOI.DIEN_RA, TRANG_THAI_BUOI.HUY_HET_VIEC, TRANG_THAI_BUOI.HUY_KHAC].indexOf(tt) < 0) return { loi: 'Trạng thái buổi không hợp lệ.' };
+  var ds = function (v) {
+    var kq = [], co = {};
+    (Array.isArray(v) ? v : tachTen_(v)).forEach(function (n) { n = String(n).trim(); if (n && !co[n.toLowerCase()]) { co[n.toLowerCase()] = true; kq.push(n); } });
+    return kq;
+  };
+  return { loi: '', dong: { TenBuoi: ten, Ngay: ngay, ThoiLuong: tl, TrangThai: tt, DangKy: ds(yc.dangKy).join(', '), CoMat: ds(yc.coMat).join(', ') } };
+}
+
+/** Tách ô danh sách tên (ngăn cách bằng dấu phẩy). */
+function tachTen_(s) {
+  return String(s == null ? '' : s).split(',').map(function (x) { return x.trim(); }).filter(String);
+}
+
+function coTen_(ds, ten) {
+  var k = String(ten).trim().toLowerCase();
+  for (var i = 0; i < ds.length; i++) if (String(ds[i]).trim().toLowerCase() === k) return true;
+  return false;
+}
+
+/** Buổi tính vào sự kiện (bỏ buổi đã xoá), xếp theo ngày rồi theo lúc tạo. */
+function buoiHieuLuc_(buoi) {
+  return buoi.filter(function (b) { return String(b.TrangThai) !== TRANG_THAI_BUOI.XOA; }).sort(function (a, b) {
+    var na = String(a.Ngay || ''), nb = String(b.Ngay || '');
+    if (na !== nb) return na < nb ? -1 : 1;
+    return Number(a.ThoiGian) - Number(b.ThoiGian);
+  });
+}
+
+/**
+ * Số buổi thực diễn ra. Sau khi chốt: số buổi đã diễn ra hoặc huỷ vì lý do khác.
+ * Trước khi chốt: số buổi dự kiến trừ số buổi đã huỷ vì hết việc.
+ */
+function soBuoiThucDien_(suKien, buoi) {
+  var ds = buoiHieuLuc_(buoi);
+  if (String(suKien.TrangThai) === SU_KIEN_CHOT) {
+    return ds.filter(function (b) { return b.TrangThai === TRANG_THAI_BUOI.DIEN_RA || b.TrangThai === TRANG_THAI_BUOI.HUY_KHAC; }).length;
+  }
+  return Math.max(0, Number(suKien.SoBuoiDuKien) - ds.filter(function (b) { return b.TrangThai === TRANG_THAI_BUOI.HUY_HET_VIEC; }).length);
+}
+
+/** Số buổi được giao cuối = thực diễn × (giao ban đầu ÷ dự kiến), không bao giờ lớn hơn giao ban đầu. Giữ số lẻ. */
+function giaoCuoi_(giao, duKien, thucDien) {
+  if (!giao || !duKien) return 0;
+  return Math.min(giao, thucDien * giao / duKien);
+}
+
+/**
+ * KPI log của một người trong một sự kiện.
+ * thamGia: buổi đã diễn ra có mặt, và buổi huỷ vì lý do khác mà người đó đã đăng ký.
+ * vuot: các buổi được cộng điểm làm vượt, là những buổi có mặt muộn nhất vượt quá số buổi được giao cuối
+ * (chỉ tính buổi thực sự diễn ra).
+ */
+function kpiLogSuKien_(suKien, buoi, tv) {
+  var ten = String(tv.HoVaTen);
+  var giao = giaoBanDau_(suKien, tv);
+  var ds = buoiHieuLuc_(buoi);
+  var thamGia = [], coMat = [];
+  ds.forEach(function (b) {
+    if (b.TrangThai === TRANG_THAI_BUOI.DIEN_RA && coTen_(tachTen_(b.CoMat), ten)) { thamGia.push(b); coMat.push(b); }
+    else if (b.TrangThai === TRANG_THAI_BUOI.HUY_KHAC && coTen_(tachTen_(b.DangKy), ten)) thamGia.push(b);
+  });
+  var cuoi = giaoCuoi_(giao, Number(suKien.SoBuoiDuKien), soBuoiThucDien_(suKien, buoi));
+  var soVuot = Math.min(coMat.length, Math.max(0, Math.floor(thamGia.length - cuoi + 1e-9)));
+  return { giao: giao, giaoCuoi: cuoi, thamGia: thamGia.length, vuot: soVuot ? coMat.slice(coMat.length - soVuot) : [] };
+}
+
+/** Làm tròn số buổi được giao cuối để hiện (tối đa 2 chữ số thập phân). */
+function hienSoBuoi_(x) { return Math.round(x * 100) / 100; }
+
+/**
+ * KPI log của một người qua các sự kiện của nhiệm kỳ (sự kiện đã huỷ không tính).
+ * dsSuKien: mỗi sự kiện kèm mảng buoi. Thành viên bổ sung chỉ tính sự kiện tạo từ lúc bắt đầu giai đoạn 2 (moc2).
+ * Trả về { giaoCuoi, thamGia, tiLe, chiTiet[] }; tiLe null khi chưa được giao buổi nào.
+ */
+function kpiLogCuaNguoi_(tv, dsSuKien, moc2) {
+  var boSung = tv.LoaiThanhVien === LOAI_TV.BO_SUNG;
+  var kq = { giaoCuoi: 0, thamGia: 0, tiLe: null, chiTiet: [] };
+  dsSuKien.forEach(function (s) {
+    if (String(s.TrangThai) === SU_KIEN_HUY) return;
+    if (boSung && new Date(s.ThoiGian).getTime() < moc2) return;
+    var k = kpiLogSuKien_(s, s.buoi || [], tv);
+    if (!k.giao) return;
+    kq.giaoCuoi += k.giaoCuoi;
+    kq.thamGia += k.thamGia;
+    kq.chiTiet.push({ suKien: new Date(s.ThoiGian).getTime(), ten: String(s.TenSuKien), daChot: String(s.TrangThai) === SU_KIEN_CHOT, giao: k.giao, giaoCuoi: hienSoBuoi_(k.giaoCuoi), thamGia: k.thamGia, vuot: k.vuot.length });
+  });
+  kq.tiLe = kq.giaoCuoi > 0 ? Math.round(kq.thamGia * 100 / kq.giaoCuoi + 1e-9) : null;
+  kq.giaoCuoi = hienSoBuoi_(kq.giaoCuoi);
+  return kq;
+}
+
+/**
+ * Các dòng LichSuDiem cộng điểm log vượt khi chốt sự kiện: mỗi buổi vượt một dòng, buổi 90 phút và 180 phút
+ * theo hai loại hoạt động gắn với log90, log180. Trả về { dong, loi }.
+ */
+function dongDiemLogVuot_(suKien, buoi, thanhVien, loaiHoatDong, ky, nguoiCong, bayGio) {
+  var dong = [];
+  var loai = { 90: loaiDungCho_(loaiHoatDong, DUNG_CHO.LOG_90), 180: loaiDungCho_(loaiHoatDong, DUNG_CHO.LOG_180) };
+  var thieu = {};
+  thanhVien.forEach(function (tv) {
+    kpiLogSuKien_(suKien, buoi, tv).vuot.forEach(function (b) {
+      var tl = Number(b.ThoiLuong) === 180 ? 180 : 90;
+      if (!loai[tl]) { thieu[tl] = true; return; }
+      dong.push({
+        ThoiGian: bayGio, HoVaTen: String(tv.HoVaTen), LoaiHoatDong: String(loai[tl].TenLoai),
+        TenHoatDong: (String(suKien.TenSuKien) + ' · ' + String(b.TenBuoi)).slice(0, 200), Diem: Number(loai[tl].Diem) || 0,
+        NguoiCong: nguoiCong, NhiemKy: ky ? String(ky.NhiemKy) : '', HocKy: ky ? Number(ky.HocKy) : ''
+      });
+    });
+  });
+  var tl = Object.keys(thieu);
+  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.' };
+  if (dong.length && !ky) return { dong: [], loi: 'Chưa có giai đoạn nào nên chưa cộng được điểm log vượt.' };
+  return { dong: dong, loi: '' };
+}
+
+/**
+ * Đọc đăng ký từ file đăng ký log (giá trị của một tab).
+ * toolCu: tab "Đăng ký log" của tool cũ: dòng 4 là tên buổi từ cột E đến trước cột Ghi chú, từ dòng 5 là họ tên ở cột A.
+ * Mẫu khác: dòng tiêu đề có cột Họ và tên; các cột có tiêu đề sau cột Họ tên, Ban, SĐT là các buổi.
+ * Trả về [{ ten, dangKy: [họ tên] }].
+ */
+function docDangKyLog_(values, toolCu) {
+  var dongTieuDe, cotTen, cotDau;
+  if (toolCu) { dongTieuDe = 3; cotTen = 0; cotDau = 4; }
+  else {
+    var td = timTieuDeMauLog_(values);
+    if (!td) return [];
+    dongTieuDe = td.dong; cotTen = td.cot.ten;
+    cotDau = Math.max.apply(null, Object.keys(td.cot).map(function (k) { return td.cot[k]; })) + 1;
+  }
+  var tieuDe = values[dongTieuDe] || [];
+  var buoi = [];
+  for (var c = cotDau; c < tieuDe.length; c++) {
+    var ten = String(tieuDe[c] == null ? '' : tieuDe[c]).trim();
+    if (chuanHoaTenCot_(ten) === 'ghichu') break;
+    if (ten) buoi.push({ cot: c, ten: ten, dangKy: [] });
+  }
+  for (var r = dongTieuDe + 1; r < values.length; r++) {
+    var nguoi = String(values[r][cotTen] == null ? '' : values[r][cotTen]).trim();
+    if (!nguoi) continue;
+    buoi.forEach(function (b) { var v = values[r][b.cot]; if (v === true || String(v).toUpperCase() === 'TRUE') b.dangKy.push(nguoi); });
+  }
+  return buoi.map(function (b) { return { ten: b.ten, dangKy: b.dangKy }; });
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI, LOAI_TV: LOAI_TV,
@@ -1888,6 +2125,8 @@ if (typeof module !== 'undefined') {
     COT_DA_CONG_FORM: COT_DA_CONG_FORM, chuanTenFb: chuanTenFb_,
     TI_LE_TOP: TI_LE_TOP, soNguoiTop: soNguoiTop_, topTheoDiem: topTheoDiem_, vuotGioiHan: vuotGioiHan_, gioiHanLoai: gioiHanLoai_,
     DUNG_CHO: DUNG_CHO, MUC_DIEM_QUY_CHE: MUC_DIEM_QUY_CHE, loaiDungCho: loaiDungCho_,
-    NHOM_HR: NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_
+    NHOM_HR: NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_,
+    TRANG_THAI_BUOI: TRANG_THAI_BUOI, SU_KIEN_CHOT: SU_KIEN_CHOT, SU_KIEN_HUY: SU_KIEN_HUY, khoiLop: khoiLop_, giaoBanDau: giaoBanDau_, chuanHoaSuKienLog: chuanHoaSuKienLog_, chuanHoaBuoiLog: chuanHoaBuoiLog_,
+    soBuoiThucDien: soBuoiThucDien_, giaoCuoi: giaoCuoi_, kpiLogSuKien: kpiLogSuKien_, kpiLogCuaNguoi: kpiLogCuaNguoi_, dongDiemLogVuot: dongDiemLogVuot_, docDangKyLog: docDangKyLog_
   };
 }

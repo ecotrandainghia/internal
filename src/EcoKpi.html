@@ -28,6 +28,19 @@ function tomTatKpi(k) {
   return { so: t.tiLe === null ? '–' : t.tiLe + '%', chu: 'Đạt ' + t.dat + '/' + (t.dat + t.chuaDat) + ' task có kết quả', kq: t.tiLe === null ? '' : t.tiLe >= 80 ? 'Đạt' : 'Chưa đạt' };
 }
 
+/** Tóm tắt KPI log: số buổi đã tham gia / tổng số buổi được giao cuối. */
+function tomTatLog(l) {
+  var giao = String(l.giaoCuoi).replace('.', ',');
+  return { so: l.tiLe === null ? '–' : l.tiLe + '%', chu: l.tiLe === null ? 'Chưa được giao buổi log nào' : 'Tham gia ' + l.thamGia + '/' + giao + ' buổi được giao cuối', kq: l.tiLe === null ? '' : l.tiLe >= 80 ? 'Đạt' : 'Chưa đạt' };
+}
+function theLog(l) {
+  var t = tomTatLog(l);
+  return '<div class="card"><div class="ctitle"><h3>' + ic('file', 18) + ' Log</h3>' + pillKpi(t.kq) + '</div><div class="kpi-the"><div><b>' + t.so + '</b><span>' + t.chu + '</span></div></div>' +
+    (l.chiTiet.length ? '<div style="margin-top:10px">' + l.chiTiet.map(function (c) {
+      return '<div class="kpi-task"><div class="row sb"><b>' + esc(c.ten) + '</b><span class="pill ' + (c.daChot ? 'p-ok' : 'p-info') + '">' + (c.daChot ? 'Đã chốt' : 'Đang diễn ra') + '</span></div><span class="dh">Giao ' + c.giao + ' buổi' + (c.giaoCuoi !== c.giao ? ', giao cuối ' + String(c.giaoCuoi).replace('.', ',') : '') + ' · Đã tham gia ' + c.thamGia + (c.vuot ? ' · Vượt ' + c.vuot + ' buổi' + (c.daChot ? ' (đã cộng điểm)' : ' (cộng điểm khi BOD chốt)') : '') + '</span></div>';
+    }).join('') + '</div>' : '') + '</div>';
+}
+
 VIEWS.kpi = function () {
   dangTai();
   goiPhien('layKpi').then(function (d) {
@@ -43,8 +56,9 @@ function veKpiCuaToi(d) {
     : '<div><b>' + t.so + '</b><span>' + t.chu + '</span></div><div><b>' + k.task.cho + '</b><span>Task chờ BOD đánh giá</span></div><div><b>' + k.task.dangLam + '</b><span>Task đang làm</span></div>';
   $('#main').innerHTML = '<div class="head"><div><h2>KPI của tôi</h2><p class="lead">' +
     (k.hr ? 'Thành viên ban HR tính KPI theo lượt nhắc deadline: mỗi task của thành viên bạn phụ trách có 2 lượt nhắc. Đạt khi số lần quên không quá 20% số lượt.' :
-      'Task đạt khi nộp đúng hạn và hoàn chỉnh hoặc cần chỉnh sửa, hoặc trễ hạn nhưng hoàn chỉnh. Đạt KPI khi từ 80% task trở lên đạt.') +
+      'Task đạt khi nộp đúng hạn và hoàn chỉnh hoặc cần chỉnh sửa, hoặc trễ hạn nhưng hoàn chỉnh. Đạt KPI task khi từ 80% task trở lên đạt.') + ' Đạt KPI log khi tham gia từ 80% tổng số buổi log được giao cuối.' +
     (k.boSung ? ' Bạn là thành viên bổ sung nên chỉ tính việc giao từ giai đoạn 2.' : '') + '</p></div></div>' +
+    theLog(k.log) +
     '<div class="card"><div class="ctitle"><h3>' + ic('target', 18) + ' Task</h3>' + pillKpi(t.kq) + '</div><div class="kpi-the">' + the + '</div></div>' +
     (k.hr ? '<div class="card"><div class="ctitle"><h3>' + ic('bell', 18) + ' Các lần BOD ghi nhận bạn quên</h3></div>' + (d.quen.filter(function (q) { return !q.daHuy; }).length ? d.quen.filter(function (q) { return !q.daHuy; }).map(function (q) {
       return '<div class="kpi-task"><b>' + esc(q.loai) + '</b><span class="dh">' + ngayDayDu(q.thoiGian) + ' · ' + esc(q.nguoiGhi) + (q.thamChieu ? ' · ' + esc(q.thamChieu) : '') + '</span>' + (q.moTa ? '<span>' + esc(q.moTa) + '</span>' : '') + '</div>';
@@ -71,19 +85,19 @@ var KPI_BOD = { tab: 'tv', ban: 'Tất cả', q: '' };
 function veKpiBod(d) {
   var nhom = [];
   d.thanhVien.forEach(function (k) { if (k.nhom && nhom.indexOf(k.nhom) < 0) nhom.push(k.nhom); });
-  $('#main').innerHTML = '<div class="head"><div><h2>KPI</h2><p class="lead">KPI task của từng thành viên trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Ban HR tính theo lượt nhắc deadline. Đánh giá task ở trang Task.</p></div></div>' +
+  $('#main').innerHTML = '<div class="head"><div><h2>KPI</h2><p class="lead">KPI log và KPI task của từng thành viên trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Ban HR tính theo lượt nhắc deadline. Đánh giá task ở trang Task, điểm danh log ở trang Làm log.</p></div></div>' +
     '<div class="row" id="kb-tab">' + [['tv', 'Thành viên'], ['hr', 'HR quên']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (KPI_BOD.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><div id="kb"></div>';
   var veTv = function () {
     $('#kb').innerHTML = '<div class="xh-tools" style="margin-bottom:10px"><input type="search" id="kb-q" placeholder="Tìm tên…" value="' + esc(KPI_BOD.q) + '" aria-label="Tìm thành viên">' +
       '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BOD.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div></div>' +
-      '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th><th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th></th></tr></thead><tbody id="kb-b"></tbody></table></div></div>';
+      '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th><th class="n">KPI log</th><th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th></th></tr></thead><tbody id="kb-b"></tbody></table></div></div>';
     var ve = function () {
       var q = boDau(KPI_BOD.q);
       var ds = d.thanhVien.filter(function (k) { return (KPI_BOD.ban === 'Tất cả' || k.nhom === KPI_BOD.ban) && boDau(k.ten).indexOf(q) >= 0; });
       $('#kb-b').innerHTML = ds.map(function (k) {
-        var t = tomTatKpi(k);
-        return '<tr><td>' + esc(k.ten) + (k.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td class="muted">' + esc(k.ban) + '</td><td class="n"><b>' + t.so + '</b></td><td class="muted">' + esc(t.chu) + '</td><td class="n">' + (k.task && k.task.cho ? k.task.cho : '') + '</td><td>' + pillKpi(t.kq) + '</td></tr>';
-      }).join('') || '<tr><td colspan="6" class="muted">Không có ai.</td></tr>';
+        var t = tomTatKpi(k), lg = tomTatLog(k.log);
+        return '<tr><td>' + esc(k.ten) + (k.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td class="muted">' + esc(k.ban) + '</td><td class="n" title="' + esc(lg.chu) + '"><b' + (lg.kq === 'Chưa đạt' ? ' style="color:var(--bad)"' : '') + '>' + lg.so + '</b></td><td class="n"><b>' + t.so + '</b></td><td class="muted">' + esc(t.chu) + '</td><td class="n">' + (k.task && k.task.cho ? k.task.cho : '') + '</td><td>' + pillKpi(t.kq) + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" class="muted">Không có ai.</td></tr>';
     };
     ve();
     $('#kb-q').oninput = function (e) { KPI_BOD.q = e.target.value; ve(); };
