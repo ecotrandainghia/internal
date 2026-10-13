@@ -281,7 +281,7 @@ function veTaoFileLog() {
       '<div class="card flush"><div style="padding:16px 18px 4px"><h3>File đã tạo gần đây</h3></div><div class="lst">' + (d.ganDay.length ? d.ganDay.map(function (f) { return '<div class="li"><div class="c"><a class="t" style="font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.ten) + '</a><span class="s">' + f.soNguoi + ' người · ' + f.soBuoi + ' buổi · ' + esc(f.nguoiTao) + ' · ' + ngayDayDu(f.thoiGian) + '</span></div></div>'; }).join('') : rong('Chưa có file nào.')) + '</div></div>';
     ganTabLog();
     var layChon = bindPicker('lp');
-    if ($('[data-s2]')) $('[data-s2]').onclick = function () { diToi('caidat', 'logcfg'); };
+    if ($('#main [data-s2]')) $('#main [data-s2]').onclick = function () { diToi('caidat', 'logcfg'); };
     var docBuoi = function () { buoi = $$('[data-bu]').map(function (i) { return i.value; }); };
     var veBuoi = function () {
       $('#lb').innerHTML = buoi.map(function (b, i) { return '<div class="row" style="flex-wrap:nowrap"><input type="text" data-bu="' + i + '" value="' + esc(b) + '" placeholder="Ví dụ: Sáng thứ 7 (12/10)" aria-label="Tên buổi ' + (i + 1) + '"><button type="button" class="ibtn" data-bx="' + i + '" aria-label="Xoá buổi"' + (buoi.length < 2 ? ' disabled' : '') + '>' + ic('x', 16) + '</button></div>'; }).join('');
@@ -354,26 +354,27 @@ function vietGopY() {
 var CD = null;
 /*
  * Mục cài đặt: [mã, biểu tượng, tên, mô tả ngắn (hàm), từ khoá tìm, trang mở thẳng (nếu có)].
- * Nhóm và thứ tự giữ đúng cấu trúc cha con BOD đã chốt trong sheet góc nhìn (nhóm tên trống là mục không có nhóm cha).
+ * Nhóm: [tên, mục, mã, biểu tượng]. Nhóm và thứ tự giữ đúng cấu trúc cha con BOD đã chốt trong sheet góc nhìn: mỗi nhóm là
+ * một thư mục, bấm vào mới thấy mục con; nhóm tên trống là mục không có thư mục cha.
  * Người khác chỉ có các mục của phần Của tôi, hiện thẳng dưới Cài đặt.
  */
 var CUA_TOI = ['Của tôi', [['tbtoi', 'bell', 'Thông báo', function () { return NGUOI.vaiTro === 'BOD' ? 'Cách nhận qua Zalo, app trên điện thoại hoặc mail' : 'Tự nhắc task, cách nhận qua Zalo, app hoặc mail'; }, 'thông báo của tôi nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử nhắc'],
     ['matkhau', 'key', 'Mật khẩu', function () { return 'Đổi mật khẩu đăng nhập của bạn'; }, 'mật khẩu đổi password đăng nhập'],
     ['avatar', 'image', 'Ảnh đại diện', function () { return NGUOI.anh ? 'Đang dùng ảnh riêng' : 'Chưa có ảnh'; }, 'ảnh đại diện avatar hình'],
-    ['theme', 'sun', 'Giao diện sáng tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']]];
+    ['theme', 'sun', 'Giao diện sáng tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']], 'cuatoi', 'users'];
 var SET = [
   ['Thông báo', [['tbkhac', 'users', 'Thông báo của thành viên', function () { return 'Cách nhận của từng người, gửi thử'; }, 'thông báo mọi người người khác chung nhận zalo app mail cách nhận máy gỡ gửi thử'],
     ['due', 'clock', 'Lịch nhắc task', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'không hoàn thành sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
-    ['notify', 'mail', 'Thông báo khác', function () { var ds = [CD.baoGopY ? 'góp ý' : '', CD.baoThuChoDuyet ? 'mail chờ duyệt' : '', CD.baoSeeding ? 'báo cáo seeding' : ''].filter(String); return ds.length ? 'Mail cho BOD khi có ' + ds.join(', ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv seeding điền báo cáo']]],
+    ['notify', 'mail', 'Thông báo khác', function () { var ds = [CD.baoGopY ? 'góp ý' : '', CD.baoThuChoDuyet ? 'mail chờ duyệt' : '', CD.baoSeeding ? 'báo cáo seeding' : ''].filter(String); return ds.length ? 'Mail cho BOD khi có ' + ds.join(', ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv seeding điền báo cáo']], 'thongbao', 'bell'],
   ['Hoạt động CLB', [['logcfg', 'file', 'File mẫu log', function () { return CD.log.linkMau ? 'Đã có file mẫu' + (CD.log.linkThuMuc ? ' và thư mục lưu' : '') : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive lưu'],
     ['seeding', 'chat', 'Báo cáo seeding', function () { return 'Điền báo cáo seeding, xem lịch sử'; }, 'seeding báo cáo react comment lịch sử điền', 'seeding'],
-    ['pins', 'pin', 'Ghim và quy chế', function () { return CD.ghim.length + ' link ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế') + '. Hiện ở trang chủ thành viên'; }, 'link ghim quy chế luật']]],
+    ['pins', 'pin', 'Ghim và quy chế', function () { return CD.ghim.length + ' link ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế') + '. Hiện ở trang chủ thành viên'; }, 'link ghim quy chế luật']], 'clb', 'folder'],
   ['Hộp thư', [['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt'],
-    ['sign', 'edit', 'Chữ ký', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature']]],
+    ['sign', 'edit', 'Chữ ký', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature']], 'hopthu', 'mail'],
   ['Tài khoản', [['quyen', 'users', 'Phân quyền', function () { var dem = function (v) { return CD.taiKhoan.filter(function (t) { return t.vaiTro === v; }).length; }; return dem('HR') + ' HR (phụ trách ban, phụ trách seeding), ' + dem('UCV') + ' UCV'; }, 'phân quyền cấp quyền hr ucv nhân sự phụ trách ban seeding mã hr tài khoản'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại quên'],
     ['loginbg', 'eye', 'Ảnh nền đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Đang dùng nền xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background'],
-    ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth']]],
+    ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth']], 'taikhoan', 'lock'],
   ['', [['chude', 'star', 'Giao diện theo mùa và sự kiện', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí sự kiện']]],
   CUA_TOI
 ];
@@ -384,8 +385,19 @@ var CAI_DAT_AN = [['types', 'star', 'Thang điểm hoạt động', function () 
   ['ucv', 'users', 'Phân quyền UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' UCV · gửi mail của CLB'; }, 'UCV ucv tài khoản mail']];
 /** Người không phải BOD chỉ có phần Của tôi. */
 function nhomCaiDat() { return NGUOI.vaiTro === 'BOD' ? SET : [['', CUA_TOI[1]]]; }
-/** Trang quay về từ mục ẩn (mục mở từ nút ở trang khác). */
-var VE_TU_CAI_DAT = { types: 'diem' };
+/** Nơi quay về từ mục ẩn (mục mở từ nút ở trang khác): [trang, tab]. */
+var VE_TU_CAI_DAT = { types: ['diem'], zalo: ['caidat', 'tbkhac'], hr: ['caidat', 'taikhoan'], ucv: ['caidat', 'taikhoan'] };
+function tenNhomCaiDat(k) { var g = nhomCaiDat().filter(function (g) { return g[2] === k; })[0]; if (g) return g[0]; var x = flatCaiDat().filter(function (y) { return y[0] === k; })[0]; return x ? x[2] : 'Cài đặt'; }
+/** Nút quay lại trong Cài đặt: mục con về thư mục chứa nó, thư mục về Cài đặt. */
+function veTuCaiDat() {
+  if (!sub || !NGUOI) return null;
+  var SET = nhomCaiDat();
+  if (SET.some(function (g) { return g[2] === sub; })) return ['caidat', null, 'Cài đặt'];
+  var v = VE_TU_CAI_DAT[sub];
+  if (v) return [v[0], v[1] || null, v[1] ? tenNhomCaiDat(v[1]) : tenTrang(v[0])];
+  var g = SET.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
+  return g && g[2] ? ['caidat', g[2], g[0]] : ['caidat', null, 'Cài đặt'];
+}
 var CUON_CAI_DAT = null;
 function flatCaiDat() { return nhomCaiDat().reduce(function (a, g) { return a.concat(g[1]); }, []); }
 function napCaiDat() { return goiPhien('layCaiDatDesk').then(function (d) { CD = d; return d; }); }
@@ -393,38 +405,53 @@ VIEWS.caidat = function () {
   var SET = nhomCaiDat();
   if (!CD && NGUOI.vaiTro === 'BOD') { dangTai(); napCaiDat().then(function () { if (page === 'caidat') VIEWS.caidat(); }).catch(loiTai); return; }
   var tim = SET.concat(NGUOI.vaiTro === 'BOD' ? [['', CAI_DAT_AN]] : []);
-  if (sub && !tim.some(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })) sub = null;
-  if (sub) {
-    var g = tim.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
-    var it = g[1].filter(function (x) { return x[0] === sub; })[0];
-    var veTu = VE_TU_CAI_DAT[sub] || 'caidat';
-    $('#main').innerHTML = '<div><button class="back" id="back">' + ic('left', 16) + esc(tenTrang(veTu)) + '</button>' + (g[0] ? '<div class="crumb" style="margin-top:6px">' + g[0] + '</div>' : '') + '<h2 style="margin:' + (g[0] ? '0' : '6px 0 0') + ';font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px"></div>';
-    $('#back').onclick = function () { diToi(veTu); };
+  var nhom = sub ? SET.filter(function (g) { return g[2] === sub; })[0] : null;
+  if (sub && !nhom && !tim.some(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })) { sub = null; veNutVe(); }
+  if (sub && !nhom) {
+    var it = tim.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0][1].filter(function (x) { return x[0] === sub; })[0];
+    $('#main').innerHTML = '<div><h2 style="margin:0;font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px"></div>';
     window.scrollTo(0, 0);
     SUB[sub]();
     return;
   }
-  $('#main').innerHTML = '<div class="head"><div><h2>Cài đặt</h2><p class="lead">' + (NGUOI.vaiTro === 'BOD' ? 'Mọi BOD đều sửa được. Không cần mở sheet hay sửa code.' : 'Cài đặt riêng của bạn.') + '</p></div></div>' +
-    (NGUOI.vaiTro === 'BOD' ? '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="sq" placeholder="Tìm trong cài đặt, ví dụ: mật khẩu, điểm, ghim…" aria-label="Tìm trong cài đặt"></div>' : '<input type="hidden" id="sq">') + '<div id="slists" style="display:grid;gap:14px"></div>';
-  var ve = function (q) {
-    q = boDau(q || '');
-    var html = SET.map(function (g) {
-      var f = g[1].filter(function (x) { return !q || boDau(x[2] + ' ' + x[3]() + ' ' + x[4] + ' ' + g[0]).indexOf(q) >= 0; });
-      return f.length ? '<div class="sgroup">' + (g[0] ? '<h4>' + g[0] + '</h4>' : '') + '<div class="slist">' + f.map(function (x) { return '<button class="sitem" data-s="' + x[0] + '"><span class="ic">' + ic(x[1]) + '</span><div><b>' + x[2] + '</b><span>' + esc(x[3]()) + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>'; }).join('') + '</div></div>' : '';
-    }).join('');
-    $('#slists').innerHTML = html || '<p class="muted">Không tìm thấy mục cài đặt nào.</p>';
-    $$('[data-s]').forEach(function (b) {
+  var mo = sub;
+  var muc = function (x) { return '<button class="sitem" data-s="' + x[0] + '"><span class="ic">' + ic(x[1]) + '</span><div><b>' + x[2] + '</b><span>' + esc(x[3]()) + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>'; };
+  var thuMuc = function (g) { return '<button class="sitem" data-nhom="' + g[2] + '"><span class="ic">' + ic(g[3]) + '</span><div><b>' + g[0] + '</b><span>' + g[1].map(function (x) { return x[2]; }).join(', ') + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>'; };
+  if (nhom) {
+    $('#main').innerHTML = '<div class="head"><div><h2>' + nhom[0] + '</h2></div></div><div id="slists" style="display:grid;gap:14px"><div class="slist">' + nhom[1].map(muc).join('') + '</div></div>';
+  } else {
+    $('#main').innerHTML = '<div class="head"><div><h2>Cài đặt</h2><p class="lead">' + (NGUOI.vaiTro === 'BOD' ? 'Mọi BOD đều sửa được. Không cần mở sheet hay sửa code.' : 'Cài đặt riêng của bạn.') + '</p></div></div>' +
+      (NGUOI.vaiTro === 'BOD' ? '<div class="setsearch">' + ic('search', 16) + '<input type="search" id="sq" placeholder="Tìm trong cài đặt, ví dụ: mật khẩu, điểm, ghim…" aria-label="Tìm trong cài đặt"></div>' : '<input type="hidden" id="sq">') + '<div id="slists" style="display:grid;gap:14px"></div>';
+  }
+  var gan = function () {
+    $$('#slists [data-s]').forEach(function (b) {
       b.onclick = function () {
         var x = flatCaiDat().filter(function (y) { return y[0] === b.getAttribute('data-s'); })[0];
-        CUON_CAI_DAT = { y: window.scrollY, q: $('#sq').value };
+        CUON_CAI_DAT = { o: mo, y: window.scrollY, q: $('#sq') ? $('#sq').value : '' };
         if (x[5]) diToi(x[5]); else diToi('caidat', x[0]);
       };
     });
+    $$('#slists [data-nhom]').forEach(function (b) {
+      b.onclick = function () { CUON_CAI_DAT = { o: mo, y: window.scrollY, q: $('#sq').value }; diToi('caidat', b.getAttribute('data-nhom')); };
+    });
+  };
+  // Cấp ngoài cùng: thư mục và mục không có thư mục cha theo đúng thứ tự trong sheet. Khi tìm: hiện thẳng các mục khớp, nhóm theo thư mục.
+  var ve = function (q) {
+    q = boDau(q || '');
+    var html = !q ? '<div class="slist">' + SET.map(function (g) { return g[0] ? thuMuc(g) : g[1].map(muc).join(''); }).join('') + '</div>' : SET.map(function (g) {
+      var f = g[1].filter(function (x) { return boDau(x[2] + ' ' + x[3]() + ' ' + x[4] + ' ' + g[0]).indexOf(q) >= 0; });
+      return f.length ? '<div class="sgroup">' + (g[0] ? '<h4>' + g[0] + '</h4>' : '') + '<div class="slist">' + f.map(muc).join('') + '</div></div>' : '';
+    }).join('');
+    $('#slists').innerHTML = html || '<p class="muted">Không tìm thấy mục cài đặt nào.</p>';
+    gan();
   };
   // Quay lại từ một mục cài đặt thì giữ nguyên chỗ đang cuộn (và ô tìm) như lúc mở mục đó.
-  var nho = CUON_CAI_DAT; CUON_CAI_DAT = null;
-  if (nho && nho.q) $('#sq').value = nho.q;
-  ve(nho && nho.q); $('#sq').oninput = function (e) { ve(e.target.value); };
+  var nho = CUON_CAI_DAT && CUON_CAI_DAT.o === mo ? CUON_CAI_DAT : null; CUON_CAI_DAT = null;
+  if (nhom) gan();
+  else {
+    if (nho && nho.q) $('#sq').value = nho.q;
+    ve(nho && nho.q); $('#sq').oninput = function (e) { ve(e.target.value); };
+  }
   if (nho) window.scrollTo(0, nho.y);
 };
 function luuVa(nut, msg, ten, thamSo, xong) {

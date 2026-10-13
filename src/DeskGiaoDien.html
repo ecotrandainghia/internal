@@ -82,6 +82,10 @@ svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .topbar{display:none}
 .main{padding:24px 28px 56px;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;width:100%;max-width:1240px;margin-inline:auto}
 .main.rong{max-width:1240px}
+/* Nút quay lại thư mục cha (trên đầu trang con), cùng lề với nội dung trang. */
+.vehub{width:100%;max-width:1240px;margin-inline:auto;padding:20px 28px 0}
+.vehub[hidden]{display:none}
+.vehub:not([hidden])+.main{padding-top:10px}
 .head{display:flex;gap:12px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap}
 .head h2{margin:0;font-size:23px;line-height:1.25;text-wrap:balance}
 .lead{color:var(--muted);margin:3px 0 0;max-width:72ch}
@@ -415,6 +419,8 @@ html.nen-xanh,html.nen-xanh body{background:var(--brand-3)}
   .topbar .av{width:36px;height:36px;border:0;padding:0;cursor:pointer;font:800 15px/1 var(--f-body);display:grid;place-items:center;text-align:center}
   .main{padding:16px calc(16px + var(--sar)) calc(96px + var(--sab)) calc(16px + var(--sal));gap:14px}
   .app.motab .main{padding-bottom:calc(28px + var(--sab))}
+  .vehub{padding:12px calc(16px + var(--sar)) 0 calc(16px + var(--sal))}
+  .vehub:not([hidden])+.main{padding-top:8px}
   .head h2{font-size:20px}
   .card{padding:15px;border-radius:13px}
   .sticky-foot{margin:0 -15px -15px;padding:12px 15px}
