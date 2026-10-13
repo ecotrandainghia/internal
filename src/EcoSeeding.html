@@ -19,10 +19,10 @@ VIEWS.seeding = function () {
   goiPhien('layBaoCaoSeeding').then(function (d) {
     if (page !== 'seeding') return;
     var muc = function (m, ten) { return m ? ten + ' +' + m.diem + ' điểm' : ten + ' chưa có mức điểm'; };
-    $('#main').innerHTML = '<div class="head"><div><h2>' + (NGUOI.vaiTro === 'BOD' ? 'Báo cáo seeding' : 'Báo cáo') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
+    $('#main').innerHTML = '<div class="head"><div><h2>' + (NGUOI.vaiTro === 'BOD' ? 'Báo cáo seeding' : 'Nộp báo cáo seeding') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
       'Khi bài đăng đủ 48 giờ, dán tên Facebook của những người đã react và comment. Không cần ghi giờ đăng: app lấy giờ bạn gửi. App tự cộng điểm: ' + muc(d.react, 'react') + ', ' + muc(d.comment, 'comment') + ' mỗi bài.</p></div></div>' +
       (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào nên chưa cộng được điểm. BOD cần tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.</span></div>') +
-      (!d.react || !d.comment ? '<div class="note">' + ic('info') + '<span>BOD cần chọn loại hoạt động dùng cho react và comment trong Cài đặt, mục Loại hoạt động và mức điểm.</span></div>' : '') +
+      (!d.react || !d.comment ? '<div class="note">' + ic('info') + '<span>BOD cần chọn loại hoạt động dùng cho react và comment trong Cài đặt, mục Thang điểm hoạt động.</span></div>' : '') +
       '<div class="sd-grid"><form class="card form" id="sdf">' +
       '<label class="f">Link bài đăng<input type="url" id="sd-link" placeholder="https://www.facebook.com/…" required></label>' +
       '<label class="f">Những người đã react <small>Mỗi dòng một tên Facebook, dán nguyên danh sách cũng được</small><textarea id="sd-react" rows="7"></textarea></label>' +
@@ -82,7 +82,7 @@ VIEWS.nhachen = function () {
   dangTai();
   goiPhien('layBaoCaoSeeding').then(function (d) {
     if (page !== 'nhachen') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Nhắc hẹn</h2><p class="lead">Thấy bài mới trên group thì bấm Nhắc tôi. Đủ 48 giờ app nhắc bạn vào điền báo cáo, theo cách nhận thông báo bạn chọn ở Cài đặt.</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Hẹn nhắc 48 giờ</h2><p class="lead">Thấy bài mới trên group thì bấm Nhắc tôi. Đủ 48 giờ app nhắc bạn vào điền báo cáo, theo cách nhận thông báo bạn chọn ở Cài đặt.</p></div></div>' +
       '<form class="card form" id="nh"><label class="f">Link bài <small>Không bắt buộc, để lúc được nhắc mở bài nhanh</small><input type="url" id="nh-link" placeholder="https://www.facebook.com/…"></label>' +
       '<div class="row"><button class="btn" id="nh-b">' + ic('bell', 16) + 'Nhắc tôi sau 48 giờ</button><span id="nh-m"></span></div></form>' +
       '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Đang chờ nhắc</h3></div><div id="nh-ds"></div></div>';

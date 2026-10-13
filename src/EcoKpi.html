@@ -20,7 +20,7 @@ function pillKetQua(kq, chu) {
 }
 /**
  * Tóm tắt KPI task một người: phần trăm task đạt trên số task đã có kết quả, hoặc được miễn.
- * Chỉ là con số: đạt hay chưa đạt, có certificate hay không chỉ ghi ở trang Tổng hợp của BOD.
+ * Chỉ là con số: đạt hay chưa đạt, có certificate hay không chỉ ghi ở trang Chứng nhận của BOD.
  */
 function tomTatKpi(k) {
   if (k.mien) return { so: 'Miễn', chu: 'Được miễn task (ôn thi chuyển cấp)', tiLe: null };
@@ -48,13 +48,13 @@ function veKpiCaNhan(phan) {
     if (page !== phan) return;
     var k = d.kpi;
     if (phan === 'log') {
-      $('#main').innerHTML = '<div class="head"><div><h2>Log</h2><p class="lead">Số buổi log bạn đã tham gia so với số buổi được giao' + (k.boSung ? ', tính từ giai đoạn 2 vì bạn là thành viên bổ sung' : '') + '. BOD điểm danh sau mỗi buổi.</p></div></div>' + theLog(k.log);
+      $('#main').innerHTML = '<div class="head"><div><h2>Log của tôi</h2><p class="lead">Số buổi log bạn đã tham gia so với số buổi được giao' + (k.boSung ? ', tính từ giai đoạn 2 vì bạn là thành viên bổ sung' : '') + '. BOD điểm danh sau mỗi buổi.</p></div></div>' + theLog(k.log);
       return;
     }
     var t = tomTatKpi(k);
     var the = k.mien ? '<div><b>Miễn</b><span>Bạn đang được miễn task (ôn thi chuyển cấp).</span></div>'
       : '<div><b>' + t.so + '</b><span>' + t.chu + '</span></div><div><b>' + k.task.cho + '</b><span>Task chờ BOD đánh giá</span></div><div><b>' + k.task.dangLam + '</b><span>Task đang làm</span></div>';
-    $('#main').innerHTML = '<div class="head"><div><h2>Task</h2><p class="lead">Task đạt khi nộp đúng hạn và hoàn chỉnh hoặc cần chỉnh sửa, hoặc trễ hạn nhưng hoàn chỉnh.' + (k.boSung ? ' Bạn là thành viên bổ sung nên chỉ tính task giao từ giai đoạn 2.' : '') + '</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Task của tôi</h2><p class="lead">Task đạt khi nộp đúng hạn và hoàn chỉnh hoặc cần chỉnh sửa, hoặc trễ hạn nhưng hoàn chỉnh.' + (k.boSung ? ' Bạn là thành viên bổ sung nên chỉ tính task giao từ giai đoạn 2.' : '') + '</p></div></div>' +
       '<div class="card"><div class="ctitle"><h3>' + ic('target', 18) + ' KPI task của tôi</h3></div><div class="kpi-the">' + the + '</div></div>' +
       '<div class="card"><div class="ctitle"><h3>' + ic('check', 18) + ' Task của tôi</h3></div><div id="kt">' + (d.task.length ? d.task.map(function (x, i) {
         return '<div class="kpi-task"><div class="row sb"><b>' + esc(x.ten) + '</b>' + (pillKetQua(x.ketQua) || '<span class="pill ' + ((ST_TASK[x.trangThai] || ['p-mute'])[0]) + '">' + esc(x.trangThai) + '</span>') + '</div>' +
@@ -91,10 +91,10 @@ function veKpiBang(phan) {
     ds.forEach(function (k) { if (k.nhom && nhom.indexOf(k.nhom) < 0) nhom.push(k.nhom); });
     if (KPI_BANG.ban !== 'Tất cả' && nhom.indexOf(KPI_BANG.ban) < 0) KPI_BANG.ban = 'Tất cả';
     var pv = d.phamVi || { ban: [], rieng: [] };
-    var moTa = bod ? 'Mọi thành viên trừ BOD, trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Kết quả cấp chứng nhận xem ở Tổng hợp.'
+    var moTa = bod ? 'Mọi thành viên trừ BOD, trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Kết quả cấp chứng nhận xem ở trang Chứng nhận.'
       : 'Những người bạn phụ trách' + (pv.ban.length ? ': ban ' + pv.ban.map(esc).join(', ') : '') + (pv.rieng.length ? (pv.ban.length ? ' và ' : ': ') + pv.rieng.length + ' thành viên được BOD giao riêng' : '') + '.';
     var dau = laTask ? '<th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th class="n">Đang làm</th>' : '<th class="n">KPI log</th><th>Chi tiết</th>';
-    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(phan)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Task.' : 'Điểm danh ở trang Log.') : '') + '</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(phan)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Quản lý task.' : 'Điểm danh ở trang Sự kiện log.') : '') + '</p></div></div>' +
       '<div class="xh-tools"><input type="search" id="kb-q" placeholder="Tìm tên…" value="' + esc(KPI_BANG.q) + '" aria-label="Tìm thành viên">' +
       (nhom.length > 1 ? '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BANG.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th>' + dau + '</tr></thead><tbody id="kb-b"></tbody></table></div></div>';

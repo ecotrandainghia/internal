@@ -35,7 +35,7 @@ var BANG = {
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc', 'HoVaTen', 'DaDung', 'NguoiDanhDau'],
   BaoCaoSeeding: ['ThoiGian', 'NguoiNop', 'LinkBai', 'LucDang', 'React', 'Comment', 'KhongKhop', 'TrangThai', 'NguoiHuy'],
-  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr', 'NhomHr'],
+  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr', 'NhomHr', 'TuNhac'],
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong',
     'NgayNop', 'HanGoc', 'NgayXinGiaHan', 'ChatLuong', 'DauHieu', 'NguoiDanhGia', 'LucDanhGia', 'PhanHoi', 'HrPhuTrach'],
@@ -571,7 +571,7 @@ function dongBoTaiKhoan_(taiKhoan, thanhVien) {
  */
 var QUYEN = {
   BOD: ['congdiem', 'task', 'danhgia', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
-  HR: ['guigopy'],
+  HR: ['task', 'guigopy'],
   UCV: ['mail', 'hopthu', 'guigopy'],
   TV: ['guigopy']
 };
@@ -608,12 +608,18 @@ function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g,
  * Còn lại: chỉ xem task của mình. HR phụ trách xem KPI của ban và thành viên được phân ở trang riêng (phamViHr_).
  * @return {{xem:function(string):boolean, sua:function(string):boolean, moTa:string}}
  */
-function quyenTask_(tk, chucVu, banCua) {
+function quyenTask_(tk, chucVu, banCua, phanCong) {
   var toi = String(tk.HoVaTen);
   var ban = function (n) { return chuanChu_(banCua[String(n)]); };
   if (String(tk.VaiTro) === 'BOD') {
     var khongBod = function (n) { return ban(n) !== 'BOD'; };
     return { xem: khongBod, sua: khongBod, moTa: '' };
+  }
+  if (String(tk.VaiTro) === 'HR') {
+    // HR nhập, sửa, đổi trạng thái task giúp BOD cho những người mình phụ trách (không phải task của chính mình).
+    var pv = phamViHr_(tk, banCua, phanCong);
+    var quanLy = function (n) { return String(n) !== toi && pv.thuoc(n); };
+    return { xem: quanLy, sua: quanLy, moTa: pv.co ? '' : 'BOD chưa giao ban hay thành viên nào cho bạn phụ trách.' };
   }
   return { xem: function (n) { return String(n) === toi; }, sua: function () { return false; }, moTa: '' };
 }
@@ -638,6 +644,21 @@ function phamViHr_(tk, banCua, phanCong) {
     return rieng[String(n).toLowerCase()] === true || kq.ban.indexOf(b) >= 0;
   };
   return kq;
+}
+
+/**
+ * Ngày nộp ghi vào sheet khi đánh xong task: xong đúng hạn thì là hôm nay (hoặc hạn chót nếu đã qua hạn),
+ * trễ hạn thì là hôm nay (hoặc ngày sau hạn chót nếu chưa tới hạn), để cột Đúng hạn ra đúng lựa chọn.
+ */
+function congNgayChuoi_(s, n) {
+  var p = String(s).split('-');
+  return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)).toISOString().slice(0, 10);
+}
+
+function ngayNopTheoKieu_(kieu, han, hom) {
+  if (!han) return hom;
+  if (kieu === 'tre') return hom > han ? hom : congNgayChuoi_(han, 1);
+  return hom < han ? hom : han;
 }
 
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
@@ -1817,8 +1838,8 @@ function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, ba
   if (trung) return loi('Bài này đã có báo cáo của ' + String(trung.NguoiNop) + '. Muốn sửa thì nhờ BOD huỷ báo cáo cũ rồi điền lại.');
   var loaiReact = loaiDungCho_(loaiHoatDong, DUNG_CHO.REACT), loaiComment = loaiDungCho_(loaiHoatDong, DUNG_CHO.COMMENT);
   var r = khopTenSeeding_(yc.react, thanhVien), c = khopTenSeeding_(yc.comment, thanhVien);
-  if (r.ten.length && !loaiReact) return loi('Chưa có loại hoạt động dùng cho react. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
-  if (c.ten.length && !loaiComment) return loi('Chưa có loại hoạt động dùng cho comment. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
+  if (r.ten.length && !loaiReact) return loi('Chưa có loại hoạt động dùng cho react. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.');
+  if (c.ten.length && !loaiComment) return loi('Chưa có loại hoạt động dùng cho comment. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.');
   if (!r.ten.length && !c.ten.length && !r.khongKhop.length && !c.khongKhop.length) return loi('Bạn chưa dán tên ai.');
   kq.react = r.ten; kq.comment = c.ten;
   r.khongKhop.concat(c.khongKhop).forEach(function (x) { if (kq.khongKhop.indexOf(x) < 0) kq.khongKhop.push(x); });
@@ -2065,7 +2086,7 @@ function dongDiemLogVuot_(suKien, buoi, thanhVien, loaiHoatDong, ky, nguoiCong, 
     });
   });
   var tl = Object.keys(thieu);
-  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.' };
+  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.' };
   if (dong.length && !ky) return { dong: [], loi: 'Chưa có giai đoạn nào nên chưa cộng được điểm log vượt.' };
   return { dong: dong, loi: '' };
 }
@@ -2188,7 +2209,7 @@ if (typeof module !== 'undefined') {
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, dongBoTaiKhoan: dongBoTaiKhoan_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
-    coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, phamViHr: phamViHr_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
+    coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, phamViHr: phamViHr_, ngayNopTheoKieu: ngayNopTheoKieu_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
     trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_,

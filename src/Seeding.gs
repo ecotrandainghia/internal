@@ -1,6 +1,6 @@
 /**
  * Báo cáo seeding trong app CLB ECO, thay cho Google Form seeding.
- * HR phụ trách seeding (BOD cấp quyền trong Cài đặt, Tài khoản, Cấp quyền) dán link bài đăng và tên những người
+ * HR phụ trách seeding (BOD cấp quyền trong Cài đặt, Phân quyền HR) dán link bài đăng và tên những người
  * đã react, comment trong 48 giờ. App dò tên với danh sách thành viên và tự cộng điểm theo loại hoạt động
  * đang gắn với react, comment. Mỗi bài chỉ có một báo cáo; BOD huỷ được để điền lại.
  */

@@ -131,7 +131,7 @@ function mailUCV() {
   var M = { thuMuc: 'Hộp thư đến', tim: '', batDau: 0, ds: [], coThem: false, nhan: [], cheDo: 'tatca', sel: null, viec: [] };
   var THU_MUC = [['Hộp thư đến', 'inbox'], ['Đã gửi', 'send'], ['Lưu trữ', 'archive'], ['Thư rác', 'info'], ['Thùng rác', 'trash']];
   $('#main').className = 'main rong';
-  $('#main').innerHTML = '<div class="head"><div><h2>Mail</h2><p class="lead">Hộp thư của CLB. Đọc thư thoải mái; còn gửi, trả lời, chuyển tiếp, lưu trữ, gắn nhãn, xoá… sẽ chờ BOD duyệt rồi mới thực hiện.</p></div></div>' +
+  $('#main').innerHTML = '<div class="head"><div><h2>Hộp thư</h2><p class="lead">Hộp thư của CLB. Đọc thư thoải mái; còn gửi, trả lời, chuyển tiếp, lưu trữ, gắn nhãn, xoá… sẽ chờ BOD duyệt rồi mới thực hiện.</p></div></div>' +
     '<div class="mail" id="mail"><div class="folders" id="mf"></div><div class="mlist" id="ml"></div><div class="mread" id="mr"></div></div>' +
     '<button class="btn fab" id="fab">' + ic('edit', 18) + 'Soạn thư</button>';
   var msg = function () { return $('#mrm'); };
@@ -433,7 +433,7 @@ function mailUCV() {
 function mailBOD(tabDau, them) {
   var tab = tabDau || 'duyet';
   $('#main').className = 'main rong';
-  $('#main').innerHTML = '<div class="head"><div><h2>Mail</h2><p class="lead">Soạn và sửa thư trong Gmail của CLB. Ở đây BOD duyệt thư UCV, gửi hàng loạt và hẹn giờ gửi từ thư nháp Gmail.</p></div>' +
+  $('#main').innerHTML = '<div class="head"><div><h2>Hộp thư</h2><p class="lead">Soạn và sửa thư trong Gmail của CLB. Ở đây BOD duyệt thư UCV, gửi hàng loạt và hẹn giờ gửi từ thư nháp Gmail.</p></div>' +
     (NGUOI.gmail ? '<a class="btn ghost" href="' + esc(NGUOI.gmail) + '" target="_blank" rel="noopener">' + ic('ext', 16) + 'Mở Gmail CLB</a>' : '') + '</div>' +
     '<div class="seg" id="mtab" style="justify-self:start">' + [['duyet', 'Duyệt thư', 'check'], ['nhap', 'Thư nháp', 'file'], ['hangloat', 'Gửi hàng loạt', 'send'], ['lich', 'Lịch sử gửi', 'clock']].map(function (x) {
       return '<button data-t="' + x[0] + '" aria-pressed="' + (x[0] === tab) + '">' + ic(x[2], 16) + x[1] + (x[0] === 'duyet' ? '<span class="badge" id="dbadge"' + (soViecCho ? '' : ' hidden') + '>' + soViecCho + '</span>' : '') + '</button>';

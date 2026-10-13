@@ -181,5 +181,5 @@ function guiMailSeeding_(nhat) {
       '\nĐược cộng (' + n.soNguoi + ' người, ' + n.soLuot + ' lượt): ' + (n.duoc.length ? n.duoc.map(function (d) { return d[0] + ' (' + d[1] + ')'; }).join(', ') + (n.soNguoi > n.duoc.length ? ', …' : '') : 'không ai') +
       (n.soKhongKhop ? '\nKhông được cộng (' + n.soKhongKhop + ' tên không khớp Tên Facebook của thành viên nào): ' + n.khongKhop.join(', ') + (n.soKhongKhop > n.khongKhop.length ? ', …' : '') : '');
   }).join('\n\n');
-  guiMailThongBao_(den, 'Form seeding vừa cộng ' + luot + ' lượt', noiDung + '\n\nTắt mail này trong app CLB ECO: Cài đặt, Loại hoạt động và mức điểm.');
+  guiMailThongBao_(den, 'Form seeding vừa cộng ' + luot + ' lượt', noiDung + '\n\nTắt mail này trong app CLB ECO: Cài đặt, Thang điểm hoạt động.');
 }

@@ -40,7 +40,7 @@ function nguoiNhanThongBao_() {
     var email = String(t.Email), m = may[email.toLowerCase()] || [];
     var cach = cachMacDinh_(t);
     return {
-      email: email, ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), cach: cach,
+      email: email, ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), cach: cach, tuNhac: String(t.TuNhac || '') === 'bat',
       chatId: String(z.chatId || ''), tenZalo: String(z.tenZalo || ''), ma: String(z.ma || ''), soMay: m.length, may: m
     };
   });
@@ -261,7 +261,7 @@ function layThongBaoCuaToi(phien) {
   var tk = canDangNhap_(phien);
   var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0] || { cach: ['zalo'], may: [] };
   return {
-    email: String(tk.Email), vaiTro: String(tk.VaiTro), cach: toi.cach, soMay: toi.may.length, may: toi.may,
+    email: String(tk.Email), vaiTro: String(tk.VaiTro), cach: toi.cach, soMay: toi.may.length, may: toi.may, tuNhac: !!toi.tuNhac,
     zalo: trangThaiZaloCuaToi_(String(tk.HoVaTen)), khoaCong: khoaVapid_().cong,
     suKien: { lich: caiDatNhacZalo_().lich.map(moTaMocNhac_), gopY: baoGopYQuaMail_(), thuChoDuyet: batSuKien_('BaoThuChoDuyet'), seeding: baoSeedingMoi_() }
   };
@@ -277,6 +277,14 @@ function luuCachNhanCuaToi(phien, cach) {
   var tk = canDangNhap_(phien);
   ghiCotTaiKhoan_(String(tk.Email), 'NhanThongBao', kiemTraCachNhan_(cach));
   damBaoLichNhac_();
+  return layThongBaoCuaToi(phien);
+}
+
+/** Bật/tắt tự nhắc hạn task của chính mình (mặc định tắt: HR phụ trách nhắc). */
+function luuTuNhacTask(phien, bat) {
+  var tk = canDangNhap_(phien);
+  ghiCotTaiKhoan_(String(tk.Email), 'TuNhac', bat ? 'bat' : '');
+  if (bat) damBaoLichNhac_();
   return layThongBaoCuaToi(phien);
 }
 

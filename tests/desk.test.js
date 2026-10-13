@@ -9,7 +9,8 @@ const LOAI = [{ TenLoai: 'Staff', Diem: 5 }, { TenLoai: 'Seeding', Diem: 1 }];
 test('coQuyen theo vai trò', () => {
   assert.strictEqual(L.coQuyen('BOD', 'congdiem'), true);
   assert.strictEqual(L.coQuyen('HR', 'congdiem'), false);
-  assert.strictEqual(L.coQuyen('HR', 'task'), false); // chỉ BOD giao và sửa task
+  assert.strictEqual(L.coQuyen('HR', 'task'), true); // HR nhập, sửa task giúp BOD cho người mình phụ trách
+  assert.strictEqual(L.coQuyen('HR', 'danhgia'), false); // chỉ BOD đánh giá
   assert.strictEqual(L.coQuyen('UCV', 'mail'), true);
   assert.strictEqual(L.coQuyen('UCV', 'caidat'), false);
   assert.strictEqual(L.coQuyen('', 'task'), false);

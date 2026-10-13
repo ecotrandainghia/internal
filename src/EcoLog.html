@@ -13,7 +13,7 @@
 var LOG = { tab: 'sukien', d: null };
 var TT_BUOI = { 'Chưa diễn ra': 'p-mute', 'Đã diễn ra': 'p-ok', 'Huỷ vì hết việc': 'p-warn', 'Huỷ vì lý do khác': 'p-info' };
 function dauTrangLog() {
-  return '<div class="head"><div><h2>Log</h2><p class="lead">' + (LOG.tab === 'file' ? 'Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi. Ai có link file đều mở và đăng ký được.' :
+  return '<div class="head"><div><h2>Sự kiện log</h2><p class="lead">' + (LOG.tab === 'file' ? 'Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi. Ai có link file đều mở và đăng ký được.' :
     'Mỗi sự kiện có số buổi dự kiến và số buổi giao cho từng thành viên. Điểm danh từng buổi; buổi huỷ vì hết việc làm số buổi được giao cuối giảm theo tỉ lệ, buổi huỷ vì lý do khác tính là đã tham gia với người đã đăng ký. Đạt KPI log khi tham gia từ 80% tổng số buổi được giao cuối.') + '</p></div></div>' +
     '<div class="row" id="lg-tab">' + [['sukien', 'Sự kiện và điểm danh'], ['file', 'Tạo sheet đăng ký']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (LOG.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
 }
@@ -47,7 +47,7 @@ function veSuKienLog() {
     if (page !== 'log' || LOG.tab !== 'sukien') return;
     LOG.d = d;
     $('#main').innerHTML = dauTrangLog() +
-      (!d.coLoai[90] || !d.coLoai[180] ? '<div class="note">' + ic('info') + '<span>Chưa chọn loại hoạt động cho điểm log vượt buổi ' + [90, 180].filter(function (x) { return !d.coLoai[x]; }).join(' và ') + ' phút nên chưa chốt được sự kiện có người làm vượt. Chọn trong Cài đặt, mục Loại hoạt động và mức điểm, cột App tự cộng.</span></div>' : '') +
+      (!d.coLoai[90] || !d.coLoai[180] ? '<div class="note">' + ic('info') + '<span>Chưa chọn loại hoạt động cho điểm log vượt buổi ' + [90, 180].filter(function (x) { return !d.coLoai[x]; }).join(' và ') + ' phút nên chưa chốt được sự kiện có người làm vượt. Chọn trong Cài đặt, mục Thang điểm hoạt động, cột App tự cộng.</span></div>' : '') +
       '<div class="row"><button class="btn sm" id="sk-moi">' + ic('plus', 14) + 'Tạo sự kiện</button></div>' +
       '<div style="display:grid;gap:14px">' + (d.suKien.length ? d.suKien.map(theSuKien).join('') : rong('Chưa có sự kiện log nào trong nhiệm kỳ này.')) + '</div>';
     ganTabLog();

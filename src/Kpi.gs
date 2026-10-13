@@ -105,7 +105,7 @@ function phamViHrCua_(tk) {
 /**
  * Trang KPI task và KPI log. BOD: KPI của mọi thành viên (trừ BOD), kèm kết quả đạt hay chưa.
  * Người khác: chỉ các con số của mình (và của những người mình phụ trách, nếu là HR phụ trách), không ghi đạt hay chưa đạt:
- * xét certificate chỉ có ở trang Tổng hợp của BOD.
+ * xét certificate chỉ có ở trang Chứng nhận của BOD.
  */
 function layKpi(phien) {
   var tk = canDangNhap_(phien);
@@ -211,7 +211,7 @@ function nhacSeedingTheoGio(e) {
   var nguoi = {};
   nguoiNhanThongBao_().forEach(function (n) { nguoi[n.email.toLowerCase()] = n; });
   den.forEach(function (d) {
-    var noiDung = 'Bài đăng lúc ' + Utilities.formatDate(d.lucDang, tz, 'HH:mm dd/MM') + ' đã đủ 48 giờ. Bạn vào app CLB ECO, mục Seeding, Báo cáo, điền những người đã react và comment nhé.' + (d.link ? '\n' + d.link : '');
+    var noiDung = 'Bài đăng lúc ' + Utilities.formatDate(d.lucDang, tz, 'HH:mm dd/MM') + ' đã đủ 48 giờ. Bạn vào app CLB ECO, mục Seeding, Nộp báo cáo, điền những người đã react và comment nhé.' + (d.link ? '\n' + d.link : '');
     try {
       var n = nguoi[d.email.toLowerCase()];
       if (!n || !guiThongBao_(n, 'Đến giờ báo cáo seeding', noiDung)) guiMailThongBao_(d.email, 'Đến giờ báo cáo seeding', noiDung);

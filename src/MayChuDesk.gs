@@ -280,7 +280,7 @@ function danhDauGopYDuocDung(phien, thoiGianMs) {
       if (v[r][cDung]) throw new Error('Góp ý này đã được đánh dấu trước đó.');
       var loaiHd = docBang_('LoaiHoatDong');
       var loai = loaiDungCho_(loaiHd, DUNG_CHO.GOP_Y);
-      if (!loai) throw new Error('Chưa có loại hoạt động dùng cho góp ý. Chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
+      if (!loai) throw new Error('Chưa có loại hoạt động dùng cho góp ý. Chọn trong Cài đặt, mục Thang điểm hoạt động.');
       var kq = taoDongCongDiem_({ loai: String(loai.TenLoai), tenHoatDong: String(v[r][td.indexOf('NoiDung')]).slice(0, 80), nguoi: [ten] },
         docBang_('ThanhVien').filter(khongPhaiBod_), loaiHd, String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
       if (kq.loi) throw new Error(kq.loi);
@@ -514,7 +514,7 @@ function soNgaySapDenHan_() {
 function quyenTaskCua_(tk) {
   var banCua = {};
   docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); });
-  return quyenTask_(tk, String(tk.VaiTro) === 'BOD' ? chucVuCua_(tk) : '', banCua);
+  return quyenTask_(tk, String(tk.VaiTro) === 'BOD' ? chucVuCua_(tk) : '', banCua, docBang_('PhuTrachHr'));
 }
 
 function kiemTraDuocGiao_(q, ten) {
@@ -620,22 +620,21 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
   return true;
 }
 
-/** Đánh dấu Đã xong, Đã huỷ, hoặc mở lại (Đã giao). Người phụ trách tự xác nhận xong (hoặc mở lại) task của mình. */
-function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai, ngayNop) {
+/**
+ * Đánh dấu Đã xong, Đã huỷ, hoặc mở lại (Đã giao). BOD và HR phụ trách làm thay thành viên.
+ * Đánh xong thì chọn đúng hạn hay trễ hạn (kieuXong 'dung' / 'tre'), kể cả khi bấm muộn hoặc task đã quá hạn lâu.
+ */
+function doiTrangThaiTask(phien, thoiGianTao, nguoi, trangThai, kieuXong) {
   var tk = canDangNhap_(phien, 'task');
-  var nop = ngayNop ? String(ngayNop) : homNay_();
-  if (trangThai === TRANG_THAI_TASK.XONG && (!ngayHopLe_(nop) || nop > homNay_())) throw new Error('Ngày nộp chưa đúng (không được sau hôm nay).');
   if ([TRANG_THAI_TASK.XONG, TRANG_THAI_TASK.HUY, TRANG_THAI_TASK.GIAO].indexOf(trangThai) < 0) throw new Error('Trạng thái không hợp lệ.');
-  var cuaToi = String(nguoi) === String(tk.HoVaTen) && trangThai !== TRANG_THAI_TASK.HUY;
-  if (!cuaToi) kiemTraDuocGiao_(quyenTaskCua_(tk), nguoi);
+  if (trangThai === TRANG_THAI_TASK.XONG && kieuXong !== 'dung' && kieuXong !== 'tre') throw new Error('Chọn task xong đúng hạn hay trễ hạn.');
+  kiemTraDuocGiao_(quyenTaskCua_(tk), nguoi);
   voiKhoa_(function () {
     var sh = bangDuLieu_('Task');
     var v = sh.getDataRange().getValues();
     var dong = timDongTask_(v, thoiGianTao, nguoi);
     var td = v[0];
-    if (trangThai === TRANG_THAI_TASK.XONG && laKhongHoanThanh_(String(v[dong - 1][td.indexOf('TrangThai')] || TRANG_THAI_TASK.GIAO), ngayChuoi_(v[dong - 1][td.indexOf('HanChot')]), homNay_(), soNgayKhongHoanThanh_())) {
-      throw new Error('Task đã trễ quá hạn nên được tính là không hoàn thành. Muốn ghi nhận xong thì người quản lý sửa hạn chót trước.');
-    }
+    var nop = ngayNopTheoKieu_(kieuXong, ngayChuoi_(v[dong - 1][td.indexOf('HanChot')]), homNay_());
     sh.getRange(dong, td.indexOf('TrangThai') + 1).setValue(trangThai);
     sh.getRange(dong, td.indexOf('ThoiGianXong') + 1).setValue(trangThai === TRANG_THAI_TASK.GIAO ? '' : new Date());
     sh.getRange(dong, td.indexOf('NgayNop') + 1).setValue(trangThai === TRANG_THAI_TASK.XONG ? nop : '');
@@ -734,6 +733,6 @@ function layTrangChu(phien) {
     kq.thu = { nhap: demThu(TRANG_THAI_VIEC.NHAP), cho: demThu(TRANG_THAI_VIEC.CHO), sua: demThu(TRANG_THAI_VIEC.SUA), duyet: demThu(TRANG_THAI_VIEC.DUYET) };
   }
   var toi = nguoiNhanThongBao_().filter(function (n) { return n.email.toLowerCase() === String(tk.Email).toLowerCase(); })[0];
-  kq.thongBao = toi ? { cach: toi.cach, soMay: toi.soMay, daKetNoiZalo: !!toi.chatId } : null;
+  kq.thongBao = toi ? { cach: toi.cach, soMay: toi.soMay, daKetNoiZalo: !!toi.chatId, tuNhac: toi.tuNhac } : null;
   return kq;
 }

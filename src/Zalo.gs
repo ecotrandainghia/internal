@@ -225,7 +225,8 @@ function nhacViec_(luc) {
   var hom = homNay_();
   var canNhac = chonTaskTheoLich_(docTask_(), hom, cd.lich, luc == null ? null : luc);
   var nguoiNhan = nguoiNhanThongBao_();
-  // Mỗi người được nhắc task của chính mình. HR phụ trách được nhắc thêm task của ban và thành viên mình phụ trách.
+  // HR phụ trách được nhắc task của ban và thành viên mình phụ trách (cách nhắc chính).
+  // Ai bật "Tự nhắc task của tôi" trong Cài đặt thì được nhắc thêm task của chính mình.
   // Ban HR không có HR phụ trách theo ban nên Head HR được nhắc task của thành viên ban HR (trừ người đã có HR phụ trách riêng).
   var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {}, phanCong = docBang_('PhuTrachHr'), coPhanRieng = {};
   phanCong.forEach(function (p) { if (String(p.NguoiHr || '').trim()) coPhanRieng[String(p.HoVaTen).toLowerCase()] = true; });
@@ -238,7 +239,7 @@ function nhacViec_(luc) {
 
   var daGui = 0, loi = [];
   nguoiNhan.forEach(function (n) {
-    var cuaToi = soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false);
+    var cuaToi = n.tuNhac ? soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false) : '';
     var khac = [];
     if (n.vaiTro === 'BOD' && chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]) === 'HEAD HR') {
       khac = canNhac.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten && !coPhanRieng[t.nguoi.toLowerCase()]; });
