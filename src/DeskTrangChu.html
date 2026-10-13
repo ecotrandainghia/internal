@@ -165,7 +165,12 @@ function ganGoMay(goc, xong) {
 VIEWS.thongbao = function () { diToi('caidat', 'tbtoi'); };
 /** phan = 'toi': cài đặt của chính mình; 'khac': BOD xem và chỉnh cách nhận của BOD và HR khác. Hai phần tách riêng, không trộn. */
 function veTrangThongBao(goc, phan) {
-  if (phan === 'khac') { goc.innerHTML = '<div id="tb-moi" class="tb-khac"></div>'; veMoiNguoi(); return; }
+  if (phan === 'khac') {
+    // Bot Zalo không có mục riêng trong cài đặt: mở từ đây vì là một cách mọi người nhận thông báo.
+    goc.innerHTML = '<div class="row"><button class="btn ghost sm" id="tb-zalo">' + ic('chat', 14) + 'Bot Zalo</button></div><div id="tb-moi" class="tb-khac"></div>';
+    $('#tb-zalo').onclick = function () { diToi('caidat', 'zalo'); };
+    veMoiNguoi(); return;
+  }
   goc.innerHTML = cho();
   goiPhien('layThongBaoCuaToi').then(function (tb) {
     if (!goc.isConnected) return;

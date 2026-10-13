@@ -293,9 +293,13 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $(
  * Phải đăng nhập mới dùng được app.
  */
 var TRANG_CHU = ['', [['home', 'Trang chủ', 'home']]];
-var NAV_BOD = [TRANG_CHU,
-  ['Điều hành', [['task', 'Quản lý task', 'check'], ['log', 'Sự kiện log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Hộp góp ý', 'chat']]],
-  ['Đánh giá', [['kpitask', 'KPI task', 'target'], ['kpilog', 'KPI log', 'file'], ['xephang', 'Bảng điểm', 'chart'], ['tongket', 'Chứng nhận', 'award']]],
+/*
+ * Menu giữ đúng cấu trúc cha con BOD đã chốt trong sheet góc nhìn; chỉ đổi tên cho rõ nghĩa.
+ * Mục cấp 3 (KPI > task, log) là các tab trong cùng một trang.
+ */
+var NAV_BOD = [
+  ['', [['home', 'Trang chủ', 'home'], ['task', 'Quản lý task', 'check'], ['log', 'Sự kiện log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Hộp góp ý', 'chat']]],
+  ['Hoạt động thành viên', [['kpi', 'KPI', 'target'], ['xephang', 'Bảng điểm', 'chart'], ['tongket', 'Chứng nhận', 'award']]],
   ['', [['caidat', 'Cài đặt', 'gear']]]];
 /** Trang không có trên menu, mở từ nút trong trang khác (Điểm, Cài đặt). */
 var TRANG_AN = { BOD: [['baocao', 'Báo cáo điểm', 'chart'], ['seeding', 'Báo cáo seeding', 'chat']], khac: [['anh', 'Ảnh thành tích', 'image']] };
@@ -304,24 +308,25 @@ var BOTTOM = { BOD: ['home', 'task', 'log', 'diem'], UCV: ['home', 'task', 'xeph
 var TEN_NGAN = { task: 'Task', log: 'Log', xephang: 'Điểm', mail: 'Hộp thư', diem: 'Cộng điểm' };
 var VAI_TRO = { BOD: 'BOD', HR: 'HR', UCV: 'UCV', TV: 'Thành viên' };
 function vaiTro() { return NGUOI && VAI_TRO[NGUOI.vaiTro] ? NGUOI.vaiTro : 'TV'; }
-/** Được BOD cấp quyền theo mã nhóm cũ trong sheet: SUP-SEED (phụ trách seeding), SUP-RES (miễn task), CRE (phụ trách sinh nhật). */
+/** Được BOD cấp quyền phụ trách seeding (mã SUP-SEED trong sheet). */
 function coNhomHr(n) { return !!NGUOI && (NGUOI.nhomHr || []).indexOf(n) >= 0; }
-var TEN_NHOM_HR = { 'SUP-SEED': 'Phụ trách seeding', 'SUP-RES': 'Miễn task (ôn thi chuyển cấp)', 'CRE': 'Phụ trách sinh nhật' };
+var TEN_NHOM_HR = { 'SUP-SEED': 'Phụ trách seeding' };
 /**
- * Menu của người đang dùng theo góc nhìn. Cách đặt tên: nhóm gọi theo mục đích (Điều hành, Đánh giá, Của tôi, Phụ trách),
- * mục giữ đúng từ CLB quen dùng (task, log, KPI) để nhận ra ngay; cùng một việc thì cùng một tên ở mọi góc nhìn
- * (HR phụ trách thấy Quản lý task, KPI task, KPI log như BOD). Mục dùng nhiều đứng trước, Góp ý và Cài đặt luôn ở cuối.
+ * Menu của thành viên, HR phụ trách ban, HR phụ trách seeding: đúng cấu trúc cha con trong sheet góc nhìn
+ * (KPI > Task, Log; Điểm; Góp ý; Phụ trách > Task, Log hoặc Seeding > Nhắc hẹn, Báo cáo; Cài đặt).
  */
 function navCuaToi() {
   if (!NGUOI) return [];
   if (vaiTro() === 'BOD') return NAV_BOD;
-  var nav = [TRANG_CHU, ['Của tôi', [['task', 'Task', 'check'], ['log', 'Log', 'file'], ['xephang', 'Điểm và xếp hạng', 'chart']]]];
-  if (NGUOI.vaiTro === 'HR' && NGUOI.phuTrach) nav.push(['Phụ trách', [['qltask', 'Quản lý task', 'edit'], ['kpitask', 'KPI task', 'target'], ['kpilog', 'KPI log', 'users']]]);
+  var nav = [TRANG_CHU, ['KPI của tôi', [['task', 'Task', 'check'], ['log', 'Log', 'file']]],
+    ['', [['xephang', 'Điểm và xếp hạng', 'chart'], ['gopy', 'Góp ý', 'chat']].concat(NGUOI.vaiTro === 'UCV' ? [['mail', 'Hộp thư', 'mail']] : [])]];
+  if (NGUOI.vaiTro === 'HR' && NGUOI.phuTrach) nav.push(['Ban phụ trách', [['pttask', 'Task', 'check'], ['ptlog', 'Log', 'file']]]);
   if (coNhomHr('SUP-SEED')) nav.push(['Seeding', [['nhachen', 'Hẹn nhắc 48 giờ', 'bell'], ['seeding', 'Nộp báo cáo', 'chat']]]);
-  if (NGUOI.vaiTro === 'UCV') nav.push(['Liên lạc', [['mail', 'Hộp thư', 'mail']]]);
-  nav.push(['', [['gopy', 'Gửi góp ý', 'chat'], ['caidat', 'Cài đặt', 'gear']]]);
+  nav.push(['', [['caidat', 'Cài đặt', 'gear']]]);
   return nav;
 }
+/** Tên trang ở đầu trang và thanh trên điện thoại, khi tên trên menu chỉ rõ nghĩa nhờ nhóm cha. */
+var TEN_DAY_DU = { BOD: {}, khac: { task: 'Task của tôi', log: 'Log của tôi', pttask: 'Task ban phụ trách', ptlog: 'Log ban phụ trách' } };
 function trangAn() { return NGUOI ? (TRANG_AN[vaiTro()] || TRANG_AN.khac).filter(function (x) { return !flat().some(function (y) { return y[0] === x[0]; }); }) : []; }
 function thanhDuoi() { return BOTTOM[vaiTro()] || BOTTOM.khac; }
 /** Nhãn dưới tên người dùng: BOD hiện chức vụ (nếu danh sách thành viên có ghi), còn lại hiện vai trò. */
@@ -334,7 +339,7 @@ function anhTron(lop, kieu, thuocTinh) {
 var page = null, sub = null, soGopYMoi = 0, soViecCho = 0;
 var MENU_GON = (function () { try { return localStorage.getItem('eco_menu_gon') === '1'; } catch (e) { return false; } })();
 function flat() { return navCuaToi().reduce(function (a, g) { return a.concat(g[1]); }, []); }
-function tenTrang(k) { if (k === 'menu') return 'Menu'; if (k === 'thongbao') return 'Thông báo của tôi'; return (flat().concat(trangAn()).filter(function (x) { return x[0] === k; })[0] || [0, 'CLB ECO'])[1]; }
+function tenTrang(k) { if (k === 'menu') return 'Menu'; if (k === 'thongbao') return 'Thông báo của tôi'; var dd = (TEN_DAY_DU[vaiTro()] || TEN_DAY_DU.khac)[k]; if (dd) return dd; return (flat().concat(trangAn()).filter(function (x) { return x[0] === k; })[0] || [0, 'CLB ECO'])[1]; }
 function soHuyHieu(k) { return k === 'gopy' ? soGopYMoi : k === 'mail' ? soViecCho : 0; }
 function huyHieu(k) { var n = soHuyHieu(k); return n ? '<span class="badge">' + n + '</span>' : ''; }
 /** Số trên nút Menu: cộng các mục không nằm trên thanh tab dưới. */
@@ -465,13 +470,10 @@ function moTaiKhoan() {
 }
 /** Trang Menu trên điện thoại: mọi chức năng, tài khoản, giao diện, thông báo. */
 function viewMenu() {
-  // Giữ đúng các nhóm như menu bên trái trên máy tính; nhóm không tên gộp vào nhóm Chung.
+  // Giữ đúng thứ tự và các nhóm như menu bên trái trên máy tính.
   var nut = function (x) { return '<button class="mi2" data-p="' + x[0] + '"><span class="ic">' + ic(x[2]) + '</span><span class="t">' + x[1] + '</span>' + huyHieu(x[0]) + ic('right', 16) + '</button>'; };
-  var nhom = [], chung = [];
-  navCuaToi().forEach(function (g) { if (g[0]) nhom.push(g); else chung = chung.concat(g[1].filter(function (x) { return x[0] !== 'home'; })); });
-  var dsNhom = [['', [['home', 'Trang chủ', 'home']]]].concat(nhom).concat(chung.length ? [['Chung', chung]] : []);
   $('#main').innerHTML = '<div class="menu-trang">' + khoiTaiKhoan(true) +
-    dsNhom.map(function (g) { return (g[0] ? '<div class="sheet-sec">' + g[0] + '</div>' : '') + '<div class="mlist2">' + g[1].map(nut).join('') + '</div>'; }).join('') +
+    navCuaToi().map(function (g) { return (g[0] ? '<div class="sheet-sec">' + g[0] + '</div>' : '') + '<div class="mlist2">' + g[1].map(nut).join('') + '</div>'; }).join('') +
     '<div class="sheet-sec">Giao diện</div>' + chonGiaoDien() +
     '<div class="sheet-sec">Tài khoản</div><div class="mlist2">' +
     '<button class="mi2" data-mk><span class="ic">' + ic('key') + '</span><span class="t">Đổi mật khẩu</span>' + ic('right', 16) + '</button>' +
@@ -485,7 +487,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('[data-mk]')) { moDoiMatKhau(); return; }
   if (e.target.closest('[data-caidat]')) { if (!dongHop()) return; diToi('caidat'); return; }
   var p = e.target.closest('[data-p]');
-  if (p) { if (!dongHop()) return; diToi(p.getAttribute('data-p')); }
+  if (p) { if (!dongHop()) return; diToi(p.getAttribute('data-p'), p.getAttribute('data-s2') || null); }
 });
 
 /* ---------- Đăng nhập ---------- */

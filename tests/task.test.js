@@ -102,10 +102,10 @@ test('quyền task: mọi BOD như nhau, không giao cho BOD; HR làm giúp cho 
   assert.deepStrictEqual(L.banCuaHr('HR, BOD, ER'), ['ER'], 'HR không phụ trách ban BOD, HR; chưa phân thì rỗng');
   const ban = { An: 'PG', Binh: 'PR CAP', Bao: 'PR DES', Chi: 'AD', Dung: 'BOD', Duy: 'BOD', Em: 'HR', Ha: 'HR' };
   const ds = Object.keys(ban).concat(['Người cũ']);
-  const ha = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR' }, '', ban, [{ HoVaTen: 'Em', NguoiHr: 'Ha' }, { HoVaTen: 'Ha', NguoiHr: 'Ha' }, { HoVaTen: 'Chi', NguoiHr: 'Khac' }]);
-  assert.deepStrictEqual(ds.filter(ha.sua), ['Binh', 'Bao', 'Em'], 'ban PR và người phân riêng, không gồm chính mình');
+  const ha = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR, HR' }, '', ban);
+  assert.deepStrictEqual(ds.filter(ha.sua), ['Binh', 'Bao'], 'các ban PR, không gồm ban HR và chính mình');
   assert.deepStrictEqual(ds.filter(ha.xem), ds.filter(ha.sua));
-  const moi = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: '' }, '', ban, []);
+  const moi = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: '' }, '', ban);
   assert.deepStrictEqual(ds.filter(moi.sua), []);
   assert.ok(moi.moTa, 'HR chưa được phân thì có lời giải thích');
   // Chức vụ không ảnh hưởng: mọi BOD quản lý task của mọi người trừ BOD.
@@ -120,19 +120,17 @@ test('quyền task: mọi BOD như nhau, không giao cho BOD; HR làm giúp cho 
   assert.deepStrictEqual(L.banCoo([{ Ban: 'PR DES' }, { Ban: 'BOD' }, { Ban: 'HR' }, { Ban: 'PG' }, { Ban: 'PR CAP' }]), ['PG', 'PR']);
 });
 
-test('phạm vi HR phụ trách: các ban được phân cộng thành viên phân riêng, không gồm BOD', () => {
+test('phạm vi HR phụ trách: chỉ các ban được phân, không gồm BOD', () => {
   const ban = { An: 'PG', Binh: 'PR CAP', Bao: 'PR DES', Chi: 'AD', Dung: 'BOD', Em: 'HR', Ha: 'HR' };
   const ds = Object.keys(ban);
-  const pc = [{ HoVaTen: 'Em', NguoiHr: 'ha' }, { HoVaTen: 'Chi', NguoiHr: 'Linh' }, { HoVaTen: 'Dung', NguoiHr: 'Ha' }];
-  const ha = L.phamViHr({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR' }, ban, pc);
+  const ha = L.phamViHr({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR, AD' }, ban);
   assert.strictEqual(ha.co, true);
-  assert.deepStrictEqual(ha.ban, ['PR']);
-  assert.deepStrictEqual(ds.filter(ha.thuoc), ['Binh', 'Bao', 'Em']);
-  const linh = L.phamViHr({ VaiTro: 'HR', HoVaTen: 'Linh', BanQuanLy: '' }, ban, pc);
-  assert.deepStrictEqual(ds.filter(linh.thuoc), ['Chi']);
-  const moi = L.phamViHr({ VaiTro: 'HR', HoVaTen: 'Moi', BanQuanLy: '' }, ban, pc);
+  assert.deepStrictEqual(ha.ban, ['PR', 'AD']);
+  assert.deepStrictEqual(ds.filter(ha.thuoc), ['Binh', 'Bao', 'Chi']);
+  const moi = L.phamViHr({ VaiTro: 'HR', HoVaTen: 'Moi', BanQuanLy: '' }, ban);
   assert.strictEqual(moi.co, false);
-  assert.strictEqual(L.phamViHr({ VaiTro: 'UCV', HoVaTen: 'Ha', BanQuanLy: 'PR' }, ban, pc).co, false);
+  assert.deepStrictEqual(ds.filter(moi.thuoc), []);
+  assert.strictEqual(L.phamViHr({ VaiTro: 'UCV', HoVaTen: 'Ha', BanQuanLy: 'PR' }, ban).co, false);
 });
 
 test('KPI task: đúng hạn × chất lượng theo bảng 3 × 3', () => {

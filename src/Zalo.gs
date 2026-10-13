@@ -227,9 +227,8 @@ function nhacViec_(luc) {
   var nguoiNhan = nguoiNhanThongBao_();
   // HR phụ trách được nhắc task của ban và thành viên mình phụ trách (cách nhắc chính).
   // Ai bật "Tự nhắc task của tôi" trong Cài đặt thì được nhắc thêm task của chính mình.
-  // Ban HR không có HR phụ trách theo ban nên Head HR được nhắc task của thành viên ban HR (trừ người đã có HR phụ trách riêng).
-  var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {}, phanCong = docBang_('PhuTrachHr'), coPhanRieng = {};
-  phanCong.forEach(function (p) { if (String(p.NguoiHr || '').trim()) coPhanRieng[String(p.HoVaTen).toLowerCase()] = true; });
+  // Ban HR không có HR phụ trách theo ban nên Head HR được nhắc task của thành viên ban HR.
+  var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {};
   docBang_('ThanhVien').forEach(function (t) {
     banCua[String(t.HoVaTen)] = String(t.Ban);
     if (t.Email) chucVuTheoEmail[String(t.Email).toLowerCase()] = String(t.ChucVu || '');
@@ -242,9 +241,9 @@ function nhacViec_(luc) {
     var cuaToi = n.tuNhac ? soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false) : '';
     var khac = [];
     if (n.vaiTro === 'BOD' && chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]) === 'HEAD HR') {
-      khac = canNhac.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten && !coPhanRieng[t.nguoi.toLowerCase()]; });
+      khac = canNhac.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten; });
     } else if (n.vaiTro === 'HR') {
-      var pv = phamViHr_(tkTheoEmail[n.email.toLowerCase()], banCua, phanCong);
+      var pv = phamViHr_(tkTheoEmail[n.email.toLowerCase()], banCua);
       khac = canNhac.filter(function (t) { return t.nguoi !== n.ten && pv.thuoc(t.nguoi); });
     }
     var tin = [cuaToi, soanTinNhac_(n.ten, khac, hom, true)].filter(String).join('\n\n');

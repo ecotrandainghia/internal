@@ -254,7 +254,8 @@ test('chuanHoaLoaiHoatDong: số lần tối đa, gắn chức năng tự cộng
 });
 
 test('nhóm HR và quyền báo cáo seeding', () => {
-  assert.deepStrictEqual(L.nhomHr(' sup-seed, CRE ; abc, SUP-SEED'), ['SUP-SEED', 'CRE']);
+  assert.deepStrictEqual(L.nhomHr(' sup-seed, CRE ; abc, SUP-SEED'), ['SUP-SEED'], 'chỉ còn phụ trách seeding; mã cũ CRE, SUP-RES bị bỏ qua');
+  assert.deepStrictEqual(L.nhomHr('SUP-RES'), []);
   assert.strictEqual(L.duocBaoCaoSeeding({ VaiTro: 'HR', NhomHr: 'SUP-SEED' }), true);
   assert.strictEqual(L.duocBaoCaoSeeding({ VaiTro: 'HR', NhomHr: 'CRE' }), false);
   assert.strictEqual(L.duocBaoCaoSeeding({ VaiTro: 'BOD' }), true);

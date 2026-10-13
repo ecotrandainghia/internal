@@ -3,11 +3,11 @@
  * - BOD đánh giá chất lượng task đã xong; app tự ra Đạt / Chưa đạt theo bảng 3 × 3.
  * - BOD ghi gia hạn khi thành viên xin trước hạn ít nhất 24 giờ.
  * - Ban HR tính KPI task như mọi ban. App không theo dõi việc HR nhắc deadline nữa.
- * - HR phụ trách ban xem KPI của ban và những thành viên BOD phân cho mình.
+ * - HR phụ trách ban xem KPI của các ban mình phụ trách.
  * - HR phụ trách seeding đặt nhắc hẹn: 48 giờ sau app nhắc điền báo cáo seeding.
  */
 
-/** Tên những người được miễn task (ôn thi chuyển cấp, mã SUP-RES). */
+/** Tên những người được miễn task. Không còn nhóm miễn task (mã SUP-RES cũ bị bỏ qua), nên luôn rỗng. */
 function tenSupRes_() {
   return docBang_('TaiKhoan').filter(function (t) { return nhomHr_(t.NhomHr).indexOf('SUP-RES') >= 0; }).map(function (t) { return String(t.HoVaTen); });
 }
@@ -89,17 +89,17 @@ function taskTinhKpi_(task, tv, moc2) {
 /** Thông tin KPI log và KPI task của một người (để hiện). Người được miễn task thì không xét phần task. */
 function kpiCuaNguoi_(tv, task, moc2, supRes, suKienLog) {
   var ten = String(tv.HoVaTen);
-  var kq = { ten: ten, ban: String(tv.Ban || ''), nhom: nhomBan_(tv.Ban), boSung: tv.LoaiThanhVien === LOAI_TV.BO_SUNG, log: kpiLogCuaNguoi_(tv, suKienLog || [], moc2) };
+  var kq = { ten: ten, ban: String(tv.Ban || ''), nhom: nhomBan_(tv.Ban), khoi: khoiLop_(tv.Lop), boSung: tv.LoaiThanhVien === LOAI_TV.BO_SUNG, log: kpiLogCuaNguoi_(tv, suKienLog || [], moc2) };
   if (supRes.indexOf(ten) >= 0) { kq.mien = true; return kq; }
   kq.task = tongKpiTask_(taskTinhKpi_(task, tv, moc2));
   return kq;
 }
 
-/** Phạm vi HR phụ trách của tài khoản đang đăng nhập (ban ở cột BanQuanLy và thành viên BOD phân riêng). */
+/** Phạm vi HR phụ trách của tài khoản đang đăng nhập (các ban ở cột BanQuanLy). */
 function phamViHrCua_(tk) {
   var banCua = {};
   docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); });
-  return phamViHr_(tk, banCua, docBang_('PhuTrachHr'));
+  return phamViHr_(tk, banCua);
 }
 
 /**
@@ -118,42 +118,11 @@ function layKpi(phien) {
   var pv = phamViHrCua_(tk);
   return {
     laBod: false,
-    phamVi: { ban: pv.ban, rieng: pv.rieng },
+    phamVi: { ban: pv.ban },
     thanhVienBan: pv.co ? tv.filter(function (t) { return pv.thuoc(String(t.HoVaTen)); }).map(cua) : [],
     kpi: cua(toi),
     task: cuaToi
   };
-}
-
-/* ---------- HR phụ trách thành viên (ngoài các ban ở cột BanQuanLy) ---------- */
-
-/** Mọi thành viên (trừ BOD), kèm HR đang phụ trách riêng, và các HR (kèm ban đang phụ trách). */
-function layPhanCongHr(phien) {
-  canDangNhap_(phien, 'caidat');
-  var pc = {};
-  docBang_('PhuTrachHr').forEach(function (p) { pc[String(p.HoVaTen).toLowerCase()] = String(p.NguoiHr || ''); });
-  var hr = docBang_('TaiKhoan').filter(function (t) { return String(t.VaiTro) === 'HR'; }).map(function (t) { return { ten: String(t.HoVaTen), ban: banCuaHr_(t.BanQuanLy) }; });
-  var tv = docThanhVien_().filter(khongPhaiBod_);
-  return {
-    hr: hr,
-    thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), hr: pc[String(t.HoVaTen).toLowerCase()] || '' }; })
-  };
-}
-
-/** Lưu phân công riêng: ds = [{ ten, hr }]. HR đó xem được KPI task và KPI log của người này. */
-function luuPhanCongHr(phien, ds) {
-  canDangNhap_(phien, 'caidat');
-  var tenHr = {};
-  docBang_('TaiKhoan').forEach(function (t) { if (String(t.VaiTro) === 'HR') tenHr[String(t.HoVaTen)] = true; });
-  var dong = [];
-  (ds || []).forEach(function (x) {
-    var hr = String(x && x.hr || '').trim();
-    if (!hr) return;
-    if (!tenHr[hr]) throw new Error(hr + ' không còn là HR.');
-    dong.push({ HoVaTen: String(x.ten), NguoiHr: hr });
-  });
-  ghiDeBang_('PhuTrachHr', dong);
-  return dong.length;
 }
 
 /* ---------- Nhắc hẹn 48 giờ cho HR phụ trách seeding ---------- */

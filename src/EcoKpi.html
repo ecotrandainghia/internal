@@ -77,42 +77,72 @@ function veKpiCaNhan(phan) {
   }).catch(loiTai);
 }
 
+/** Lọc theo khối lớp (đọc từ cột Lớp), dùng chung cho các bảng dữ liệu nhiều người. */
+function chipKhoi(ds, chon, id) {
+  var khoi = [];
+  ds.forEach(function (x) { if (x.khoi && khoi.indexOf(x.khoi) < 0) khoi.push(x.khoi); });
+  khoi.sort(function (a, b) { return a - b; });
+  return khoi.length > 1 ? '<div class="row" id="' + id + '">' + [0].concat(khoi).map(function (k) { return '<button class="chip" data-k="' + k + '" aria-pressed="' + (k === chon) + '">' + (k ? 'Khối ' + k : 'Mọi khối') + '</button>'; }).join('') + '</div>' : '';
+}
+function ganChip(id, chon) {
+  var g = $('#' + id); if (!g) return;
+  g.onclick = function (e) { var b = e.target.closest('.chip'); if (!b) return; $$('#' + id + ' .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); chon(b.getAttribute('data-k') !== null ? Number(b.getAttribute('data-k')) : b.getAttribute('data-b')); };
+}
+/** Tab trong một trang (mục cấp con trên menu, ví dụ KPI > Task, Log). ds: [[sub, tên]]. */
+function tabTrang(ds) {
+  return '<div class="seg" id="tabtrang" style="margin-bottom:4px">' + ds.map(function (x) { return '<button data-tab="' + x[0] + '" aria-pressed="' + ((sub || '') === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+}
+function ganTabTrang() {
+  var g = $('#tabtrang'); if (!g) return;
+  g.onclick = function (e) { var b = e.target.closest('[data-tab]'); if (b) diToi(page, b.getAttribute('data-tab') || null); };
+}
+
 /**
- * Bảng KPI task hoặc KPI log của nhiều người: BOD xem mọi thành viên (trừ BOD), HR phụ trách xem ban và thành viên được phân.
- * Chỉ có con số; với BOD, số dưới 80% tô đỏ để dễ thấy ai cần nhắc.
+ * Bảng KPI task hoặc KPI log của nhiều người: BOD xem mọi thành viên (trừ BOD), HR phụ trách xem các ban mình phụ trách.
+ * Chỉ có con số; với BOD, số dưới 80% tô đỏ để dễ thấy ai cần nhắc. Lọc theo ban và theo khối.
  */
-var KPI_BANG = { ban: 'Tất cả', q: '' };
-function veKpiBang(phan) {
+var KPI_BANG = { ban: 'Tất cả', khoi: 0, q: '' };
+function veKpiBang(laTask, tabs) {
+  var trang = page, tab = sub;
   dangTai();
   goiPhien('layKpi').then(function (d) {
-    if (page !== phan) return;
-    var ds = d.laBod ? d.thanhVien : d.thanhVienBan, bod = d.laBod, laTask = phan === 'kpitask';
+    if (page !== trang || sub !== tab) return;
+    var ds = d.laBod ? d.thanhVien : d.thanhVienBan, bod = d.laBod;
     var nhom = [];
     ds.forEach(function (k) { if (k.nhom && nhom.indexOf(k.nhom) < 0) nhom.push(k.nhom); });
     if (KPI_BANG.ban !== 'Tất cả' && nhom.indexOf(KPI_BANG.ban) < 0) KPI_BANG.ban = 'Tất cả';
-    var pv = d.phamVi || { ban: [], rieng: [] };
+    if (KPI_BANG.khoi && !ds.some(function (k) { return k.khoi === KPI_BANG.khoi; })) KPI_BANG.khoi = 0;
+    var pv = d.phamVi || { ban: [] };
     var moTa = bod ? 'Mọi thành viên trừ BOD, trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Kết quả cấp chứng nhận xem ở trang Chứng nhận.'
-      : 'Những người bạn phụ trách' + (pv.ban.length ? ': ban ' + pv.ban.map(esc).join(', ') : '') + (pv.rieng.length ? (pv.ban.length ? ' và ' : ': ') + pv.rieng.length + ' thành viên được BOD giao riêng' : '') + '.';
+      : 'Thành viên các ban bạn phụ trách' + (pv.ban.length ? ': ' + pv.ban.map(esc).join(', ') : '') + '.';
     var dau = laTask ? '<th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th class="n">Đang làm</th>' : '<th class="n">KPI log</th><th>Chi tiết</th>';
-    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(phan)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Quản lý task.' : 'Điểm danh ở trang Sự kiện log.') : '') + '</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(trang)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Quản lý task.' : 'Điểm danh ở trang Sự kiện log.') : '') + '</p></div></div>' +
+      (tabs ? tabTrang(tabs) : '') +
       '<div class="xh-tools"><input type="search" id="kb-q" placeholder="Tìm tên…" value="' + esc(KPI_BANG.q) + '" aria-label="Tìm thành viên">' +
-      (nhom.length > 1 ? '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BANG.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') + '</div>' +
+      (nhom.length > 1 ? '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BANG.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
+      chipKhoi(ds, KPI_BANG.khoi, 'kb-khoi') + '</div>' +
       '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th>' + dau + '</tr></thead><tbody id="kb-b"></tbody></table></div></div>';
     var ve = function () {
       var q = boDau(KPI_BANG.q);
-      var loc = ds.filter(function (k) { return (KPI_BANG.ban === 'Tất cả' || k.nhom === KPI_BANG.ban) && boDau(k.ten).indexOf(q) >= 0; });
+      var loc = ds.filter(function (k) { return (KPI_BANG.ban === 'Tất cả' || k.nhom === KPI_BANG.ban) && (!KPI_BANG.khoi || k.khoi === KPI_BANG.khoi) && boDau(k.ten).indexOf(q) >= 0; });
       $('#kb-b').innerHTML = loc.map(function (k) {
         var t = laTask ? tomTatKpi(k) : tomTatLog(k.log);
         var thap = bod && t.tiLe !== null && t.tiLe < 80;
         return '<tr><td>' + esc(k.ten) + (k.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td class="muted">' + esc(k.ban) + '</td><td class="n"><b' + (thap ? ' style="color:var(--bad)"' : '') + '>' + t.so + '</b></td><td class="muted">' + esc(t.chu) + '</td>' +
           (laTask ? '<td class="n">' + (k.task && k.task.cho ? k.task.cho : '') + '</td><td class="n">' + (k.task && k.task.dangLam ? k.task.dangLam : '') + '</td>' : '') + '</tr>';
-      }).join('') || '<tr><td colspan="' + (laTask ? 6 : 4) + '" class="muted">' + (ds.length ? 'Không có ai khớp.' : bod ? 'Chưa có thành viên.' : 'BOD chưa phân ai cho bạn phụ trách.') + '</td></tr>';
+      }).join('') || '<tr><td colspan="' + (laTask ? 6 : 4) + '" class="muted">' + (ds.length ? 'Không có ai khớp.' : bod ? 'Chưa có thành viên.' : 'BOD chưa giao ban nào cho bạn phụ trách.') + '</td></tr>';
     };
     ve();
+    ganTabTrang();
     $('#kb-q').oninput = function (e) { KPI_BANG.q = e.target.value; ve(); };
-    if ($('#kb-ban')) $('#kb-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; KPI_BANG.ban = b.getAttribute('data-b'); $$('#kb-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
+    ganChip('kb-ban', function (b) { KPI_BANG.ban = b; ve(); });
+    ganChip('kb-khoi', function (k) { KPI_BANG.khoi = k; ve(); });
   }).catch(loiTai);
 }
-VIEWS.kpitask = function () { veKpiBang('kpitask'); };
-VIEWS.kpilog = function () { veKpiBang('kpilog'); };
+/** BOD: Hoạt động thành viên > KPI, hai tab Task và Log. */
+VIEWS.kpi = function () { veKpiBang(sub !== 'log', [['', 'KPI task'], ['log', 'KPI log']]); };
+/** HR phụ trách ban: Ban phụ trách > Task (quản lý task giúp BOD, và KPI task), Log (KPI log). */
+var TAB_PT_TASK = [['', 'Danh sách task'], ['kpi', 'KPI task']];
+VIEWS.pttask = function () { if (sub === 'kpi') veKpiBang(true, TAB_PT_TASK); else veQuanLyTask(TAB_PT_TASK); };
+VIEWS.ptlog = function () { veKpiBang(false); };
 </script>

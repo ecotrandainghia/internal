@@ -4,7 +4,7 @@ Mã nguồn của app CLB ECO (trước đây là hai app ECOBoard và ECODesk),
 
 - Ai cũng phải đăng nhập mới xem được (kể cả bảng điểm).
 - Mọi thành viên có email trong danh sách đều đăng nhập được (mật khẩu chung của CLB, mật khẩu riêng, hoặc Google). Quyền theo bậc thang: thành viên < HR < UCV < BOD, người bậc trên có cả chức năng của bậc dưới.
-- Thành viên: trang chủ (4 ô vào nhanh; link ghim, quy chế), nhóm Của tôi (Task, Log, Điểm và xếp hạng; KPI chỉ hiện con số), Gửi góp ý, Cài đặt của tôi. HR phụ trách ban thêm nhóm Phụ trách (Quản lý task giúp BOD, KPI task, KPI log); HR phụ trách seeding thêm Hẹn nhắc 48 giờ và Nộp báo cáo; UCV thêm Hộp thư; BOD có nhóm Điều hành (Quản lý task, Sự kiện log, Cộng điểm, Hộp thư, Hộp góp ý), Đánh giá (KPI task, KPI log, Bảng điểm, Chứng nhận) và cài đặt chung. Chi tiết ở `docs/kien-truc.md`, mục Góc nhìn.
+- Thành viên: trang chủ (4 ô vào nhanh), KPI của tôi (Task, Log; chỉ con số), Điểm và xếp hạng, Góp ý, Cài đặt của tôi. HR phụ trách ban thêm Ban phụ trách (Task: quản lý task giúp BOD và KPI task; Log); HR phụ trách seeding thêm Hẹn nhắc 48 giờ và Nộp báo cáo; UCV thêm Hộp thư; BOD có Quản lý task, Sự kiện log, Cộng điểm, Hộp thư, Hộp góp ý, nhóm Hoạt động thành viên (KPI, Bảng điểm, Chứng nhận) và cài đặt chung. Chi tiết ở `docs/kien-truc.md`, mục Góc nhìn.
 - Cài được lên điện thoại như app nhờ trang vỏ trong `pwa/` (địa chỉ ecotdn.github.io/home).
 
 ## Tài liệu
