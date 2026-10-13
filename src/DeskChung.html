@@ -292,16 +292,36 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $(
  * Sắp theo tần suất dùng: việc hằng ngày ở trên, phần theo dõi ở giữa, cài đặt ở cuối. Mỗi nhóm ít mục để lướt là thấy.
  * Phải đăng nhập mới dùng được app.
  */
-var TRANG_CHU = ['', [['home', 'Trang chủ', 'home']]];
+var TRANG_CHU = ['home', 'Trang chủ', 'home'];
 /*
- * Menu giữ đúng cấu trúc cha con BOD đã chốt trong sheet góc nhìn; chỉ đổi tên cho rõ nghĩa.
- * Mục cấp 3 (KPI > task, log) là các tab trong cùng một trang.
+ * Menu giữ đúng cấu trúc cha con trong sheet góc nhìn; chỉ đổi tên cho rõ nghĩa.
+ * Mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy các mục con (giống Cài đặt).
  */
 var NAV_BOD = [
-  ['', [['home', 'Trang chủ', 'home'], ['task', 'Quản lý task', 'check'], ['log', 'Sự kiện log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Hộp góp ý', 'chat']]],
-  ['Hoạt động thành viên', [['kpi', 'KPI', 'target'], ['xephang', 'Bảng điểm', 'chart'], ['tongket', 'Chứng nhận', 'award']]],
-  ['', [['caidat', 'Cài đặt', 'gear']]]];
-/** Trang không có trên menu, mở từ nút trong trang khác (Điểm, Cài đặt). */
+  ['', [TRANG_CHU, ['task', 'Quản lý task', 'check'], ['log', 'Sự kiện log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Hộp góp ý', 'chat'],
+    ['hoatdong', 'Hoạt động thành viên', 'target'], ['caidat', 'Cài đặt', 'gear']]]];
+/*
+ * Thư mục: THU_MUC[mã] = [tên, mô tả, mục con]. Mục con: [trang, tên, biểu tượng, mô tả, tab trong trang].
+ * Mục con có thể là một thư mục khác (Hoạt động thành viên > KPI > Task, Log).
+ */
+var THU_MUC = {
+  hoatdong: ['Hoạt động thành viên', 'Theo dõi mọi thành viên trừ BOD.', [
+    ['kpibod', 'KPI', 'target', 'KPI task và KPI log'],
+    ['xephang', 'Bảng điểm', 'chart', 'Xếp hạng và lịch sử điểm'],
+    ['tongket', 'Chứng nhận', 'award', 'Tình hình cấp chứng nhận']]],
+  kpibod: ['KPI', 'KPI của mọi thành viên trừ BOD.', [
+    ['kpi', 'KPI task', 'check', 'Tình hình KPI task', ''],
+    ['kpi', 'KPI log', 'file', 'Tình hình KPI log', 'log']]],
+  kpitoi: ['KPI của tôi', 'Task được giao và các buổi log của bạn.', [
+    ['task', 'Task', 'check', 'Task của tôi và KPI task'],
+    ['log', 'Log', 'file', 'KPI log của tôi']]],
+  phutrach: ['Ban phụ trách', 'Thành viên các ban bạn phụ trách.', [
+    ['pttask', 'Task', 'check', 'Nhập task giúp BOD, xem KPI task của ban'],
+    ['ptlog', 'Log', 'file', 'KPI log của ban']]],
+  seed: ['Seeding', 'Việc của người phụ trách seeding.', [
+    ['nhachen', 'Hẹn nhắc 48 giờ', 'bell', 'Đặt hẹn để được nhắc điền seeding sau 48 giờ'],
+    ['seeding', 'Báo cáo', 'chat', 'Điền báo cáo seeding, xem lịch sử']]]
+};
 var TRANG_AN = { BOD: [['baocao', 'Báo cáo điểm', 'chart'], ['seeding', 'Báo cáo seeding', 'chat']], khac: [['anh', 'Ảnh thành tích', 'image']] };
 var BOTTOM = { BOD: ['home', 'task', 'log', 'diem'], UCV: ['home', 'task', 'xephang', 'mail'], khac: ['home', 'task', 'log', 'xephang'] };
 /** Tên ngắn trên thanh tab dưới (điện thoại), để không xuống dòng. */
@@ -318,15 +338,27 @@ var TEN_NHOM_HR = { 'SUP-SEED': 'Phụ trách seeding' };
 function navCuaToi() {
   if (!NGUOI) return [];
   if (vaiTro() === 'BOD') return NAV_BOD;
-  var nav = [TRANG_CHU, ['KPI của tôi', [['task', 'Task', 'check'], ['log', 'Log', 'file']]],
-    ['', [['xephang', 'Điểm và xếp hạng', 'chart'], ['gopy', 'Góp ý', 'chat']].concat(NGUOI.vaiTro === 'UCV' ? [['mail', 'Hộp thư', 'mail']] : [])]];
-  if (NGUOI.vaiTro === 'HR' && NGUOI.phuTrach) nav.push(['Ban phụ trách', [['pttask', 'Task', 'check'], ['ptlog', 'Log', 'file']]]);
-  if (coNhomHr('SUP-SEED')) nav.push(['Seeding', [['nhachen', 'Hẹn nhắc 48 giờ', 'bell'], ['seeding', 'Nộp báo cáo', 'chat']]]);
-  nav.push(['', [['caidat', 'Cài đặt', 'gear']]]);
-  return nav;
+  var ds = [TRANG_CHU, ['kpitoi', 'KPI của tôi', 'target'], ['xephang', 'Điểm và xếp hạng', 'chart'], ['gopy', 'Góp ý', 'chat']];
+  if (NGUOI.vaiTro === 'UCV') ds.push(['mail', 'Hộp thư', 'mail']);
+  if (NGUOI.vaiTro === 'HR' && NGUOI.phuTrach) ds.push(['phutrach', 'Ban phụ trách', 'users']);
+  if (coNhomHr('SUP-SEED')) ds.push(['seed', 'Seeding', 'bell']);
+  ds.push(['caidat', 'Cài đặt', 'gear']);
+  return [['', ds]];
 }
+/** Các thư mục mở được từ menu của người đang đăng nhập (kể cả thư mục lồng trong thư mục). */
+function thuMucCuaToi() {
+  var kq = [], xet = function (k) { if (THU_MUC[k] && kq.indexOf(k) < 0) { kq.push(k); THU_MUC[k][2].forEach(function (c) { xet(c[0]); }); } };
+  navCuaToi().forEach(function (g) { g[1].forEach(function (x) { xet(x[0]); }); });
+  return kq;
+}
+/** Thư mục chứa trang k (null nếu trang nằm thẳng trên menu). */
+function thuMucCha(k) { return thuMucCuaToi().filter(function (m) { return THU_MUC[m][2].some(function (c) { return c[0] === k; }); })[0] || null; }
+/** Mục trên menu đang mở (trang hoặc thư mục ngoài cùng chứa trang). */
+function mucGoc(k) { var di = 0; while (thuMucCha(k) && di++ < 5) k = thuMucCha(k); return k; }
+/** Trang không thuộc thư mục nào, mở từ nút ở trang khác: nút quay lại về trang đó. */
+var VE_TU_AN = { baocao: ['xephang'], anh: ['xephang'], seeding: ['caidat', 'clb'] };
 /** Tên trang ở đầu trang và thanh trên điện thoại, khi tên trên menu chỉ rõ nghĩa nhờ nhóm cha. */
-var TEN_DAY_DU = { BOD: {}, khac: { task: 'Task của tôi', log: 'Log của tôi', pttask: 'Task ban phụ trách', ptlog: 'Log ban phụ trách' } };
+var TEN_DAY_DU = { BOD: {}, khac: { task: 'Task của tôi', log: 'Log của tôi', pttask: 'Task ban phụ trách', ptlog: 'Log ban phụ trách', seeding: 'Báo cáo seeding' } };
 function trangAn() { return NGUOI ? (TRANG_AN[vaiTro()] || TRANG_AN.khac).filter(function (x) { return !flat().some(function (y) { return y[0] === x[0]; }); }) : []; }
 function thanhDuoi() { return BOTTOM[vaiTro()] || BOTTOM.khac; }
 /** Nhãn dưới tên người dùng: BOD hiện chức vụ (nếu danh sách thành viên có ghi), còn lại hiện vai trò. */
@@ -338,8 +370,22 @@ function anhTron(lop, kieu, thuocTinh) {
 }
 var page = null, sub = null, soGopYMoi = 0, soViecCho = 0;
 var MENU_GON = (function () { try { return localStorage.getItem('eco_menu_gon') === '1'; } catch (e) { return false; } })();
-function flat() { return navCuaToi().reduce(function (a, g) { return a.concat(g[1]); }, []); }
-function tenTrang(k) { if (k === 'menu') return 'Menu'; if (k === 'thongbao') return 'Thông báo của tôi'; var dd = (TEN_DAY_DU[vaiTro()] || TEN_DAY_DU.khac)[k]; if (dd) return dd; return (flat().concat(trangAn()).filter(function (x) { return x[0] === k; })[0] || [0, 'CLB ECO'])[1]; }
+function flat() {
+  var ds = navCuaToi().reduce(function (a, g) { return a.concat(g[1]); }, []);
+  thuMucCuaToi().forEach(function (m) { THU_MUC[m][2].forEach(function (c) { if (!ds.some(function (x) { return x[0] === c[0]; })) ds.push([c[0], c[1], c[2]]); }); });
+  thuMucCuaToi().forEach(function (m) { ds.forEach(function (x) { if (x[0] === m) x[1] = THU_MUC[m][0]; }); });
+  return ds;
+}
+function tenTrang(k, s) {
+  if (k === 'menu') return 'Menu';
+  if (k === 'thongbao') return 'Thông báo của tôi';
+  // Trang có nhiều tab nằm ở các mục con khác nhau (KPI > KPI task, KPI log): lấy tên mục con khớp tab.
+  var con = null;
+  if (s !== undefined) thuMucCuaToi().forEach(function (m) { THU_MUC[m][2].forEach(function (c) { if (c[0] === k && c[4] !== undefined && (c[4] || null) === (s || null)) con = c; }); });
+  if (con) return con[1];
+  var dd = (TEN_DAY_DU[vaiTro()] || TEN_DAY_DU.khac)[k]; if (dd) return dd;
+  return (flat().concat(trangAn()).filter(function (x) { return x[0] === k; })[0] || [0, 'CLB ECO'])[1];
+}
 function soHuyHieu(k) { return k === 'gopy' ? soGopYMoi : k === 'mail' ? soViecCho : 0; }
 function huyHieu(k) { var n = soHuyHieu(k); return n ? '<span class="badge">' + n + '</span>' : ''; }
 /** Số trên nút Menu: cộng các mục không nằm trên thanh tab dưới. */
@@ -365,13 +411,14 @@ function shell(khongBao) {
       return '<div class="grp"' + (g[0] ? '' : ' aria-hidden="true"') + '>' + g[0] + '</div>' + g[1].map(function (x) { return '<button class="nav" data-p="' + x[0] + '" title="' + x[1] + '"' + (x[0] === page ? ' aria-current="page"' : '') + '>' + ic(x[2]) + '<span class="t">' + x[1] + '</span>' + huyHieu(x[0]) + '</button>'; }).join('');
     }).join('') + '</nav>' +
     '<div class="sb-user">' + nguoiDung + '</div></aside>' +
-    '<div class="wrap"><header class="topbar"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><h1 id="tieude">' + esc(tenTrang(page)) + '</h1>' + nutTren + '</header>' +
-    '<main class="main" id="main"></main></div>' +
+    '<div class="wrap"><header class="topbar"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><h1 id="tieude">' + esc(tenTrang(page, sub)) + '</h1>' + nutTren + '</header>' +
+    '<div class="vehub" id="vehub" hidden></div><main class="main" id="main"></main></div>' +
     (coTab ? '<nav class="bottom">' + bot.map(function (k) { var x = items.filter(function (y) { return y[0] === k; })[0]; return '<button data-p="' + k + '"' + (k === page ? ' aria-current="page"' : '') + '><span class="ic">' + ic(x[2], 22) + '</span>' + (TEN_NGAN[k] || x[1]) + huyHieu(k) + '</button>'; }).join('') +
       '<button data-more' + (bot.indexOf(page) < 0 ? ' aria-current="page"' : '') + '><span class="ic">' + ic('menu', 22) + '</span>Menu' + (soMenu() ? '<span class="badge">' + soMenu() + '</span>' : '') + '</button></nav>' : '') + '</div>';
   $('#thugon').onclick = function () { MENU_GON = !MENU_GON; try { localStorage.setItem('eco_menu_gon', MENU_GON ? '1' : '0'); } catch (e) {} $('#khungapp').classList.toggle('gon', MENU_GON); this.title = MENU_GON ? 'Mở rộng menu' : 'Thu gọn menu'; };
   $('#main').className = 'main';
   apGiaoDien();
+  danhDauMenu(); veNutVe();
   (VIEWS[page] || VIEWS.sapco)();
   if (!khongBao) baoDuong(true);
 }
@@ -405,14 +452,44 @@ function datLichChiaDeu() { if (!henChiaDeu) henChiaDeu = requestAnimationFrame(
 new MutationObserver(datLichChiaDeu).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
 window.addEventListener('resize', datLichChiaDeu);
 
+/** Tô mục đang mở trên menu bên trái (mục cha nếu đang ở trong thư mục) và trên thanh tab dưới. */
+function danhDauMenu() {
+  var goc = mucGoc(page);
+  $$('.sb-nav [data-p]').forEach(function (b) { if (b.getAttribute('data-p') === goc) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  $$('.bottom [data-p]').forEach(function (b) { if (b.getAttribute('data-p') === page) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  var them = $('[data-more]');
+  if (them) { if (thanhDuoi().indexOf(page) < 0) them.setAttribute('aria-current', 'page'); else them.removeAttribute('aria-current'); }
+}
+/** Nơi nút quay lại dẫn về: [trang, tab, tên] hoặc null. */
+function veTuDau() {
+  if (page === 'caidat') return typeof veTuCaiDat === 'function' ? veTuCaiDat() : null;
+  var cha = thuMucCha(page);
+  if (cha) return [cha, null, THU_MUC[cha][0]];
+  var an = VE_TU_AN[page];
+  if (an && trangHopLe(an[0]) && !(an[0] === 'caidat' && vaiTro() !== 'BOD')) return [an[0], an[1] || null, an[1] && typeof tenNhomCaiDat === 'function' ? tenNhomCaiDat(an[1]) : tenTrang(an[0])];
+  return null;
+}
+/** Nút quay lại về thư mục cha, nằm trên đầu trang. */
+function veNutVe() {
+  var o = $('#vehub'); if (!o) return;
+  var v = veTuDau();
+  o.hidden = !v;
+  o.innerHTML = v ? '<button class="back" data-p="' + v[0] + '"' + (v[1] ? ' data-s2="' + v[1] + '"' : '') + '>' + ic('left', 16) + esc(v[2]) + '</button>' : '';
+}
+/** Trang thư mục: danh sách mục con, bấm vào mục con để mở. */
+function veThuMuc(k) {
+  var f = THU_MUC[k];
+  $('#main').innerHTML = '<div class="head"><div><h2>' + f[0] + '</h2><p class="lead">' + f[1] + '</p></div></div>' +
+    '<div class="slist">' + f[2].map(function (c) {
+      return '<button class="sitem" data-p="' + c[0] + '"' + (c[4] ? ' data-s2="' + c[4] + '"' : '') + '><span class="ic">' + ic(c[2]) + '</span><div><b>' + c[1] + '</b><span>' + c[3] + '</span></div>' + huyHieu(c[0]) + '<span class="chev">' + ic('chev', 16) + '</span></button>';
+    }).join('') + '</div>';
+}
 function diToi(k, s, khongBao) {
   if (k === 'dangnhap' && NGUOI) k = 'home';
   if (!$('#main') || k === 'dangnhap' || !NGUOI) { page = k; sub = s || null; shell(true); if (!khongBao) baoDuong(false); return; }
   page = k; sub = s || null;
-  $$('[data-p]').forEach(function (b) { if (b.getAttribute('data-p') === page) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-  var them = $('[data-more]');
-  if (them) { if (thanhDuoi().indexOf(page) < 0) them.setAttribute('aria-current', 'page'); else them.removeAttribute('aria-current'); }
-  if ($('#tieude')) $('#tieude').textContent = tenTrang(page);
+  danhDauMenu(); veNutVe();
+  if ($('#tieude')) $('#tieude').textContent = tenTrang(page, sub);
   $('#main').className = 'main';
   window.scrollTo(0, 0);
   (VIEWS[page] || VIEWS.sapco)();
@@ -571,6 +648,7 @@ function bindPicker(id) {
 }
 
 var VIEWS = {};
+Object.keys(THU_MUC).forEach(function (k) { VIEWS[k] = function () { veThuMuc(k); }; });
 function dangTai() { $('#main').innerHTML = cho(); }
 function loiTai(err) { $('#main').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; }
 VIEWS.menu = viewMenu;

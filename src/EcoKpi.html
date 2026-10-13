@@ -88,7 +88,7 @@ function ganChip(id, chon) {
   var g = $('#' + id); if (!g) return;
   g.onclick = function (e) { var b = e.target.closest('.chip'); if (!b) return; $$('#' + id + ' .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); chon(b.getAttribute('data-k') !== null ? Number(b.getAttribute('data-k')) : b.getAttribute('data-b')); };
 }
-/** Tab trong một trang (mục cấp con trên menu, ví dụ KPI > Task, Log). ds: [[sub, tên]]. */
+/** Tab trong một trang (ví dụ Task ban phụ trách: danh sách task, KPI task). ds: [[sub, tên]]. */
 function tabTrang(ds) {
   return '<div class="seg" id="tabtrang" style="margin-bottom:4px">' + ds.map(function (x) { return '<button data-tab="' + x[0] + '" aria-pressed="' + ((sub || '') === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
 }
@@ -116,7 +116,7 @@ function veKpiBang(laTask, tabs) {
     var moTa = bod ? 'Mọi thành viên trừ BOD, trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Kết quả cấp chứng nhận xem ở trang Chứng nhận.'
       : 'Thành viên các ban bạn phụ trách' + (pv.ban.length ? ': ' + pv.ban.map(esc).join(', ') : '') + '.';
     var dau = laTask ? '<th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th class="n">Đang làm</th>' : '<th class="n">KPI log</th><th>Chi tiết</th>';
-    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(trang)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Quản lý task.' : 'Điểm danh ở trang Sự kiện log.') : '') + '</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(trang, tab)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Quản lý task.' : 'Điểm danh ở trang Sự kiện log.') : '') + '</p></div></div>' +
       (tabs ? tabTrang(tabs) : '') +
       '<div class="xh-tools"><input type="search" id="kb-q" placeholder="Tìm tên…" value="' + esc(KPI_BANG.q) + '" aria-label="Tìm thành viên">' +
       (nhom.length > 1 ? '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BANG.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
@@ -139,8 +139,8 @@ function veKpiBang(laTask, tabs) {
     ganChip('kb-khoi', function (k) { KPI_BANG.khoi = k; ve(); });
   }).catch(loiTai);
 }
-/** BOD: Hoạt động thành viên > KPI, hai tab Task và Log. */
-VIEWS.kpi = function () { veKpiBang(sub !== 'log', [['', 'KPI task'], ['log', 'KPI log']]); };
+/** BOD: Hoạt động thành viên > KPI > KPI task (tab trống) hoặc KPI log (tab 'log'). */
+VIEWS.kpi = function () { veKpiBang(sub !== 'log'); };
 /** HR phụ trách ban: Ban phụ trách > Task (quản lý task giúp BOD, và KPI task), Log (KPI log). */
 var TAB_PT_TASK = [['', 'Danh sách task'], ['kpi', 'KPI task']];
 VIEWS.pttask = function () { if (sub === 'kpi') veKpiBang(true, TAB_PT_TASK); else veQuanLyTask(TAB_PT_TASK); };
