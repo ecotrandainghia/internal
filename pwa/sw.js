@@ -20,19 +20,19 @@ self.addEventListener('fetch', function (e) {
   }).catch(function () { return caches.match(e.request); }));
 });
 
-/* ---------- Thông báo của app eco ---------- */
+/* ---------- Thông báo của app CLB ECO ---------- */
 /*
  * Máy chủ gửi kèm nội dung đã mã hoá (trình duyệt tự giải mã) nên hiện ngay. iPhone chỉ cho rất ít thời gian,
  * phải hiện thông báo ngay chứ không kịp hỏi lại máy chủ. Máy bật từ bản cũ (tin không có nội dung) thì
  * hỏi lại nội dung bằng mã riêng của máy, quá 4 giây thì hiện câu chung.
  */
 self.addEventListener('push', function (e) {
-  var mac = { tieuDe: 'eco', noiDung: 'Bạn có thông báo mới.' };
+  var mac = { tieuDe: 'CLB ECO', noiDung: 'Bạn có thông báo mới.' };
   var co = null;
   try { co = e.data ? e.data.json() : null; } catch (loi) { co = null; }
   var hien = function (ds) {
     return Promise.all((ds.length ? ds : [mac]).slice(-3).map(function (t, i) {
-      return self.registration.showNotification(t.tieuDe === 'eco' ? 'eco' : 'eco: ' + t.tieuDe, {
+      return self.registration.showNotification(t.tieuDe === 'CLB ECO' ? 'CLB ECO' : 'CLB ECO: ' + t.tieuDe, {
         body: String(t.noiDung || '').slice(0, 400), icon: '../icons/eco-192.png', badge: '../icons/badge-96.png', tag: 'eco-' + Date.now() + '-' + i, data: { url: './' }
       });
     }));

@@ -1,5 +1,5 @@
 /*
- * Trang vỏ: mở app eco (chạy trên Google Apps Script) toàn màn hình, để có thể "Thêm vào màn hình chính" như một app,
+ * Trang vỏ: mở app CLB ECO (chạy trên Google Apps Script) toàn màn hình, để có thể "Thêm vào màn hình chính" như một app,
  * giúp đăng nhập bằng Google, bật thông báo, và giữ địa chỉ từng trang (#/task, #/xephang…) để nút quay lại dùng được.
  */
 (function () {
@@ -120,10 +120,10 @@
   }
   function dangKyThongBao(khoaCong) {
     var tt = trangThaiThongBao();
-    if (tt === 'can-cai') return Promise.reject(new Error('Trên iPhone, thêm eco vào màn hình chính rồi mở từ đó mới bật được thông báo.'));
+    if (tt === 'can-cai') return Promise.reject(new Error('Trên iPhone, thêm CLB ECO vào màn hình chính rồi mở từ đó mới bật được thông báo.'));
     if (tt !== 'co') return Promise.reject(new Error('Trình duyệt này không hỗ trợ thông báo của app.'));
     return Notification.requestPermission().then(function (q) {
-      if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với eco rồi thử lại.');
+      if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với CLB ECO rồi thử lại.');
       // Đăng ký (hoặc cập nhật) service worker ngay lúc này, không chờ trang tải xong.
       return henGio(navigator.serviceWorker.register('../sw.js', { scope: './' }).then(function (reg) {
         return reg.update().catch(function () {}).then(function () { return navigator.serviceWorker.ready; });

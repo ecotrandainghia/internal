@@ -23,7 +23,7 @@ VIEWS.tongket = function () {
     if (!d.gd2) canhBao.push('Đang ở giai đoạn 1 nên kết quả certificate chỉ là tạm tính. Certificate xét ở tổng kết đợt 2, sau khi có điểm giai đoạn 2.');
     if (d.choDanhGia) canhBao.push(d.choDanhGia + ' task đã xong nhưng chưa được đánh giá, chưa tính vào KPI task. Đánh giá ở trang Task.');
     if (d.suKienChuaChot.length) canhBao.push('Sự kiện log chưa chốt: ' + d.suKienChuaChot.join(', ') + '. Số buổi được giao cuối của các sự kiện này đang tạm tính.');
-    $('#main').innerHTML = '<div class="head"><div><h2>Tổng kết</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
+    $('#main').innerHTML = '<div class="head"><div><h2>Tổng hợp</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
       'Log và task từ 80% trở lên thì cấp certificate. Mỗi phần từ 60% trở lên thì xét bù trừ: lọt top 40% bảng xếp hạng bù trừ (chính thức theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức, bổ sung theo điểm giai đoạn 2 trong tất cả thành viên) thì cấp. Phần chưa được giao việc gì coi như đạt.</p></div>' +
       '<button class="btn ghost sm" id="tk-x">' + ic('sheet', 14) + 'Xuất Excel</button></div>' +
       canhBao.map(function (c) { return '<div class="note">' + ic('info') + '<span>' + esc(c) + '</span></div>'; }).join('') +

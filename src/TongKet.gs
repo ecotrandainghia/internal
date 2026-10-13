@@ -6,13 +6,13 @@
 /** Tính toàn bộ tổng kết của nhiệm kỳ đang chạy. */
 function tinhTongKet_() {
   var ky = layKyHienTai_();
-  var board = layDuLieuBoard();
+  var board = duLieuBoard_();
   var gd2 = !!ky && Number(ky.HocKy) === 2;
-  var task = docTask_(), quen = docHrQuen_(), moc2 = batDauGiaiDoan2_(), supRes = tenSupRes_(), suKienLog = docSuKienLog_();
+  var task = docTask_(), moc2 = batDauGiaiDoan2_(), supRes = tenSupRes_(), suKienLog = docSuKienLog_();
   var diem = {};
   board.thanhVien.forEach(function (p) { diem[p.ten.toLowerCase()] = p; });
   var ds = docThanhVien_().filter(khongPhaiBod_).map(function (tv) {
-    var k = kpiCuaNguoi_(tv, task, quen, moc2, supRes, suKienLog);
+    var k = kpiCuaNguoi_(tv, task, moc2, supRes, suKienLog);
     var p = diem[String(tv.HoVaTen).toLowerCase()] || { diem: 0, diemCaKy: null };
     return {
       ten: String(tv.HoVaTen), ban: String(tv.Ban || ''), boSung: k.boSung, kpi: k,
@@ -58,7 +58,7 @@ function xuatExcelTongKet(phien) {
     var pt = function (x) { return x === null || x === undefined ? 'Không có việc' : x + '%'; };
     ghi(ss.getSheets()[0].setName('Certificate'), ['Họ và tên', 'Ban', 'Nhóm', 'KPI log', 'KPI task', 'Xét bù trừ', 'Hạng bù trừ', 'Điểm bù trừ', 'Kết quả'],
       tk.cert.map(function (c) {
-        return [c.ten, c.ban, c.boSung ? 'Bổ sung' : 'Chính thức', pt(c.log), c.mien ? 'Miễn (SUP-RES)' : pt(c.task), c.buTru ? 'Có' : '',
+        return [c.ten, c.ban, c.boSung ? 'Bổ sung' : 'Chính thức', pt(c.log), c.mien ? 'Miễn (ôn thi)' : pt(c.task), c.buTru ? 'Có' : '',
           c.hangBuTru ? c.hangBuTru + '/' + c.soBuTru : '', c.buTru ? c.diemBuTru : '', c.ketQua];
       }));
     var kt = ss.insertSheet('Khen thưởng'), dong = [];

@@ -12,10 +12,9 @@ test('top 40%: tính cả người bằng điểm, hạng đồng hạng, 0 đi�
   assert.deepStrictEqual(L.xepHangTop([{ ten: 'A', d: 0 }, { ten: 'B', d: 0 }, { ten: 'C', d: 0 }], 'd', 40).top, {});
 });
 
-test('phần trăm task để xét certificate: HR theo lượt nhắc, SUP-RES miễn', () => {
+test('phần trăm task để xét certificate: người được miễn task không xét, ban HR như mọi ban', () => {
   assert.strictEqual(L.phanTramTaskCert({ mien: true }), null);
-  assert.strictEqual(L.phanTramTaskCert({ hr: { luot: 10, soQuen: 3 } }), 70);
-  assert.strictEqual(L.phanTramTaskCert({ hr: { luot: 0, soQuen: 0 } }), null);
+  assert.strictEqual(L.phanTramTaskCert({ task: { tiLe: null } }), null);
   assert.strictEqual(L.phanTramTaskCert({ task: { tiLe: 75 } }), 75);
 });
 
@@ -28,7 +27,7 @@ test('xét certificate theo sơ đồ quy chế', () => {
     { ten: 'Dưới 60', kpi: kpi(59, 100), diemCaKy: 500, diemGd2: 300 },
     { ten: 'Chưa giao gì', kpi: kpi(null, null), diemCaKy: 0, diemGd2: 0 },
     { ten: 'SUP-RES', kpi: { log: { tiLe: 85 }, mien: true }, diemCaKy: 0, diemGd2: 0 },
-    { ten: 'HR quên nhiều', kpi: { log: { tiLe: 95 }, hr: { luot: 10, soQuen: 3, dat: false } }, diemCaKy: 50, diemGd2: 20 },
+    { ten: 'Ban HR', kpi: kpi(95, 70), diemCaKy: 50, diemGd2: 20 },
     { ten: 'Bổ sung', boSung: true, kpi: kpi(65, 100), diemCaKy: null, diemGd2: 45 }
   ];
   const kq = Object.fromEntries(L.xetCertificate(ds).map((k) => [k.ten, k]));
@@ -42,8 +41,8 @@ test('xét certificate theo sơ đồ quy chế', () => {
   assert.strictEqual(kq['Bù trừ top'].hangBuTru, 2);
   assert.strictEqual(kq['Bù trừ trượt'].ketQua, C.CHUA);
   assert.strictEqual(kq['Bù trừ trượt'].buTru, true);
-  // HR: 70% lượt nhắc không quên (≥ 60, < 80) nên xét bù trừ; 50 điểm là hạng 3 nên vẫn trong top 40%.
-  assert.strictEqual(kq['HR quên nhiều'].ketQua, C.CAP_BU_TRU);
+  // Ban HR tính task như mọi ban: 70% (≥ 60, < 80) nên xét bù trừ; 50 điểm là hạng 3 nên vẫn trong top 40%.
+  assert.strictEqual(kq['Ban HR'].ketQua, C.CAP_BU_TRU);
   // Bổ sung xếp theo điểm giai đoạn 2 trong tất cả 8 người: top 40% = 3 người (300, 45, 40).
   assert.strictEqual(kq['Bổ sung'].ketQua, C.CAP_BU_TRU);
   assert.strictEqual(kq['Bổ sung'].diemBuTru, 45);

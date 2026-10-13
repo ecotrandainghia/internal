@@ -288,4 +288,9 @@ test('báo cáo seeding: dò tên, chặn trùng bài, cảnh báo 48 giờ, c�
   assert.match(L.taoBaoCaoSeeding({ ...yc, lucDang: now.getTime() + 3600000 }, TV, LOAI, KY, 'HR', now, [], []).loi, /tương lai/);
   assert.match(L.taoBaoCaoSeeding(yc, TV, LOAI.slice(1), KY, 'HR', now, [], []).loi, /react/);
   assert.match(L.taoBaoCaoSeeding(yc, TV, LOAI, null, 'HR', now, [], []).loi, /Chưa có giai đoạn/);
+  // Không ghi giờ đăng: lấy giờ gửi, không cảnh báo 48 giờ, ô giờ đăng để trống.
+  const khongGio = L.taoBaoCaoSeeding({ ...yc, lucDang: undefined }, TV, LOAI, KY, 'HR', now, [], []);
+  assert.strictEqual(khongGio.loi, '');
+  assert.deepStrictEqual(khongGio.canhBao, []);
+  assert.strictEqual(khongGio.bao.LucDang, '');
 });

@@ -1,5 +1,5 @@
 <style>
-/* app eco: máy tính có menu dọc bên trái (thu gọn được); điện thoại có thanh trên, thanh tab dưới và bảng "Thêm". */
+/* app CLB ECO: máy tính có menu dọc bên trái (thu gọn được); điện thoại có thanh trên, thanh tab dưới và bảng "Thêm". */
 :root{
   --brand:#274e13; --brand-2:#2f5d18; --brand-3:#1d3a0e; --brand-ink:#ffffff;
   --side-bg:linear-gradient(170deg,#2f5d18 0%,#274e13 55%,#1d3a0e 100%);
@@ -371,6 +371,12 @@ html.nen-xanh,html.nen-xanh body{background:var(--brand-3)}
 .tom.vang{border-left-color:var(--warn)}.tom.vang b{color:var(--warn)}
 .tom.do{border-left-color:var(--bad)}.tom.do b{color:var(--bad)}
 .tom:hover{background:var(--surface-2)}
+.tom.nhanh{grid-template-columns:auto 1fr;column-gap:12px;align-items:center;border-left-width:1px;min-height:92px}
+.tom.nhanh .nh-ic{grid-row:span 3;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--soft);color:var(--accent)}
+.tom.nhanh .nh-t{font-size:15px;display:flex;gap:6px;align-items:center}
+.tom.nhanh b{font-size:24px}
+.tom.nhanh.vang .nh-ic{color:var(--warn)}.tom.nhanh.do .nh-ic{color:var(--bad)}
+.av{background-size:cover;background-position:center}
 #tomtat{display:grid;gap:10px}
 
 /* ---------- Trang Thông báo ---------- */

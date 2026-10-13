@@ -11,7 +11,6 @@ const CONG_KHAI = [
   'khoiTaoCoSoDuLieu', // chạy tay trong Apps Script để cấp quyền; chạy lại nhiều lần không sao
   'moHopThoaiTaiDanhSach', 'taiDanhSachThanhVien', 'xemTruocTaiDanhSach', // menu trong Sheet (có vé dùng một lần)
   'guiThuDaLenLich', 'nhacViecHangNgay', 'khiNopForm', 'nhacSeedingTheoGio', // lịch chạy tự động (kiểm tra laLichChay_)
-  'layDuLieuBoard', // bảng xếp hạng: ai mở app cũng xem được
   'dangNhap', 'dangNhapGoogle', 'dangXuat', 'moDesk', 'layAnhNen' // trước khi đăng nhập
 ];
 

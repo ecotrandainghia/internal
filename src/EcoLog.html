@@ -13,14 +13,15 @@
 var LOG = { tab: 'sukien', d: null };
 var TT_BUOI = { 'Chưa diễn ra': 'p-mute', 'Đã diễn ra': 'p-ok', 'Huỷ vì hết việc': 'p-warn', 'Huỷ vì lý do khác': 'p-info' };
 function dauTrangLog() {
-  return '<div class="head"><div><h2>Làm log</h2><p class="lead">' + (LOG.tab === 'file' ? 'Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi. Ai có link file đều mở và đăng ký được.' :
+  return '<div class="head"><div><h2>Log</h2><p class="lead">' + (LOG.tab === 'file' ? 'Chép file mẫu thành một Google Sheet mới, điền họ tên, lớp, ban, số điện thoại của những người được chọn và thêm một cột cho mỗi buổi. Ai có link file đều mở và đăng ký được.' :
     'Mỗi sự kiện có số buổi dự kiến và số buổi giao cho từng thành viên. Điểm danh từng buổi; buổi huỷ vì hết việc làm số buổi được giao cuối giảm theo tỉ lệ, buổi huỷ vì lý do khác tính là đã tham gia với người đã đăng ký. Đạt KPI log khi tham gia từ 80% tổng số buổi được giao cuối.') + '</p></div></div>' +
-    '<div class="row" id="lg-tab">' + [['sukien', 'Sự kiện và điểm danh'], ['file', 'Tạo file đăng ký']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (LOG.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+    '<div class="row" id="lg-tab">' + [['sukien', 'Sự kiện và điểm danh'], ['file', 'Tạo sheet đăng ký']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (LOG.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
 }
 function ganTabLog() {
   $('#lg-tab').onclick = function (e) { var b = e.target.closest('[data-tab]'); if (!b || b.getAttribute('data-tab') === LOG.tab) return; LOG.tab = b.getAttribute('data-tab'); VIEWS.log(); };
 }
-VIEWS.log = function () { if (LOG.tab === 'file') veTaoFileLog(); else veSuKienLog(); };
+/** Trang Log: BOD tạo sheet đăng ký và điểm danh; người khác xem KPI log của mình. */
+VIEWS.log = function () { if (NGUOI.vaiTro !== 'BOD') { veKpiCaNhan('log'); return; } if (LOG.tab === 'file') veTaoFileLog(); else veSuKienLog(); };
 
 function moTaGiao(s) {
   return 'Giao ' + s.giaoMacDinh + ' buổi' + s.giaoRieng.map(function (r) { return ', ' + (r.loai === 'khoi' ? 'khối ' : '') + esc(r.gia) + ': ' + r.so; }).join('');

@@ -1,6 +1,6 @@
 /**
- * Báo cáo seeding trong app eco, thay cho Google Form seeding.
- * HR nhóm SUP-SEED (BOD chọn trong Cài đặt, Tài khoản HR) dán link bài đăng, giờ đăng và tên những người
+ * Báo cáo seeding trong app CLB ECO, thay cho Google Form seeding.
+ * HR phụ trách seeding (BOD cấp quyền trong Cài đặt, Tài khoản, Cấp quyền) dán link bài đăng và tên những người
  * đã react, comment trong 48 giờ. App dò tên với danh sách thành viên và tự cộng điểm theo loại hoạt động
  * đang gắn với react, comment. Mỗi bài chỉ có một báo cáo; BOD huỷ được để điền lại.
  */
@@ -8,7 +8,7 @@
 var SO_BAO_CAO_SEEDING_HIEN = 30;
 
 function canBaoCaoSeeding_(tk) {
-  if (!duocBaoCaoSeeding_(tk)) throw new Error('Chỉ HR nhóm SUP-SEED và BOD điền được báo cáo seeding.');
+  if (!duocBaoCaoSeeding_(tk)) throw new Error('Chỉ BOD và HR phụ trách seeding điền được báo cáo seeding.');
   return tk;
 }
 
@@ -59,14 +59,16 @@ function xemTruocBaoCaoSeeding(phien, yc) {
 /** Gửi báo cáo và cộng điểm. */
 function guiBaoCaoSeeding(phien, yc) {
   var tk = canBaoCaoSeeding_(canDangNhap_(phien));
-  return voiKhoa_(function () {
+  var kq = voiKhoa_(function () {
     var kq = chuanBiBaoCaoSeeding_(tk, yc, new Date());
     if (kq.loi) throw new Error(kq.loi);
     themDong_('BaoCaoSeeding', [kq.bao]);
     themDong_('LichSuDiem', kq.dong);
     xoaBoNhoTam_();
-    return { soNguoi: kq.react.concat(kq.comment.filter(function (t) { return kq.react.indexOf(t) < 0; })).length, soLuot: kq.dong.length };
+    return { soNguoi: kq.react.concat(kq.comment.filter(function (t) { return kq.react.indexOf(t) < 0; })).length, soLuot: kq.dong.length, link: String(kq.bao.LinkBai) };
   });
+  try { baoBaoCaoSeeding_(String(tk.HoVaTen), kq.link, kq.soNguoi); } catch (e) { /* không gửi được mail thì báo cáo vẫn được lưu */ }
+  return kq;
 }
 
 /**
