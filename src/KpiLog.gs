@@ -1,5 +1,5 @@
 /**
- * KPI log trong app eco (quy chế 2026-2027, mục II.1). BOD tạo sự kiện log với số buổi dự kiến và số buổi giao,
+ * KPI log trong app CLB ECO (quy chế 2026-2027, mục II.1). BOD tạo sự kiện log với số buổi dự kiến và số buổi giao,
  * thêm từng buổi (hoặc nhập từ file đăng ký log), điểm danh, đánh dấu buổi huỷ. Khi sự kiện kết thúc, BOD chốt:
  * số buổi được giao cuối tính theo số buổi thực diễn ra, và ai làm vượt được cộng điểm log vượt.
  */

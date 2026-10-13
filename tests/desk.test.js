@@ -9,7 +9,8 @@ const LOAI = [{ TenLoai: 'Staff', Diem: 5 }, { TenLoai: 'Seeding', Diem: 1 }];
 test('coQuyen theo vai trò', () => {
   assert.strictEqual(L.coQuyen('BOD', 'congdiem'), true);
   assert.strictEqual(L.coQuyen('HR', 'congdiem'), false);
-  assert.strictEqual(L.coQuyen('HR', 'task'), true);
+  assert.strictEqual(L.coQuyen('HR', 'task'), true); // HR nhập, sửa task giúp BOD cho người mình phụ trách
+  assert.strictEqual(L.coQuyen('HR', 'danhgia'), false); // chỉ BOD đánh giá
   assert.strictEqual(L.coQuyen('UCV', 'mail'), true);
   assert.strictEqual(L.coQuyen('UCV', 'caidat'), false);
   assert.strictEqual(L.coQuyen('', 'task'), false);
@@ -53,7 +54,7 @@ test('kiemTraTokenGoogle', () => {
   const id = '123-abc.apps.googleusercontent.com';
   const ok = { email: 'a@gmail.com', aud: id, iss: 'https://accounts.google.com', email_verified: 'true', exp: '2000' };
   assert.strictEqual(L.kiemTraTokenGoogle(ok, id, 1000), '');
-  assert.match(L.kiemTraTokenGoogle({ ...ok, aud: 'khac' }, id, 1000), /không phải của app eco/);
+  assert.match(L.kiemTraTokenGoogle({ ...ok, aud: 'khac' }, id, 1000), /không phải của app CLB ECO/);
   assert.match(L.kiemTraTokenGoogle({ ...ok, iss: 'evil' }, id, 1000), /Google cấp/);
   assert.match(L.kiemTraTokenGoogle({ ...ok, email_verified: 'false' }, id, 1000), /xác minh/);
   assert.match(L.kiemTraTokenGoogle({ ...ok, exp: '999' }, id, 1000), /hết hạn/);

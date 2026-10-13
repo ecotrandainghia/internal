@@ -1,5 +1,5 @@
 <style>
-/* KPI: task của mình (thành viên, HR, UCV) và bảng KPI của cả CLB (BOD). */
+/* KPI: task và log của mình (thành viên), bảng KPI của nhiều người (BOD, HR phụ trách). */
 .kpi-the{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .kpi-the div{background:var(--soft);border-radius:12px;padding:12px}
 .kpi-the b{display:block;font:700 24px var(--f-num);color:var(--accent)}
@@ -18,125 +18,101 @@ function pillKetQua(kq, chu) {
   if (!kq) return '';
   return '<span class="pill ' + (kq === 'Đạt' ? 'kq-dat' : kq === 'Chưa đạt' ? 'kq-chua' : 'kq-cho') + '">' + esc(chu || kq) + '</span>';
 }
-/** KPI đang tính giữa nhiệm kỳ nên ghi "Đang đạt" hoặc "Dưới mức đạt" thay cho kết quả cuối. */
-function pillKpi(kq) { return pillKetQua(kq, kq === 'Đạt' ? 'Đang đạt' : kq === 'Chưa đạt' ? 'Dưới mức đạt' : ''); }
-/** Tóm tắt KPI một người: task (đạt / có kết quả), HR (lần quên / tối đa), hoặc miễn. */
+/**
+ * Tóm tắt KPI task một người: phần trăm task đạt trên số task đã có kết quả, hoặc được miễn.
+ * Chỉ là con số: đạt hay chưa đạt, có certificate hay không chỉ ghi ở trang Chứng nhận của BOD.
+ */
 function tomTatKpi(k) {
-  if (k.mien) return { so: 'Miễn', chu: 'SUP-RES được miễn task ban', kq: '' };
-  if (k.hr) return { so: k.hr.soQuen + '/' + k.hr.toiDa, chu: 'Lần quên / tối đa (' + k.hr.luot + ' lượt nhắc)', kq: k.hr.luot ? (k.hr.dat ? 'Đạt' : 'Chưa đạt') : '' };
+  if (k.mien) return { so: 'Miễn', chu: 'Được miễn task (ôn thi chuyển cấp)', tiLe: null };
   var t = k.task;
-  return { so: t.tiLe === null ? '–' : t.tiLe + '%', chu: 'Đạt ' + t.dat + '/' + (t.dat + t.chuaDat) + ' task có kết quả', kq: t.tiLe === null ? '' : t.tiLe >= 80 ? 'Đạt' : 'Chưa đạt' };
+  return { so: t.tiLe === null ? '–' : t.tiLe + '%', chu: 'Đạt ' + t.dat + '/' + (t.dat + t.chuaDat) + ' task có kết quả', tiLe: t.tiLe };
 }
 
 /** Tóm tắt KPI log: số buổi đã tham gia / tổng số buổi được giao cuối. */
 function tomTatLog(l) {
   var giao = String(l.giaoCuoi).replace('.', ',');
-  return { so: l.tiLe === null ? '–' : l.tiLe + '%', chu: l.tiLe === null ? 'Chưa được giao buổi log nào' : 'Tham gia ' + l.thamGia + '/' + giao + ' buổi được giao cuối', kq: l.tiLe === null ? '' : l.tiLe >= 80 ? 'Đạt' : 'Chưa đạt' };
+  return { so: l.tiLe === null ? '–' : l.tiLe + '%', chu: l.tiLe === null ? 'Chưa được giao buổi log nào' : 'Tham gia ' + l.thamGia + '/' + giao + ' buổi được giao cuối', tiLe: l.tiLe };
 }
 function theLog(l) {
   var t = tomTatLog(l);
-  return '<div class="card"><div class="ctitle"><h3>' + ic('file', 18) + ' Log</h3>' + pillKpi(t.kq) + '</div><div class="kpi-the"><div><b>' + t.so + '</b><span>' + t.chu + '</span></div></div>' +
+  return '<div class="card"><div class="ctitle"><h3>' + ic('file', 18) + ' Log của tôi</h3></div><div class="kpi-the"><div><b>' + t.so + '</b><span>' + t.chu + '</span></div></div>' +
     (l.chiTiet.length ? '<div style="margin-top:10px">' + l.chiTiet.map(function (c) {
       return '<div class="kpi-task"><div class="row sb"><b>' + esc(c.ten) + '</b><span class="pill ' + (c.daChot ? 'p-ok' : 'p-info') + '">' + (c.daChot ? 'Đã chốt' : 'Đang diễn ra') + '</span></div><span class="dh">Giao ' + c.giao + ' buổi' + (c.giaoCuoi !== c.giao ? ', giao cuối ' + String(c.giaoCuoi).replace('.', ',') : '') + ' · Đã tham gia ' + c.thamGia + (c.vuot ? ' · Vượt ' + c.vuot + ' buổi' + (c.daChot ? ' (đã cộng điểm)' : ' (cộng điểm khi BOD chốt)') : '') + '</span></div>';
-    }).join('') + '</div>' : '') + '</div>';
+    }).join('') + '</div>' : '<p class="hint" style="margin:10px 0 0">Chưa có sự kiện log nào giao cho bạn.</p>') + '</div>';
 }
 
-VIEWS.kpi = function () {
+/** Trang Task và Log của thành viên (không phải BOD): việc của chính mình. */
+function veKpiCaNhan(phan) {
   dangTai();
   goiPhien('layKpi').then(function (d) {
-    if (page !== 'kpi') return;
-    if (d.laBod) veKpiBod(d); else veKpiCuaToi(d);
-  }).catch(loiTai);
-};
-
-function veKpiCuaToi(d) {
-  var k = d.kpi, t = tomTatKpi(k);
-  var the = k.mien ? '<div><b>Miễn</b><span>Bạn thuộc nhóm SUP-RES, được miễn task ban.</span></div>'
-    : k.hr ? '<div><b>' + k.hr.luot + '</b><span>Lượt nhắc được phân (' + k.hr.soTask + ' task × 2)</span></div><div><b>' + k.hr.soQuen + '</b><span>Lần quên BOD đã ghi nhận</span></div><div><b>' + k.hr.toiDa + '</b><span>Số lần quên tối đa (20%)</span></div>'
-    : '<div><b>' + t.so + '</b><span>' + t.chu + '</span></div><div><b>' + k.task.cho + '</b><span>Task chờ BOD đánh giá</span></div><div><b>' + k.task.dangLam + '</b><span>Task đang làm</span></div>';
-  $('#main').innerHTML = '<div class="head"><div><h2>KPI của tôi</h2><p class="lead">' +
-    (k.hr ? 'Thành viên ban HR tính KPI theo lượt nhắc deadline: mỗi task của thành viên bạn phụ trách có 2 lượt nhắc. Đạt khi số lần quên không quá 20% số lượt.' :
-      'Task đạt khi nộp đúng hạn và hoàn chỉnh hoặc cần chỉnh sửa, hoặc trễ hạn nhưng hoàn chỉnh. Đạt KPI task khi từ 80% task trở lên đạt.') + ' Đạt KPI log khi tham gia từ 80% tổng số buổi log được giao cuối.' +
-    (k.boSung ? ' Bạn là thành viên bổ sung nên chỉ tính việc giao từ giai đoạn 2.' : '') + '</p></div></div>' +
-    theLog(k.log) +
-    '<div class="card"><div class="ctitle"><h3>' + ic('target', 18) + ' Task</h3>' + pillKpi(t.kq) + '</div><div class="kpi-the">' + the + '</div></div>' +
-    (k.hr ? '<div class="card"><div class="ctitle"><h3>' + ic('bell', 18) + ' Các lần BOD ghi nhận bạn quên</h3></div>' + (d.quen.filter(function (q) { return !q.daHuy; }).length ? d.quen.filter(function (q) { return !q.daHuy; }).map(function (q) {
-      return '<div class="kpi-task"><b>' + esc(q.loai) + '</b><span class="dh">' + ngayDayDu(q.thoiGian) + ' · ' + esc(q.nguoiGhi) + (q.thamChieu ? ' · ' + esc(q.thamChieu) : '') + '</span>' + (q.moTa ? '<span>' + esc(q.moTa) + '</span>' : '') + '</div>';
-    }).join('') : '<p class="hint" style="margin:0">Chưa có lần nào.</p>') + '</div>' : '') +
-    (d.thanhVienBan && d.thanhVienBan.length ? '<div class="card"><div class="ctitle"><h3>' + ic('users', 18) + ' Thành viên ban ' + d.banCoo.map(esc).join(', ') + '</h3></div><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th><th class="n">KPI log</th><th class="n">KPI task</th><th>Chi tiết task</th></tr></thead><tbody>' +
-      d.thanhVienBan.map(function (x) { var t = tomTatKpi(x), lg = tomTatLog(x.log); return '<tr><td>' + esc(x.ten) + (x.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td class="muted">' + esc(x.ban) + '</td><td class="n" title="' + esc(lg.chu) + '"><b>' + lg.so + '</b></td><td class="n"><b>' + t.so + '</b></td><td class="muted">' + esc(t.chu) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' : '') +
-    '<div class="card"><div class="ctitle"><h3>' + ic('check', 18) + ' Task của tôi</h3></div><div id="kt">' + (d.task.length ? d.task.map(function (x, i) {
-      return '<div class="kpi-task"><div class="row sb"><b>' + esc(x.ten) + '</b>' + (pillKetQua(x.ketQua) || '<span class="pill ' + ((ST_TASK[x.trangThai] || ['p-mute'])[0]) + '">' + esc(x.trangThai) + '</span>') + '</div>' +
-        '<span class="dh">Hạn ' + hienNgay(x.hanChot) + (x.hanGoc ? ' (gia hạn từ ' + hienNgay(x.hanGoc) + ')' : '') + (x.ngayNop ? ' · Nộp ' + hienNgay(x.ngayNop) : '') + (x.dungHan ? ' · ' + esc(x.dungHan) : '') + (x.chatLuong ? ' · ' + esc(x.chatLuong) : '') + '</span>' +
-        (x.dauHieu ? '<span class="dh">Nhận xét của ' + esc(x.nguoiDanhGia) + ': ' + esc(x.dauHieu) + '</span>' : '') +
-        (x.phanHoi ? '<span class="dh">Phản hồi của bạn: ' + esc(x.phanHoi) + '</span>' : '') +
-        (x.chatLuong ? '<div><button class="btn ghost sm" data-ph="' + i + '">' + (x.phanHoi ? 'Sửa phản hồi' : 'Phản hồi đánh giá') + '</button></div>' : '') + '</div>';
-    }).join('') : '<p class="hint" style="margin:0">Bạn chưa có task nào trong nhiệm kỳ này.</p>') + '</div><div id="ktm"></div></div>';
-  $$('[data-ph]').forEach(function (b) {
-    b.onclick = function () {
-      var x = d.task[Number(b.getAttribute('data-ph'))];
-      moHop({ tieuDe: 'Phản hồi đánh giá', than: '<form class="form" id="phf"><p class="hint" style="margin:0">' + esc(x.ten) + ' · ' + esc(x.chatLuong) + '</p><label class="f">Bạn thấy đánh giá chưa chính xác ở đâu?<textarea id="pht" rows="4" maxlength="1000">' + esc(x.phanHoi) + '</textarea></label><button hidden></button></form>',
-        chan: '<span class="msg" id="phm"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="phb">Gửi</button>' });
-      var gui = function (e) { if (e) e.preventDefault(); $('#phb').disabled = true; goiPhien('phanHoiTask', x.thoiGianTao, $('#pht').value).then(function () { dongHop(true); VIEWS.kpi(); }).catch(function (err) { $('#phb').disabled = false; thongBao($('#phm'), 'loi', err.message); }); };
-      $('#phf').onsubmit = gui; $('#phb').onclick = gui;
-    };
-  });
-}
-
-var KPI_BOD = { tab: 'tv', ban: 'Tất cả', q: '' };
-function veKpiBod(d) {
-  var nhom = [];
-  d.thanhVien.forEach(function (k) { if (k.nhom && nhom.indexOf(k.nhom) < 0) nhom.push(k.nhom); });
-  $('#main').innerHTML = '<div class="head"><div><h2>KPI</h2><p class="lead">KPI log và KPI task của từng thành viên trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Ban HR tính theo lượt nhắc deadline. Đánh giá task ở trang Task, điểm danh log ở trang Làm log.</p></div></div>' +
-    '<div class="row" id="kb-tab">' + [['tv', 'Thành viên'], ['hr', 'HR quên']].map(function (x) { return '<button class="chip" data-tab="' + x[0] + '" aria-pressed="' + (KPI_BOD.tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><div id="kb"></div>';
-  var veTv = function () {
-    $('#kb').innerHTML = '<div class="xh-tools" style="margin-bottom:10px"><input type="search" id="kb-q" placeholder="Tìm tên…" value="' + esc(KPI_BOD.q) + '" aria-label="Tìm thành viên">' +
-      '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BOD.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div></div>' +
-      '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th><th class="n">KPI log</th><th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th></th></tr></thead><tbody id="kb-b"></tbody></table></div></div>';
-    var ve = function () {
-      var q = boDau(KPI_BOD.q);
-      var ds = d.thanhVien.filter(function (k) { return (KPI_BOD.ban === 'Tất cả' || k.nhom === KPI_BOD.ban) && boDau(k.ten).indexOf(q) >= 0; });
-      $('#kb-b').innerHTML = ds.map(function (k) {
-        var t = tomTatKpi(k), lg = tomTatLog(k.log);
-        return '<tr><td>' + esc(k.ten) + (k.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td class="muted">' + esc(k.ban) + '</td><td class="n" title="' + esc(lg.chu) + '"><b' + (lg.kq === 'Chưa đạt' ? ' style="color:var(--bad)"' : '') + '>' + lg.so + '</b></td><td class="n"><b>' + t.so + '</b></td><td class="muted">' + esc(t.chu) + '</td><td class="n">' + (k.task && k.task.cho ? k.task.cho : '') + '</td><td>' + pillKpi(t.kq) + '</td></tr>';
-      }).join('') || '<tr><td colspan="7" class="muted">Không có ai.</td></tr>';
-    };
-    ve();
-    $('#kb-q').oninput = function (e) { KPI_BOD.q = e.target.value; ve(); };
-    $('#kb-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; KPI_BOD.ban = b.getAttribute('data-b'); $$('#kb-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
-  };
-  var veHr = function () {
-    var chonHr = function (loai) {
-      var nhomCan = loai === 'Chúc mừng sinh nhật' ? 'CRE' : loai === 'Báo cáo seeding' ? 'SUP-SEED' : '';
-      var ds = d.hr.filter(function (h) { return !nhomCan || h.nhomHr.indexOf(nhomCan) >= 0; });
-      if (!ds.length) ds = d.hr;
-      return ds.map(function (h) { return '<option>' + esc(h.ten) + '</option>'; }).join('');
-    };
-    $('#kb').innerHTML = '<form class="card form" id="hq"><h3 style="margin:0">Ghi nhận HR quên</h3><p class="hint" style="margin:0">Quên nhắc deadline thì ghi ở trang Task (nút HR quên nhắc trên từng task), app tự biết HR phụ trách. Ở đây ghi quên chúc mừng sinh nhật hoặc quên báo cáo seeding.</p>' +
-      '<div class="grid2"><label class="f">Việc quên<select id="hq-l"><option>Chúc mừng sinh nhật</option><option>Báo cáo seeding</option></select></label><label class="f">HR quên<select id="hq-h">' + chonHr('Chúc mừng sinh nhật') + '</select></label></div>' +
-      '<label class="f">Chi tiết <small>Ví dụ: sinh nhật bạn nào, bài đăng nào</small><input type="text" id="hq-m" maxlength="300"></label>' +
-      '<div class="row"><button class="btn sm" id="hq-b">Ghi nhận</button><span id="hq-mm"></span></div></form>' +
-      '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Các lần đã ghi nhận</h3></div>' + (d.quen.length ? d.quen.map(function (q) {
-        return '<div class="kpi-task"' + (q.daHuy ? ' style="opacity:.55"' : '') + '><div class="row sb"><b>' + esc(q.nguoiHr) + ' · ' + esc(q.loai) + '</b><span class="hint">' + ngayDayDu(q.thoiGian) + '</span></div>' +
-          '<span class="dh">' + esc(q.nguoiGhi) + ' ghi' + (q.thamChieu ? ' · ' + esc(q.thamChieu) : '') + (q.moTa ? ' · ' + esc(q.moTa) : '') + (q.daHuy ? ' · Đã huỷ' : '') + '</span>' +
-          (q.daHuy ? '' : '<div><button class="btn ghost sm" data-hqx="' + q.thoiGian + '">Huỷ (ghi nhầm)</button></div>') + '</div>';
-      }).join('') : '<p class="hint" style="margin:0">Chưa có lần nào.</p>') + '<div id="hq-xm"></div></div>';
-    $('#hq-l').onchange = function () { $('#hq-h').innerHTML = chonHr(this.value); };
-    $('#hq').onsubmit = function (e) {
-      e.preventDefault();
-      var b = $('#hq-b'); b.disabled = true; thongBao($('#hq-mm'), 'cho', 'Đang lưu…');
-      goiPhien('ghiHrQuen', { loai: $('#hq-l').value, nguoiHr: $('#hq-h').value, moTa: $('#hq-m').value }).then(function () { VIEWS.kpi(); })
-        .catch(function (err) { b.disabled = false; thongBao($('#hq-mm'), 'loi', err.message); });
-    };
-    $$('[data-hqx]').forEach(function (b) {
+    if (page !== phan) return;
+    var k = d.kpi;
+    if (phan === 'log') {
+      $('#main').innerHTML = '<div class="head"><div><h2>Log của tôi</h2><p class="lead">Số buổi log bạn đã tham gia so với số buổi được giao' + (k.boSung ? ', tính từ giai đoạn 2 vì bạn là thành viên bổ sung' : '') + '. BOD điểm danh sau mỗi buổi.</p></div></div>' + theLog(k.log);
+      return;
+    }
+    var t = tomTatKpi(k);
+    var the = k.mien ? '<div><b>Miễn</b><span>Bạn đang được miễn task (ôn thi chuyển cấp).</span></div>'
+      : '<div><b>' + t.so + '</b><span>' + t.chu + '</span></div><div><b>' + k.task.cho + '</b><span>Task chờ BOD đánh giá</span></div><div><b>' + k.task.dangLam + '</b><span>Task đang làm</span></div>';
+    $('#main').innerHTML = '<div class="head"><div><h2>Task của tôi</h2><p class="lead">Task đạt khi nộp đúng hạn và hoàn chỉnh hoặc cần chỉnh sửa, hoặc trễ hạn nhưng hoàn chỉnh.' + (k.boSung ? ' Bạn là thành viên bổ sung nên chỉ tính task giao từ giai đoạn 2.' : '') + '</p></div></div>' +
+      '<div class="card"><div class="ctitle"><h3>' + ic('target', 18) + ' KPI task của tôi</h3></div><div class="kpi-the">' + the + '</div></div>' +
+      '<div class="card"><div class="ctitle"><h3>' + ic('check', 18) + ' Task của tôi</h3></div><div id="kt">' + (d.task.length ? d.task.map(function (x, i) {
+        return '<div class="kpi-task"><div class="row sb"><b>' + esc(x.ten) + '</b>' + (pillKetQua(x.ketQua) || '<span class="pill ' + ((ST_TASK[x.trangThai] || ['p-mute'])[0]) + '">' + esc(x.trangThai) + '</span>') + '</div>' +
+          (x.moTa ? '<span class="dh">' + esc(x.moTa) + '</span>' : '') +
+          '<span class="dh">Hạn ' + hienNgay(x.hanChot) + (x.hanGoc ? ' (gia hạn từ ' + hienNgay(x.hanGoc) + ')' : '') + (x.ngayNop ? ' · Nộp ' + hienNgay(x.ngayNop) : '') + (x.dungHan ? ' · ' + esc(x.dungHan) : '') + (x.chatLuong ? ' · ' + esc(x.chatLuong) : '') + ' · Giao bởi ' + esc(x.nguoiTao) + '</span>' +
+          (x.dauHieu ? '<span class="dh">Nhận xét của ' + esc(x.nguoiDanhGia) + ': ' + esc(x.dauHieu) + '</span>' : '') +
+          (x.phanHoi ? '<span class="dh">Phản hồi của bạn: ' + esc(x.phanHoi) + '</span>' : '') +
+          (x.chatLuong ? '<div><button class="btn ghost sm" data-ph="' + i + '">' + (x.phanHoi ? 'Sửa phản hồi' : 'Phản hồi đánh giá') + '</button></div>' : '') + '</div>';
+      }).join('') : '<p class="hint" style="margin:0">Bạn chưa có task nào trong nhiệm kỳ này.</p>') + '</div><div id="ktm"></div></div>' +
+      '<p class="hint" style="margin:0">Xong task thì báo BOD để BOD ghi nhận. Cần gia hạn thì xin BOD trước hạn ít nhất 24 giờ.</p>';
+    $$('[data-ph]').forEach(function (b) {
       b.onclick = function () {
-        if (!xacNhan(b, 'Huỷ thật?')) return;
-        b.disabled = true;
-        goiPhien('huyHrQuen', Number(b.getAttribute('data-hqx'))).then(function () { VIEWS.kpi(); }).catch(function (err) { b.disabled = false; thongBao($('#hq-xm'), 'loi', err.message); });
+        var x = d.task[Number(b.getAttribute('data-ph'))];
+        moHop({ tieuDe: 'Phản hồi đánh giá', than: '<form class="form" id="phf"><p class="hint" style="margin:0">' + esc(x.ten) + ' · ' + esc(x.chatLuong) + '</p><label class="f">Bạn thấy đánh giá chưa chính xác ở đâu?<textarea id="pht" rows="4" maxlength="1000">' + esc(x.phanHoi) + '</textarea></label><button hidden></button></form>',
+          chan: '<span class="msg" id="phm"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="phb">Gửi</button>' });
+        var gui = function (e) { if (e) e.preventDefault(); $('#phb').disabled = true; goiPhien('phanHoiTask', x.thoiGianTao, $('#pht').value).then(function () { dongHop(true); veKpiCaNhan('task'); }).catch(function (err) { $('#phb').disabled = false; thongBao($('#phm'), 'loi', err.message); }); };
+        $('#phf').onsubmit = gui; $('#phb').onclick = gui;
       };
     });
-  };
-  (KPI_BOD.tab === 'hr' ? veHr : veTv)();
-  $('#kb-tab').onclick = function (e) { var b = e.target.closest('[data-tab]'); if (!b) return; KPI_BOD.tab = b.getAttribute('data-tab'); veKpiBod(d); };
+  }).catch(loiTai);
 }
+
+/**
+ * Bảng KPI task hoặc KPI log của nhiều người: BOD xem mọi thành viên (trừ BOD), HR phụ trách xem ban và thành viên được phân.
+ * Chỉ có con số; với BOD, số dưới 80% tô đỏ để dễ thấy ai cần nhắc.
+ */
+var KPI_BANG = { ban: 'Tất cả', q: '' };
+function veKpiBang(phan) {
+  dangTai();
+  goiPhien('layKpi').then(function (d) {
+    if (page !== phan) return;
+    var ds = d.laBod ? d.thanhVien : d.thanhVienBan, bod = d.laBod, laTask = phan === 'kpitask';
+    var nhom = [];
+    ds.forEach(function (k) { if (k.nhom && nhom.indexOf(k.nhom) < 0) nhom.push(k.nhom); });
+    if (KPI_BANG.ban !== 'Tất cả' && nhom.indexOf(KPI_BANG.ban) < 0) KPI_BANG.ban = 'Tất cả';
+    var pv = d.phamVi || { ban: [], rieng: [] };
+    var moTa = bod ? 'Mọi thành viên trừ BOD, trong nhiệm kỳ này (thành viên bổ sung chỉ tính từ giai đoạn 2). Kết quả cấp chứng nhận xem ở trang Chứng nhận.'
+      : 'Những người bạn phụ trách' + (pv.ban.length ? ': ban ' + pv.ban.map(esc).join(', ') : '') + (pv.rieng.length ? (pv.ban.length ? ' và ' : ': ') + pv.rieng.length + ' thành viên được BOD giao riêng' : '') + '.';
+    var dau = laTask ? '<th class="n">KPI task</th><th>Chi tiết</th><th class="n">Chờ đánh giá</th><th class="n">Đang làm</th>' : '<th class="n">KPI log</th><th>Chi tiết</th>';
+    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(phan)) + '</h2><p class="lead">' + moTa + (bod ? ' ' + (laTask ? 'Đánh giá task ở trang Quản lý task.' : 'Điểm danh ở trang Sự kiện log.') : '') + '</p></div></div>' +
+      '<div class="xh-tools"><input type="search" id="kb-q" placeholder="Tìm tên…" value="' + esc(KPI_BANG.q) + '" aria-label="Tìm thành viên">' +
+      (nhom.length > 1 ? '<div class="row" id="kb-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" data-b="' + esc(b) + '" aria-pressed="' + (b === KPI_BANG.ban) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') + '</div>' +
+      '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Ban</th>' + dau + '</tr></thead><tbody id="kb-b"></tbody></table></div></div>';
+    var ve = function () {
+      var q = boDau(KPI_BANG.q);
+      var loc = ds.filter(function (k) { return (KPI_BANG.ban === 'Tất cả' || k.nhom === KPI_BANG.ban) && boDau(k.ten).indexOf(q) >= 0; });
+      $('#kb-b').innerHTML = loc.map(function (k) {
+        var t = laTask ? tomTatKpi(k) : tomTatLog(k.log);
+        var thap = bod && t.tiLe !== null && t.tiLe < 80;
+        return '<tr><td>' + esc(k.ten) + (k.boSung ? ' <span class="xh-ban xh-bs">bổ sung</span>' : '') + '</td><td class="muted">' + esc(k.ban) + '</td><td class="n"><b' + (thap ? ' style="color:var(--bad)"' : '') + '>' + t.so + '</b></td><td class="muted">' + esc(t.chu) + '</td>' +
+          (laTask ? '<td class="n">' + (k.task && k.task.cho ? k.task.cho : '') + '</td><td class="n">' + (k.task && k.task.dangLam ? k.task.dangLam : '') + '</td>' : '') + '</tr>';
+      }).join('') || '<tr><td colspan="' + (laTask ? 6 : 4) + '" class="muted">' + (ds.length ? 'Không có ai khớp.' : bod ? 'Chưa có thành viên.' : 'BOD chưa phân ai cho bạn phụ trách.') + '</td></tr>';
+    };
+    ve();
+    $('#kb-q').oninput = function (e) { KPI_BANG.q = e.target.value; ve(); };
+    if ($('#kb-ban')) $('#kb-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; KPI_BANG.ban = b.getAttribute('data-b'); $$('#kb-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
+  }).catch(loiTai);
+}
+VIEWS.kpitask = function () { veKpiBang('kpitask'); };
+VIEWS.kpilog = function () { veKpiBang('kpilog'); };
 </script>

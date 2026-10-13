@@ -39,10 +39,10 @@
 /* =================== Xếp hạng điểm =================== */
 var XH = { d: null, luc: 0, ban: 'Tất cả', q: '', dir: 'desc', gd: 'nay' };
 
-/** Bảng xếp hạng công khai, giữ 60 giây trên máy. */
+/** Bảng xếp hạng (phải đăng nhập), giữ 60 giây trên máy. */
 function napXepHang() {
   if (XH.d && Date.now() - XH.luc < 60000) return Promise.resolve(XH.d);
-  return goi('layDuLieuBoard').then(function (d) { XH.d = d; XH.luc = Date.now(); return d; });
+  return goiPhien('layDuLieuBoard').then(function (d) { XH.d = d; XH.luc = Date.now(); return d; });
 }
 /** Hạng của từng người: bằng điểm thì cùng hạng. */
 function hangTheoDiem(ds, khoa) {
@@ -65,7 +65,7 @@ function dsTheoBang(d, gd) {
   return d.thanhVien.filter(function (p) { return p.diemHk1 !== null && p.diemHk1 !== undefined; });
 }
 function laToi(ten) { return NGUOI && String(ten).toLowerCase() === String(NGUOI.ten).toLowerCase(); }
-/** Ai xem được lịch sử của ai: BOD xem mọi người, còn lại xem của mình. Khách không xem được. */
+/** Ai xem được lịch sử của ai: BOD xem mọi người, còn lại xem của mình. */
 function xemDuocLichSu(ten) { return !!NGUOI && (NGUOI.vaiTro === 'BOD' || laToi(ten)); }
 
 VIEWS.xephang = function () {
@@ -83,17 +83,17 @@ VIEWS.xephang = function () {
     var nhom = [];
     dsBang.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
     if (XH.ban !== 'Tất cả' && nhom.indexOf(XH.ban) < 0) XH.ban = 'Tất cả';
-    $('#main').innerHTML = '<div id="xh-trang" style="display:grid;gap:14px"><div class="head"><div><h2>Xếp hạng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy : 'Chưa bắt đầu giai đoạn') + '</p></div></div>' +
-      (!NGUOI ? '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('info', 15) + ' Đăng nhập để xem lịch sử cộng điểm của bạn và dùng các chức năng khác.</span><button class="btn sm" data-p="dangnhap">Đăng nhập</button></div>' : '') +
-      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hangNay + ' với ' + toi.diem + ' điểm</b>' + (toi.top ? ' <span class="xh-ban xh-top">Top 15%</span>' : '') + '<div class="hint">Giai đoạn ' + d.ky.hocKy + ', trong ' + dsTheoBang(d, 'nay').length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Xem lịch sử điểm</button></div>' : '') +
+    var bod = NGUOI.vaiTro === 'BOD';
+    $('#main').innerHTML = '<div id="xh-trang" style="display:grid;gap:14px"><div class="head"><div><h2>' + (bod ? 'Bảng điểm' : 'Điểm và xếp hạng') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy : 'Chưa bắt đầu giai đoạn') + (bod ? '. Bấm vào một người để xem lịch sử cộng điểm.' : '') + '</p></div>' +
+      (bod ? '<button class="btn ghost" data-p="baocao">' + ic('chart', 16) + 'Báo cáo theo khoảng ngày</button>' : '') + '</div>' +
+      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hangNay + ' với ' + toi.diem + ' điểm</b>' + (toi.top ? ' <span class="xh-ban xh-top">Top 15%</span>' : '') + '<div class="hint">Giai đoạn ' + d.ky.hocKy + ', trong ' + dsTheoBang(d, 'nay').length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Lịch sử điểm</button><button class="btn ghost sm" data-p="anh">' + ic('image', 14) + 'Ảnh thành tích</button></div>' : '') +
       (coGd1 ? '<div class="row" id="xh-gd">' + ['nay', '1', 'ky'].map(function (k) { return '<button class="chip" aria-pressed="' + (k === XH.gd) + '" data-gd="' + k + '">' + BANG_XH[k].ten(d) + '</button>'; }).join('') + '</div>' : '') +
       (d.ky ? '<p class="hint" style="margin:0">' + (XH.gd === 'nay' && d.ky.hocKy === 1 ? 'Giai đoạn 1 xếp hạng thành viên chính thức. ' : XH.gd === 'nay' ? 'Giai đoạn 2 xếp hạng tất cả thành viên. ' : XH.gd === '1' ? 'Điểm giai đoạn 1 của thành viên chính thức. ' : 'Tổng điểm hai giai đoạn của thành viên chính thức, dùng khi xét bù trừ KPI. ') +
         'Top 15% là ' + soTop + ' người (' + dsBang.length + ' × 15%, làm tròn, tính cả người bằng điểm).</p>' : '') +
       '<div class="xh-tools"><input type="search" id="xh-q" placeholder="Tìm theo tên…" aria-label="Tìm theo tên" value="' + esc(XH.q) + '">' +
       (nhom.length > 1 ? '<div class="row" id="xh-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" aria-pressed="' + (b === XH.ban) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
       '<div class="row"><span class="hint" id="xh-dem"></span><label class="xh-sort">Sắp xếp<select id="xh-sx"><option value="desc">Điểm cao → thấp</option><option value="asc"' + (XH.dir === 'asc' ? ' selected' : '') + '>Điểm thấp → cao</option></select></label></div></div>' +
-      '<div class="card flush xh"><div class="lst" id="xh-ds"></div></div>' +
-      (NGUOI && NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Bấm vào một người để xem lịch sử cộng điểm.</p>' : '') + '</div>';
+      '<div class="card flush xh"><div class="lst" id="xh-ds"></div></div></div>';
     var ve = function () {
       var tim = boDau(XH.q);
       var ds = dsBang.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && boDau(p.ten).indexOf(tim) >= 0; });

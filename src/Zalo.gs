@@ -63,7 +63,7 @@ function taoMaKetNoi_() {
 }
 
 /**
- * Đảm bảo mỗi tài khoản BOD và ban nhân sự có một dòng trong tab KetNoiZalo (kèm mã kết nối).
+ * Đảm bảo mỗi tài khoản có một dòng trong tab KetNoiZalo (kèm mã kết nối).
  * Trả về danh sách người nhận: [{ ten, vaiTro, ma, chatId, tenZalo }].
  */
 function dongBoNguoiNhanZalo_() {
@@ -77,7 +77,7 @@ function dongBoNguoiNhanZalo_() {
   });
 }
 function nguoiNhanZalo_() {
-  var tk = docBang_('TaiKhoan').filter(function (t) { return t.HoVaTen && (t.VaiTro === 'BOD' || t.VaiTro === 'HR'); });
+  var tk = docBang_('TaiKhoan').filter(function (t) { return t.HoVaTen; });
   var ketNoi = docBang_('KetNoiZalo');
   var theoTen = {};
   ketNoi.forEach(function (k) { theoTen[String(k.HoVaTen)] = k; });
@@ -135,10 +135,10 @@ function nhanTinMoiZalo_(choGiay) {
         if (ai) {
           ghiKetNoiZalo_(ai.ten, String(m.chat.id), String((m.from && m.from.display_name) || ''));
           bao.soMoi++;
-          guiZalo_(token, m.chat.id, 'Đã kết nối với app eco. Từ nay ' + ai.ten + ' sẽ nhận thông báo ở đây.');
+          guiZalo_(token, m.chat.id, 'Đã kết nối với app CLB ECO. Từ nay ' + ai.ten + ' sẽ nhận thông báo ở đây.');
         } else {
           if (bao.tinKhongMa.length < 5) bao.tinKhongMa.push({ tenZalo: String((m.from && m.from.display_name) || ''), noiDung: String(m.text || '(không phải chữ)').slice(0, 40) });
-          guiZalo_(token, m.chat.id, 'Bot này gửi thông báo của app eco. Muốn nhận, hãy gửi mã kết nối 6 ký tự của bạn (xem trong app eco, mục Thông báo).');
+          guiZalo_(token, m.chat.id, 'Bot này gửi thông báo của app CLB ECO. Muốn nhận, hãy gửi mã kết nối 6 ký tự của bạn (xem trong app CLB ECO, mục Thông báo).');
         }
       } catch (e) { /* gửi trả lời lỗi thì bỏ qua, lần sau vẫn chạy tiếp */ }
     });
@@ -225,12 +225,11 @@ function nhacViec_(luc) {
   var hom = homNay_();
   var canNhac = chonTaskTheoLich_(docTask_(), hom, cd.lich, luc == null ? null : luc);
   var nguoiNhan = nguoiNhanThongBao_();
-  var laBod = {};
-  nguoiNhan.forEach(function (n) { if (n.vaiTro === 'BOD') laBod[n.ten] = true; });
-  var choNhanSu = canNhac.filter(function (t) { return !laBod[t.nguoi]; });
-  // HR được nhắc task của các ban mình quản lý (PG, PR, AD; mọi HR cùng ban đều nhận, để không ai bỏ sót).
-  // Ban HR không do HR quản lý nên Head HR được nhắc task của thành viên ban HR.
-  var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {};
+  // HR phụ trách được nhắc task của ban và thành viên mình phụ trách (cách nhắc chính).
+  // Ai bật "Tự nhắc task của tôi" trong Cài đặt thì được nhắc thêm task của chính mình.
+  // Ban HR không có HR phụ trách theo ban nên Head HR được nhắc task của thành viên ban HR (trừ người đã có HR phụ trách riêng).
+  var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {}, phanCong = docBang_('PhuTrachHr'), coPhanRieng = {};
+  phanCong.forEach(function (p) { if (String(p.NguoiHr || '').trim()) coPhanRieng[String(p.HoVaTen).toLowerCase()] = true; });
   docBang_('ThanhVien').forEach(function (t) {
     banCua[String(t.HoVaTen)] = String(t.Ban);
     if (t.Email) chucVuTheoEmail[String(t.Email).toLowerCase()] = String(t.ChucVu || '');
@@ -240,46 +239,20 @@ function nhacViec_(luc) {
 
   var daGui = 0, loi = [];
   nguoiNhan.forEach(function (n) {
-    if (n.vaiTro !== 'BOD' && n.vaiTro !== 'HR') return; // UCV không nhận nhắc việc
-    var tin;
-    if (n.vaiTro === 'BOD') {
-      tin = soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false);
-      if (chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]) === 'HEAD HR') {
-        var tinBanHr = soanTinNhac_(n.ten, choNhanSu.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten; }), hom, true);
-        tin = [tin, tinBanHr].filter(String).join('\n\n');
-      }
-    } else {
-      var q = quyenTask_(tkTheoEmail[n.email.toLowerCase()] || { VaiTro: 'HR', HoVaTen: n.ten }, '', banCua);
-      tin = soanTinNhac_(n.ten, choNhanSu.filter(function (t) { return q.sua(t.nguoi); }), hom, true);
+    var cuaToi = n.tuNhac ? soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false) : '';
+    var khac = [];
+    if (n.vaiTro === 'BOD' && chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]) === 'HEAD HR') {
+      khac = canNhac.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten && !coPhanRieng[t.nguoi.toLowerCase()]; });
+    } else if (n.vaiTro === 'HR') {
+      var pv = phamViHr_(tkTheoEmail[n.email.toLowerCase()], banCua, phanCong);
+      khac = canNhac.filter(function (t) { return t.nguoi !== n.ten && pv.thuoc(t.nguoi); });
     }
+    var tin = [cuaToi, soanTinNhac_(n.ten, khac, hom, true)].filter(String).join('\n\n');
     if (!tin) return;
     try { if (guiThongBao_(n, 'Nhắc việc', tin)) daGui++; else loi.push(n.ten + ': chưa có cách nhận nào dùng được'); } catch (e) { loi.push(n.ten + ': ' + e.message); }
   });
   datCaiDat_('ZaloLanNhacCuoi', JSON.stringify({ luc: Date.now(), daGui: daGui, loi: loi.slice(0, 5) }));
   return { daGui: daGui, loi: loi };
-}
-
-/** Task giao (không phải task HR nhập để nhắc): báo ngay cho người được giao nếu họ có tài khoản, theo cách họ chọn. Lỗi thì bỏ qua. */
-function baoTaskMoi_(dong, nguoiTao) {
-  try {
-    var nguoiNhan = nguoiNhanThongBao_();
-    dong.forEach(function (d) {
-      if (d.KieuTao !== 'Giao task' || !batSuKien_('BaoTaskMoi')) return;
-      var n = nguoiNhan.filter(function (x) { return x.ten === d.NguoiPhuTrach; })[0];
-      if (!n || n.ten === nguoiTao) return;
-      guiThongBao_(n, 'Task mới', 'eco: ' + nguoiTao + ' vừa giao cho bạn task "' + d.TenTask + '", hạn ' + hienNgay_(d.HanChot) + '.');
-    });
-  } catch (e) { /* bỏ qua */ }
-}
-
-/** Task giao vừa được đánh dấu xong: báo cho người giao theo cách họ chọn (trừ khi chính họ đánh dấu). Lỗi thì bỏ qua. */
-function baoTaskXong_(task, nguoiLam, nguoiDanhDau) {
-  try {
-    if (task.kieuTao !== 'Giao task' || task.nguoiTao === nguoiDanhDau || !batSuKien_('BaoTaskXong')) return;
-    var n = nguoiNhanThongBao_().filter(function (x) { return x.ten === task.nguoiTao; })[0];
-    if (!n) return;
-    guiThongBao_(n, 'Task đã xong', 'eco: ' + nguoiLam + ' đã xong task "' + task.ten + '"' + (nguoiDanhDau !== nguoiLam ? ' (' + nguoiDanhDau + ' xác nhận)' : '') + '.');
-  } catch (e) { /* bỏ qua */ }
 }
 
 /** Cài lịch chạy nhacViecHangNgay mỗi ngày vào các thời điểm đã chọn (thay lịch cũ nếu có). dsLuc: phút trong ngày. */
@@ -299,7 +272,7 @@ function coLichNhac_() {
   return ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'nhacViecHangNgay'; });
 }
 
-/* ---------- Gọi từ app eco ---------- */
+/* ---------- Gọi từ app CLB ECO ---------- */
 
 function layCaiDatZalo(phien) {
   canDangNhap_(phien, 'caidat');
@@ -363,7 +336,7 @@ function luuNhacViec(phien, cd) {
 
 /** Đọc tin mới gửi bot để kết nối. Ai đăng nhập cũng bấm được (để tự kết nối). */
 function kiemTraKetNoiZalo(phien) {
-  var tk = canDangNhap_(phien, 'task');
+  var tk = canDangNhap_(phien);
   if (!layTokenZalo_()) throw new Error('Chưa có bot Zalo. Nhờ BOD nhập mã bot trong Cài đặt.');
   boWebhookZalo_();
   var bao = nhanTinMoiZalo_(25);
@@ -378,7 +351,7 @@ function guiTinThuZalo(phien, ten) {
   var token = layTokenZalo_();
   var n = dongBoNguoiNhanZalo_().filter(function (x) { return x.ten === ten; })[0];
   if (!token || !n || !n.chatId) throw new Error(ten + ' chưa kết nối Zalo.');
-  guiZalo_(token, n.chatId, 'eco: đây là tin nhắn thử. Bạn sẽ nhận thông báo ở đây.');
+  guiZalo_(token, n.chatId, 'CLB ECO: đây là tin nhắn thử. Bạn sẽ nhận thông báo ở đây.');
   return true;
 }
 

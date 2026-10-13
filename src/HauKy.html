@@ -36,10 +36,14 @@
   <div class="kieu" id="kieu"></div>
 
   <h3><span>3</span>Mật khẩu chung của CLB</h3>
-  <label for="mk"><small><?= coMatKhauMacDinh ? 'Đã có. Bỏ trống để giữ nguyên, nhập mới để đổi.' : 'Mọi thành viên dùng mật khẩu này cho lần đăng nhập app eco đầu tiên. Ít nhất 6 ký tự.' ?> Người đã tự đổi mật khẩu thì không bị ảnh hưởng.</small></label>
+  <label for="mk"><small><?= coMatKhauMacDinh ? 'Đã có. Bỏ trống để giữ nguyên, nhập mới để đổi.' : 'Mọi thành viên dùng mật khẩu này cho lần đăng nhập app CLB ECO đầu tiên. Ít nhất 6 ký tự.' ?> Người đã tự đổi mật khẩu thì không bị ảnh hưởng.</small></label>
   <input type="password" id="mk" autocomplete="new-password">
 
-  <h3><span>4</span>Xem trước rồi tải lên</h3>
+  <h3><span>4</span>Lịch sinh nhật</h3>
+  <label for="lich">ID lịch Google <small id="lich-g">Bắt buộc khi tải "Sau Oday". Các lần sau bỏ trống để giữ lịch đang dùng, hoặc nhập ID mới để đổi lịch. Lấy ID trong Google Calendar: Cài đặt của lịch, mục Tích hợp lịch. Lịch cần chia sẻ cho tài khoản CLB với quyền Thay đổi sự kiện.<?= idLich ? ' Đang dùng: ' + idLich + '.' : '' ?></small></label>
+  <input type="text" id="lich" placeholder="abc123@group.calendar.google.com">
+
+  <h3><span>5</span>Xem trước rồi tải lên</h3>
   <button id="nutXem" class="phu" onclick="xemTruoc()">Xem trước thay đổi</button>
   <div id="xem" hidden></div>
   <button id="nut" onclick="tai()" hidden>Tải lên</button>
@@ -49,7 +53,7 @@
 var TINH_TRANG = <?!= JSON.stringify(tinhTrang) ?>;
 var VE = <?!= JSON.stringify(ve) ?>;
 var MO_TA = {
-  'Sau Oday': 'Thêm thành viên mới sau Oday (là thành viên chính thức), ẩn người đã rời. Chưa bắt đầu giai đoạn, chưa thêm lịch sinh nhật.',
+  'Sau Oday': 'Thêm thành viên mới sau Oday (là thành viên chính thức), ẩn người đã rời, thêm sinh nhật vào lịch. Chưa bắt đầu giai đoạn.',
   'Sau tuyển đợt 1': 'Bắt đầu nhiệm kỳ mới và giai đoạn 1, điểm về 0. Thêm người mới (chính thức), ẩn người đã rời, cập nhật lịch sinh nhật.',
   'Sau tuyển đợt 2': 'Bắt đầu giai đoạn 2, điểm về 0 (vẫn xem được điểm giai đoạn 1). Người mới là thành viên bổ sung.',
   'Cập nhật': 'Sửa thông tin, thêm người bị sót, ẩn người đã rời. Không đổi giai đoạn, không đổi điểm. Đổi ban giữa nhiệm kỳ cũng dùng kiểu này.'
@@ -70,6 +74,7 @@ function yeuCau() {
     tenTab: document.getElementById('tab').value.trim(),
     kieu: document.querySelector('input[name=kieu]:checked').value,
     matKhauMacDinh: document.getElementById('mk').value,
+    idLich: document.getElementById('lich').value.trim(),
     ve: VE
   };
 }
@@ -89,16 +94,20 @@ function xemTruoc() {
         '<li>Sửa thông tin ' + d.sua.length + ' người.' + dsTen(d.sua) + '</li>' +
         (d.doiBan.length ? '<li>' + d.doiBan.length + ' người đổi ban (app ghi lại ngày đổi).' + dsTen(d.doiBan.map(function (x) { return x.HoVaTen + ': ' + x.BanCu + ' → ' + x.BanMoi; })) + '</li>' : '') +
         '<li>Ẩn ' + d.an.length + ' người không còn trong danh sách (hồ sơ và điểm vẫn được giữ).' + dsTen(d.an) + '</li>' +
-        (d.soTkMoi ? '<li>Tạo ' + d.soTkMoi + ' tài khoản app eco mới.' + (d.canMatKhau ? ' <span class="loi">Cần nhập mật khẩu chung ở bước 3.</span>' : '') + '</li>' : '') +
-        (d.sinhNhat ? '<li>Cập nhật lịch sinh nhật trên Google Calendar.</li>' : '') + '</ul>';
+        (d.soTkMoi ? '<li>Tạo ' + d.soTkMoi + ' tài khoản app CLB ECO mới.' + (d.canMatKhau ? ' <span class="loi">Cần nhập mật khẩu chung ở bước 3.</span>' : '') + '</li>' : '') +
+        (d.sinhNhat ? '<li>Cập nhật lịch sinh nhật trên Google Calendar.</li>' : d.canIdLich ? '<li><span class="loi">Cần nhập ID lịch Google ở bước 4.</span></li>' : '<li>Chưa có ID lịch nên chưa thêm sinh nhật vào lịch.</li>') + '</ul>';
+      CAN_LICH = d.canIdLich;
       xem.hidden = false;
       var n = document.getElementById('nut');
-      n.hidden = false; n.disabled = CAN_MK && !document.getElementById('mk').value;
+      n.hidden = false; capNhatNut();
     })
     .withFailureHandler(function (e) { nut.disabled = false; kq.className = 'loi'; kq.textContent = e.message; })
     .xemTruocTaiDanhSach(yeuCau());
 }
-document.getElementById('mk').addEventListener('input', function () { var n = document.getElementById('nut'); n.disabled = CAN_MK && !this.value; });
+var CAN_LICH = false;
+function capNhatNut() { document.getElementById('nut').disabled = (CAN_MK && !document.getElementById('mk').value) || (CAN_LICH && !document.getElementById('lich').value.trim()); }
+document.getElementById('mk').addEventListener('input', capNhatNut);
+document.getElementById('lich').addEventListener('input', capNhatNut);
 function tai() {
   var y = yeuCau();
   if (y.kieu !== 'Cập nhật' && !confirm('Tải "' + y.kieu + '"? Mỗi nhiệm kỳ chỉ làm một lần.')) return;

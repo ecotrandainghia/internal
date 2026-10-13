@@ -1,10 +1,10 @@
-# Hệ thống quản lý CLB: app eco
+# Hệ thống quản lý CLB: app CLB ECO
 
-Mã nguồn của app eco (trước đây là hai app ECOBoard và ECODesk), chạy trên Google Apps Script, dữ liệu lưu trong Google Sheet của tài khoản CLB.
+Mã nguồn của app CLB ECO (trước đây là hai app ECOBoard và ECODesk), chạy trên Google Apps Script, dữ liệu lưu trong Google Sheet của tài khoản CLB.
 
-- Mở app không cần đăng nhập thì chỉ xem được bảng xếp hạng điểm.
+- Ai cũng phải đăng nhập mới xem được (kể cả bảng điểm).
 - Mọi thành viên có email trong danh sách đều đăng nhập được (mật khẩu chung của CLB, mật khẩu riêng, hoặc Google). Quyền theo bậc thang: thành viên < HR < UCV < BOD, người bậc trên có cả chức năng của bậc dưới.
-- Thành viên: trang chủ (điểm của mình, link ghim, quy chế), xếp hạng từng giai đoạn (đánh dấu top 15%) và lịch sử điểm của mình, góp ý (ẩn danh hoặc ghi tên), cài đặt. HR thêm task, nhóm SUP-SEED điền báo cáo seeding; UCV thêm mail; BOD thêm cộng điểm, duyệt mail, báo cáo, file log, đọc góp ý, cài đặt chung.
+- Thành viên: trang chủ (4 ô vào nhanh; link ghim, quy chế), nhóm Của tôi (Task, Log, Điểm và xếp hạng; KPI chỉ hiện con số), Gửi góp ý, Cài đặt của tôi. HR phụ trách ban thêm nhóm Phụ trách (Quản lý task giúp BOD, KPI task, KPI log); HR phụ trách seeding thêm Hẹn nhắc 48 giờ và Nộp báo cáo; UCV thêm Hộp thư; BOD có nhóm Điều hành (Quản lý task, Sự kiện log, Cộng điểm, Hộp thư, Hộp góp ý), Đánh giá (KPI task, KPI log, Bảng điểm, Chứng nhận) và cài đặt chung. Chi tiết ở `docs/kien-truc.md`, mục Góc nhìn.
 - Cài được lên điện thoại như app nhờ trang vỏ trong `pwa/` (địa chỉ ecotdn.github.io/home).
 
 ## Tài liệu
@@ -23,12 +23,12 @@ src/            Mã chạy trên Google Apps Script (chép nguyên vào trình s
   Code.gs       Máy chủ: trang web, menu hậu kỳ, đọc ghi dữ liệu
   Logic.gs      Các hàm tính toán thuần (có kiểm thử)
   HauKy.html    Hộp thoại tải danh sách trong Google Sheet
-  MayChuDesk.gs Máy chủ app eco: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
+  MayChuDesk.gs Máy chủ app CLB ECO: đăng nhập, phân quyền, cộng điểm, task, góp ý, cài đặt
   Zalo.gs       Nhắc việc qua bot Zalo
   ThongBao.gs   Gửi thông báo theo cách mỗi người chọn: Zalo, app trên điện thoại (Web Push), mail
   Mail.gs       Mail: hộp thư UCV, BOD duyệt, thư mẫu, gửi hàng loạt, hẹn giờ
   BaoCao.gs     Báo cáo, xuất Excel và tạo file đăng ký log
-  Eco.html      Khung giao diện app eco (gồm các file Desk*.html, EcoXepHang.html)
+  Eco.html      Khung giao diện app CLB ECO (gồm các file Desk*.html, EcoXepHang.html)
   appsscript.json  Cấu hình dự án Apps Script
 pwa/            Trang vỏ trên GitHub Pages để cài app và đăng nhập Google
 tests/          Kiểm thử tự động cho Logic.gs (chạy: npm test)

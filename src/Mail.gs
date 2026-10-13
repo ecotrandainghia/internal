@@ -1,7 +1,7 @@
 /**
- * Mail của app eco. Mọi thư gửi đi dưới tên tài khoản Gmail của CLB (tài khoản chủ của file dữ liệu).
+ * Mail của app CLB ECO. Mọi thư gửi đi dưới tên tài khoản Gmail của CLB (tài khoản chủ của file dữ liệu).
  *  - UCV (UCV): đọc hộp thư tự do; mọi thao tác làm thay đổi hộp thư tạo một "việc" chờ BOD duyệt.
- *  - BOD: duyệt thư của UCV; soạn thư nháp ngay trong Gmail của CLB rồi dùng app eco để gửi hàng loạt
+ *  - BOD: duyệt thư của UCV; soạn thư nháp ngay trong Gmail của CLB rồi dùng app CLB ECO để gửi hàng loạt
  *    (gửi ngay hoặc hẹn giờ), xem thư đã lên lịch.
  */
 
@@ -19,7 +19,7 @@ var TOI_DA_TONG_TEP_MB = 20;
 /* ===================== Dùng chung ===================== */
 
 function cheDoXemUcv_() {
-  return layCaiDat_('UcvXemHopThu') === 'rieng' ? 'rieng' : 'tatca';
+  return 'tatca'; // UCV luôn xem được mọi thư đến và đi của hộp thư CLB (BOD bỏ lựa chọn "chỉ thư của mình").
 }
 
 /** Tên người gửi luôn là tên của tài khoản Google CLB (đổi trong cài đặt tài khoản Google). */
@@ -172,7 +172,7 @@ function taiDinhKem(phien, maThu, maMsg, thuTu) {
   if (!m || m.getThread().getId() !== String(maThu)) throw new Error('Không tìm thấy tệp.');
   var a = m.getAttachments({ includeInlineImages: false })[Number(thuTu)];
   if (!a) throw new Error('Không tìm thấy tệp.');
-  if (a.getSize() > 8 * 1024 * 1024) throw new Error('Tệp lớn hơn 8MB, không tải qua app eco được.');
+  if (a.getSize() > 8 * 1024 * 1024) throw new Error('Tệp lớn hơn 8MB, không tải qua app CLB ECO được.');
   return { ten: a.getName(), loai: a.getContentType(), base64: Utilities.base64Encode(a.getBytes()) };
 }
 
@@ -403,7 +403,7 @@ function thucHienViec_(v) {
   throw new Error('Thao tác không hợp lệ.');
 }
 
-/* ===================== Thư nháp Gmail (BOD soạn trong Gmail, app eco chỉ tổng hợp và gửi) ===================== */
+/* ===================== Thư nháp Gmail (BOD soạn trong Gmail, app CLB ECO chỉ tổng hợp và gửi) ===================== */
 
 var SO_THU_NHAP_TOI_DA = 60;
 
@@ -691,12 +691,6 @@ function luuDanhBa(phien, ds) {
     kq.push({ Nhom: String(d.nhom || '').trim() || 'Khác', Ten: ten || e, Email: e, GhiChu: String(d.ghiChu || '').trim() });
   });
   ghiDeBang_('DanhBa', kq);
-  return true;
-}
-
-function luuCaiDatMail(phien, cd) {
-  canDangNhap_(phien, 'caidat');
-  datCaiDat_('UcvXemHopThu', cd && cd.cheDoUcv === 'rieng' ? 'rieng' : 'tatca');
   return true;
 }
 

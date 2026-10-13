@@ -35,13 +35,13 @@ var BANG = {
   BangGhim: ['TieuDe', 'DuongDan'],
   GopY: ['ThoiGian', 'NoiDung', 'DaDoc', 'HoVaTen', 'DaDung', 'NguoiDanhDau'],
   BaoCaoSeeding: ['ThoiGian', 'NguoiNop', 'LinkBai', 'LucDang', 'React', 'Comment', 'KhongKhop', 'TrangThai', 'NguoiHuy'],
-  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr', 'NhomHr'],
+  TaiKhoan: ['Email', 'HoVaTen', 'VaiTro', 'MatKhau', 'Muoi', 'NgayTao', 'NhanThongBao', 'GiaoDien', 'BanQuanLy', 'MaHr', 'NhomHr', 'TuNhac'],
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong',
     'NgayNop', 'HanGoc', 'NgayXinGiaHan', 'ChatLuong', 'DauHieu', 'NguoiDanhGia', 'LucDanhGia', 'PhanHoi', 'HrPhuTrach'],
   PhuTrachHr: ['HoVaTen', 'NguoiHr'],
-  HrQuen: ['ThoiGian', 'NguoiHr', 'Loai', 'MoTa', 'ThamChieu', 'NguoiGhi', 'NhiemKy', 'HocKy', 'TrangThai'],
   NhacSeeding: ['ThoiGian', 'Email', 'HoVaTen', 'LinkBai', 'LucDang', 'LucNhac', 'DaNhac'],
+  AnhDaiDien: ['Email', 'Anh', 'ThoiGian'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
   ViecMail: ['ThoiGian', 'NguoiTao', 'ThaoTac', 'MaThu', 'TieuDeThu', 'Den', 'Cc', 'Bcc', 'TieuDe', 'NoiDung', 'Nhan', 'DinhKem', 'TrangThai', 'GhiChu', 'NguoiDuyet', 'ThoiGianDuyet', 'TuyChon'],
   DanhBa: ['Nhom', 'Ten', 'Email', 'GhiChu'],
@@ -441,7 +441,7 @@ function topTheoDiem_(ds, khoa) {
 }
 
 /**
- * Dữ liệu công khai cho app eco. Chỉ có họ tên, lớp, ban và điểm.
+ * Dữ liệu công khai cho app CLB ECO. Chỉ có họ tên, lớp, ban và điểm.
  * Mỗi giai đoạn một bảng xếp hạng: giai đoạn 1 chỉ có thành viên chính thức, giai đoạn 2 có tất cả.
  * Ở giai đoạn 2 có thêm điểm giai đoạn 1 và tổng cả nhiệm kỳ (chỉ thành viên chính thức đã ở giai đoạn 1).
  * @param {Array<Object>} thanhVien
@@ -565,7 +565,10 @@ function dongBoTaiKhoan_(taiKhoan, thanhVien) {
 
 /* ===================== Phân quyền ===================== */
 
-/** Chức năng mỗi vai trò được dùng. TV là thành viên thường: xem xếp hạng, lịch sử điểm của mình, gửi góp ý. */
+/**
+ * Chức năng mỗi vai trò được dùng. TV là thành viên thường: xem task, KPI, điểm của mình, gửi góp ý.
+ * HR thêm phần phụ trách (xem KPI của ban, thành viên được phân) hoặc seeding, tuỳ BOD cấp quyền; chỉ BOD giao và sửa task.
+ */
 var QUYEN = {
   BOD: ['congdiem', 'task', 'danhgia', 'mail', 'duyetmail', 'baocao', 'gopy', 'log', 'caidat', 'lichsudiem'],
   HR: ['task', 'guigopy'],
@@ -601,28 +604,61 @@ function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g,
 
 /**
  * Quyền với task của một người (theo tên người phụ trách).
- * BOD: mọi BOD như nhau, xem và quản lý task của mọi thành viên (BOD không có task).
- * HR là COO của ban nào thì xem, nhập, sửa task của thành viên ban đó (cột BanQuanLy); chưa được phân ban thì chỉ xem task của mình.
- * Còn lại: chỉ xem task của mình.
+ * BOD: mọi BOD như nhau, xem và quản lý task của mọi thành viên trừ BOD (BOD không giao task cho nhau).
+ * Còn lại: chỉ xem task của mình. HR phụ trách xem KPI của ban và thành viên được phân ở trang riêng (phamViHr_).
  * @return {{xem:function(string):boolean, sua:function(string):boolean, moTa:string}}
  */
-function quyenTask_(tk, chucVu, banCua) {
+function quyenTask_(tk, chucVu, banCua, phanCong) {
   var toi = String(tk.HoVaTen);
   var ban = function (n) { return chuanChu_(banCua[String(n)]); };
-  var cuaToi = function (n) { return String(n) === toi; };
   if (String(tk.VaiTro) === 'BOD') {
     var khongBod = function (n) { return ban(n) !== 'BOD'; };
     return { xem: khongBod, sua: khongBod, moTa: '' };
   }
   if (String(tk.VaiTro) === 'HR') {
-    var dsBan = banCuaHr_(tk.BanQuanLy);
-    var quanLy = function (n) { return dsBan.indexOf(nhomBan_(ban(n))) >= 0; };
-    return {
-      xem: function (n) { return cuaToi(n) || quanLy(n); }, sua: quanLy,
-      moTa: dsBan.length ? 'Bạn là COO ban ' + dsBan.join(', ') + '.' : 'BOD chưa phân ban cho bạn nên bạn chỉ thấy task của mình.'
-    };
+    // HR nhập, sửa, đổi trạng thái task giúp BOD cho những người mình phụ trách (không phải task của chính mình).
+    var pv = phamViHr_(tk, banCua, phanCong);
+    var quanLy = function (n) { return String(n) !== toi && pv.thuoc(n); };
+    return { xem: quanLy, sua: quanLy, moTa: pv.co ? '' : 'BOD chưa giao ban hay thành viên nào cho bạn phụ trách.' };
   }
-  return { xem: cuaToi, sua: function () { return false; }, moTa: '' };
+  return { xem: function (n) { return String(n) === toi; }, sua: function () { return false; }, moTa: '' };
+}
+
+/**
+ * Những thành viên một HR phụ trách: mọi người thuộc các ban ở cột BanQuanLy, cộng những người BOD phân riêng cho HR đó
+ * (tab PhuTrachHr). Chỉ tài khoản HR mới có phạm vi. BOD không nằm trong phạm vi của ai.
+ * @return {{ban:Array<string>, rieng:Array<string>, co:boolean, thuoc:function(string):boolean}}
+ */
+function phamViHr_(tk, banCua, phanCong) {
+  var kq = { ban: [], rieng: [], co: false, thuoc: function () { return false; } };
+  if (!tk || String(tk.VaiTro) !== 'HR') return kq;
+  var toi = String(tk.HoVaTen).toLowerCase();
+  kq.ban = banCuaHr_(tk.BanQuanLy);
+  (phanCong || []).forEach(function (p) { if (String(p.NguoiHr || '').trim().toLowerCase() === toi && String(p.HoVaTen).trim()) kq.rieng.push(String(p.HoVaTen).trim()); });
+  var rieng = {};
+  kq.rieng.forEach(function (n) { rieng[n.toLowerCase()] = true; });
+  kq.co = !!(kq.ban.length || kq.rieng.length);
+  kq.thuoc = function (n) {
+    var b = nhomBan_(banCua[String(n)]);
+    if (b === 'BOD') return false;
+    return rieng[String(n).toLowerCase()] === true || kq.ban.indexOf(b) >= 0;
+  };
+  return kq;
+}
+
+/**
+ * Ngày nộp ghi vào sheet khi đánh xong task: xong đúng hạn thì là hôm nay (hoặc hạn chót nếu đã qua hạn),
+ * trễ hạn thì là hôm nay (hoặc ngày sau hạn chót nếu chưa tới hạn), để cột Đúng hạn ra đúng lựa chọn.
+ */
+function congNgayChuoi_(s, n) {
+  var p = String(s).split('-');
+  return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)).toISOString().slice(0, 10);
+}
+
+function ngayNopTheoKieu_(kieu, han, hom) {
+  if (!han) return hom;
+  if (kieu === 'tre') return hom > han ? hom : congNgayChuoi_(han, 1);
+  return hom < han ? hom : han;
 }
 
 /** Trả về chuỗi lỗi, hoặc '' nếu mật khẩu mới hợp lệ. */
@@ -738,7 +774,7 @@ function chuanHoaLoaiHoatDong_(ds) {
     if (dc && daGan[dc]) return { ds: [], loi: '"' + TEN_DUNG_CHO[dc] + '" đang gắn với hai loại: ' + daGan[dc] + ' và ' + ten + '. Chỉ chọn một.' };
     if (dc) daGan[dc] = ten;
     daCo[ten.toLowerCase()] = true;
-    // CongTay = false: chỉ hiện trên app eco (ví dụ điểm app tự cộng qua báo cáo seeding), BOD không chọn được khi cộng điểm.
+    // CongTay = false: chỉ hiện trên app CLB ECO (ví dụ điểm app tự cộng qua báo cáo seeding), BOD không chọn được khi cộng điểm.
     var dong = { TenLoai: ten, Diem: diem, CongTay: ds[i].congTay === false ? 'khong' : 'co' };
     if (gh || dc) { dong.GioiHan = gh || ''; dong.DungCho = dc; }
     kq.push(dong);
@@ -829,7 +865,7 @@ function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio, phanCong, mie
   var k = kiemTraTask_(yeuCau, thanhVien);
   if (k.loi) return { dong: [], loi: k.loi };
   var mien = k.nguoi.filter(function (n) { return (mienTask || []).some(function (m) { return String(m).toLowerCase() === n.toLowerCase(); }); });
-  if (mien.length) return { dong: [], loi: mien.join(', ') + ' thuộc nhóm SUP-RES, được miễn task ban.' };
+  if (mien.length) return { dong: [], loi: mien.join(', ') + ' đang được miễn task (ôn thi chuyển cấp).' };
   return {
     loi: '',
     dong: k.nguoi.map(function (n) {
@@ -847,9 +883,8 @@ function taoDongTask_(yeuCau, thanhVien, nguoiTao, vaiTro, bayGio, phanCong, mie
 var CHAT_LUONG = { HOAN_CHINH: 'Hoàn chỉnh', CAN_SUA: 'Cần chỉnh sửa', SO_SAI: 'Làm quá sơ sài' };
 var DUNG_HAN = { DUNG: 'Đúng hạn', TRE: 'Trễ hạn', KHONG_LAM: 'Không làm' };
 var KET_QUA = { DAT: 'Đạt', CHUA_DAT: 'Chưa đạt', CHO: 'Chờ đánh giá' };
-/** Hoàn thành khi đạt từ 80% việc được giao; HR quên nhắc tối đa 20% số lượt được phân. */
-var TI_LE_DAT = 80, TI_LE_QUEN_TOI_DA = 20, LUOT_NHAC_MOI_TASK = 2;
-var LOAI_HR_QUEN = ['Nhắc deadline', 'Chúc mừng sinh nhật', 'Báo cáo seeding'];
+/** Hoàn thành khi đạt từ 80% việc được giao. Ban HR tính như mọi ban (không theo dõi lượt nhắc nữa). */
+var TI_LE_DAT = 80;
 
 /**
  * Đúng hạn hay không của một task: Đã xong thì so ngày nộp với hạn chót (hạn đã gia hạn hợp lệ),
@@ -910,19 +945,6 @@ function tongKpiTask_(ds) {
   });
   kq.tiLe = phanTram_(kq.dat, kq.dat + kq.chuaDat);
   return kq;
-}
-
-/**
- * KPI của một HR theo lượt nhắc: mỗi task (không tính task huỷ) của thành viên HR đó phụ trách có 2 lượt.
- * Số lần quên tối đa = 20% × số lượt, làm tròn. Mọi lần BOD ghi nhận quên (nhắc deadline, sinh nhật, seeding) đều tính.
- */
-function kpiHr_(task, quen, tenHr) {
-  var k = String(tenHr).toLowerCase();
-  var soTask = task.filter(function (t) { return String(t.hrPhuTrach || '').toLowerCase() === k && t.trangThai !== TRANG_THAI_TASK.HUY; }).length;
-  var soQuen = quen.filter(function (q) { return String(q.NguoiHr || '').toLowerCase() === k && String(q.TrangThai || '') !== 'Đã huỷ'; }).length;
-  var luot = soTask * LUOT_NHAC_MOI_TASK;
-  var toiDa = Math.round(luot * TI_LE_QUEN_TOI_DA / 100);
-  return { soTask: soTask, luot: luot, soQuen: soQuen, toiDa: toiDa, dat: soQuen <= toiDa };
 }
 
 /** HR phụ trách một thành viên: theo bảng phân công; chưa phân công thì là HR đã nhập task (nếu người nhập là HR). */
@@ -1024,8 +1046,8 @@ function soanTinNhac_(tenNguoiNhan, ds, homNay, laNhanSu) {
   if (!ds.length) return '';
   var sx = ds.slice().sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : 0; });
   var dau = laNhanSu
-    ? 'eco nhắc việc. Chào ' + tenNguoiNhan + ', nhờ bạn nhắc các bạn sau qua Messenger:'
-    : 'eco nhắc việc. Chào ' + tenNguoiNhan + ', bạn có ' + ds.length + ' task cần chú ý:';
+    ? 'CLB ECO nhắc việc. Chào ' + tenNguoiNhan + ', nhờ bạn nhắc các bạn sau qua Messenger:'
+    : 'CLB ECO nhắc việc. Chào ' + tenNguoiNhan + ', bạn có ' + ds.length + ' task cần chú ý:';
   return dau + '\n' + sx.map(function (t) {
     return '• ' + (laNhanSu ? t.nguoi + ': ' : '') + t.ten + ' (hạn ' + hienNgay_(t.hanChot) + ', ' + moTaHan_(t.hanChot, homNay) + ')';
   }).join('\n');
@@ -1445,7 +1467,7 @@ function xepTheoBan_(nguoi, thuTu) {
 /** Kiểm tra thông tin Google trả về cho một ID token. Trả về '' nếu hợp lệ. */
 function kiemTraTokenGoogle_(info, clientId, bayGioGiay) {
   if (!info || !info.email) return 'Không xác nhận được tài khoản Google. Bạn thử lại nhé.';
-  if (String(info.aud) !== String(clientId)) return 'Mã đăng nhập không phải của app eco.';
+  if (String(info.aud) !== String(clientId)) return 'Mã đăng nhập không phải của app CLB ECO.';
   if (['accounts.google.com', 'https://accounts.google.com'].indexOf(String(info.iss)) < 0) return 'Mã đăng nhập không phải do Google cấp.';
   if (!(info.email_verified === true || info.email_verified === 'true')) return 'Email Google này chưa được xác minh.';
   if (Number(info.exp) < bayGioGiay) return 'Mã đăng nhập đã hết hạn. Bạn thử lại nhé.';
@@ -1741,10 +1763,12 @@ function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGi
   return kq;
 }
 
-/* ===================== Báo cáo seeding trong app (HR SUP-SEED) ===================== */
+/* ===================== Báo cáo seeding trong app (HR phụ trách seeding) ===================== */
 
 /** Nhóm HR do BOD chọn cho từng người, ngoài COO (COO là các ban ở cột BanQuanLy). */
 var NHOM_HR = ['SUP-SEED', 'SUP-RES', 'CRE'];
+/** Tên tiếng Việt hiện trong app (trong sheet vẫn lưu mã cũ để dữ liệu cũ dùng tiếp được). */
+var TEN_NHOM_HR = { 'SUP-SEED': 'Phụ trách seeding', 'SUP-RES': 'Miễn task (ôn thi chuyển cấp)', 'CRE': 'Phụ trách sinh nhật' };
 
 /** Đọc ô NhomHr ("SUP-SEED, CRE") thành danh sách nhóm hợp lệ. */
 function nhomHr_(giaTri) {
@@ -1756,7 +1780,7 @@ function nhomHr_(giaTri) {
   return ds;
 }
 
-/** Được điền báo cáo seeding: BOD, hoặc người được BOD xếp vào nhóm SUP-SEED. */
+/** Được điền báo cáo seeding: BOD, hoặc người được BOD cấp quyền phụ trách seeding (mã SUP-SEED). */
 function duocBaoCaoSeeding_(tk) {
   return !!tk && (String(tk.VaiTro) === 'BOD' || nhomHr_(tk.NhomHr).indexOf('SUP-SEED') >= 0);
 }
@@ -1805,20 +1829,21 @@ function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, ba
   yc = yc || {};
   var link = String(yc.link || '').trim();
   if (!linkHopLe_(link)) return loi('Dán link bài đăng (bắt đầu bằng https://).');
-  var lucDang = Number(yc.lucDang);
-  if (!lucDang || isNaN(new Date(lucDang).getTime())) return loi('Chọn thời gian bài được đăng.');
+  // Giờ đăng bài không bắt buộc: không ghi thì lấy giờ gửi báo cáo (người điền gửi sau khi bài đủ 48 giờ).
+  var lucDang = Number(yc.lucDang) || 0;
+  if (lucDang && isNaN(new Date(lucDang).getTime())) return loi('Thời gian đăng bài chưa đúng.');
   if (lucDang > bayGio.getTime() + 5 * 60000) return loi('Thời gian đăng bài đang ở tương lai. Kiểm tra lại ngày giờ.');
   var khoaLink = chuanLinkBai_(link);
   var trung = (baoCaoCu || []).filter(function (b) { return String(b.TrangThai || '') !== 'Đã huỷ' && chuanLinkBai_(b.LinkBai) === khoaLink; })[0];
   if (trung) return loi('Bài này đã có báo cáo của ' + String(trung.NguoiNop) + '. Muốn sửa thì nhờ BOD huỷ báo cáo cũ rồi điền lại.');
   var loaiReact = loaiDungCho_(loaiHoatDong, DUNG_CHO.REACT), loaiComment = loaiDungCho_(loaiHoatDong, DUNG_CHO.COMMENT);
   var r = khopTenSeeding_(yc.react, thanhVien), c = khopTenSeeding_(yc.comment, thanhVien);
-  if (r.ten.length && !loaiReact) return loi('Chưa có loại hoạt động dùng cho react. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
-  if (c.ten.length && !loaiComment) return loi('Chưa có loại hoạt động dùng cho comment. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.');
+  if (r.ten.length && !loaiReact) return loi('Chưa có loại hoạt động dùng cho react. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.');
+  if (c.ten.length && !loaiComment) return loi('Chưa có loại hoạt động dùng cho comment. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.');
   if (!r.ten.length && !c.ten.length && !r.khongKhop.length && !c.khongKhop.length) return loi('Bạn chưa dán tên ai.');
   kq.react = r.ten; kq.comment = c.ten;
   r.khongKhop.concat(c.khongKhop).forEach(function (x) { if (kq.khongKhop.indexOf(x) < 0) kq.khongKhop.push(x); });
-  var gio = (bayGio.getTime() - lucDang) / 3600000;
+  var gio = lucDang ? (bayGio.getTime() - lucDang) / 3600000 : 48;
   if (gio < 48) kq.canhBao.push('Bài mới đăng được ' + Math.floor(gio) + ' giờ, chưa đủ 48 giờ. Ai react hoặc comment sau lúc gửi sẽ không được cộng.');
   if (gio > 24 * 7) kq.canhBao.push('Bài đã đăng hơn 7 ngày. Chỉ ghi những người react hoặc comment trong 48 giờ đầu.');
   var them = function (ds, loai) {
@@ -1834,7 +1859,7 @@ function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, ba
   var vuot = vuotGioiHan_(kq.dong, loaiHoatDong, lichSu || [], ky);
   if (vuot) return loi(vuot);
   kq.bao = {
-    ThoiGian: bayGio, NguoiNop: nguoiNop, LinkBai: link, LucDang: new Date(lucDang),
+    ThoiGian: bayGio, NguoiNop: nguoiNop, LinkBai: link, LucDang: lucDang ? new Date(lucDang) : '',
     React: r.ten.join(', '), Comment: c.ten.join(', '), KhongKhop: kq.khongKhop.join(', ').slice(0, 2000), TrangThai: 'Đã cộng', NguoiHuy: ''
   };
   return kq;
@@ -2061,7 +2086,7 @@ function dongDiemLogVuot_(suKien, buoi, thanhVien, loaiHoatDong, ky, nguoiCong, 
     });
   });
   var tl = Object.keys(thieu);
-  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Loại hoạt động và mức điểm.' };
+  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.' };
   if (dong.length && !ky) return { dong: [], loi: 'Chưa có giai đoạn nào nên chưa cộng được điểm log vượt.' };
   return { dong: dong, loi: '' };
 }
@@ -2118,12 +2143,11 @@ function xepHangTop_(ds, khoa, tiLe) {
 }
 
 /**
- * Phần trăm KPI task để xét certificate. Thành viên ban HR: phần trăm lượt nhắc không quên.
- * SUP-RES được miễn: null (không xét phần task). Chưa có task nào có kết quả: null.
+ * Phần trăm KPI task để xét certificate. Người được miễn task (ôn thi chuyển cấp): null (không xét phần task).
+ * Chưa có task nào có kết quả: null.
  */
 function phanTramTaskCert_(k) {
   if (k.mien) return null;
-  if (k.hr) return k.hr.luot ? Math.round((k.hr.luot - k.hr.soQuen) * 100 / k.hr.luot + 1e-9) : null;
   return k.task ? k.task.tiLe : null;
 }
 
@@ -2131,7 +2155,7 @@ function phanTramTaskCert_(k) {
  * Xét certificate cho từng người.
  * ds: [{ ten, ban, boSung, kpi (như kpiCuaNguoi_), diemCaKy, diemGd2 }]. diemCaKy: tổng cả nhiệm kỳ (thành viên chính thức),
  * diemGd2: điểm giai đoạn 2.
- * - Log ≥ 80% và task ≥ 80% (HR: không quên quá 20%): cấp.
+ * - Log ≥ 80% và task ≥ 80%: cấp.
  * - Mỗi phần ≥ 60%: xét bù trừ. Chính thức xếp theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức; bổ sung xếp theo
  *   điểm giai đoạn 2 trong tất cả thành viên. Lọt top 40% (tính cả người bằng điểm, 0 điểm không tính) thì cấp.
  * - Có phần dưới 60%: chưa cấp.
@@ -2144,9 +2168,8 @@ function xetCertificate_(ds) {
   return ds.map(function (p) {
     var log = p.kpi.log ? p.kpi.log.tiLe : null, task = phanTramTaskCert_(p.kpi);
     var dat = function (x, muc) { return x === null || x === undefined || x >= muc; };
-    var taskDat = p.kpi.hr ? (p.kpi.hr.luot ? p.kpi.hr.dat : true) : dat(task, MUC_DAT);
     var kq = { ten: p.ten, ban: p.ban, boSung: !!p.boSung, log: log, task: task, mien: !!p.kpi.mien, buTru: false, top40: false, hangBuTru: null, soBuTru: null, diemBuTru: null };
-    if (dat(log, MUC_DAT) && taskDat) kq.ketQua = KQ_CERT.CAP;
+    if (dat(log, MUC_DAT) && dat(task, MUC_DAT)) kq.ketQua = KQ_CERT.CAP;
     else if (dat(log, MUC_BU_TRU) && dat(task, MUC_BU_TRU)) {
       var xh = p.boSung ? xhBs : xhCt, k = String(p.ten).toLowerCase();
       kq.buTru = true;
@@ -2186,12 +2209,12 @@ if (typeof module !== 'undefined') {
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, dongBoTaiKhoan: dongBoTaiKhoan_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
-    coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
+    coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, phamViHr: phamViHr_, ngayNopTheoKieu: ngayNopTheoKieu_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
     trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_,
-    CHAT_LUONG: CHAT_LUONG, DUNG_HAN: DUNG_HAN, KET_QUA: KET_QUA, LOAI_HR_QUEN: LOAI_HR_QUEN, dungHanTask: dungHanTask_, ketQuaTask: ketQuaTask_, kiemTraDanhGia: kiemTraDanhGia_,
-    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, kpiHr: kpiHr_, hrPhuTrach: hrPhuTrach_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    CHAT_LUONG: CHAT_LUONG, DUNG_HAN: DUNG_HAN, KET_QUA: KET_QUA, dungHanTask: dungHanTask_, ketQuaTask: ketQuaTask_, kiemTraDanhGia: kiemTraDanhGia_,
+    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, hrPhuTrach: hrPhuTrach_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
     lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,
@@ -2205,7 +2228,7 @@ if (typeof module !== 'undefined') {
     COT_DA_CONG_FORM: COT_DA_CONG_FORM, chuanTenFb: chuanTenFb_,
     TI_LE_TOP: TI_LE_TOP, soNguoiTop: soNguoiTop_, topTheoDiem: topTheoDiem_, vuotGioiHan: vuotGioiHan_, gioiHanLoai: gioiHanLoai_,
     DUNG_CHO: DUNG_CHO, MUC_DIEM_QUY_CHE: MUC_DIEM_QUY_CHE, loaiDungCho: loaiDungCho_,
-    NHOM_HR: NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_,
+    NHOM_HR: NHOM_HR, TEN_NHOM_HR: TEN_NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_,
     TRANG_THAI_BUOI: TRANG_THAI_BUOI, SU_KIEN_CHOT: SU_KIEN_CHOT, SU_KIEN_HUY: SU_KIEN_HUY, khoiLop: khoiLop_, giaoBanDau: giaoBanDau_, chuanHoaSuKienLog: chuanHoaSuKienLog_, chuanHoaBuoiLog: chuanHoaBuoiLog_,
     soBuoiThucDien: soBuoiThucDien_, giaoCuoi: giaoCuoi_, kpiLogSuKien: kpiLogSuKien_, kpiLogCuaNguoi: kpiLogCuaNguoi_, dongDiemLogVuot: dongDiemLogVuot_, docDangKyLog: docDangKyLog_,
     KQ_CERT: KQ_CERT, xepHangTop: xepHangTop_, phanTramTaskCert: phanTramTaskCert_, xetCertificate: xetCertificate_, danhSachKhenThuong: danhSachKhenThuong_
