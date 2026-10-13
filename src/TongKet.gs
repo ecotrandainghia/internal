@@ -25,6 +25,7 @@ function tinhTongKet_() {
   ds.forEach(function (p, i) {
     cert[i].choDanhGia = p.kpi.task ? p.kpi.task.cho : 0;
     cert[i].log = p.kpi.log.tiLe;
+    cert[i].khoi = p.kpi.khoi || null;
     cert[i].chiTietLog = p.kpi.log.thamGia + '/' + String(p.kpi.log.giaoCuoi).replace('.', ',');
     choDanhGia += cert[i].choDanhGia;
   });

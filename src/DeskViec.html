@@ -6,7 +6,7 @@ VIEWS.diem = function () {
   dangTai();
   goiPhien('layDuLieuCongDiem').then(function (d) {
     if (page !== 'diem') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Cộng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') + 'Chọn loại hoạt động và những người được cộng. BOD không tham gia cộng điểm nên không có trong danh sách.</p></div></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Cộng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') + 'Chọn loại hoạt động và những người được cộng. BOD không tham gia cộng điểm nên không có trong danh sách.</p></div><button class="btn ghost" data-p="caidat" data-s2="types">' + ic('star', 16) + 'Thang điểm</button></div>' +
       (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" ở menu ECO hậu kỳ trong Google Sheet.</span></div>') +
       '<div class="diem-grid"><form class="card form" id="fd">' +
       '<div><div style="font-weight:600;font-size:13px;margin-bottom:8px">Loại hoạt động</div><div class="types" id="types">' +
@@ -48,33 +48,34 @@ function hienNgay(s) { var p = String(s).split('-'); return p.length === 3 ? p[2
 function congNgay(s, n) { var p = s.split('-'); var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)); return d.toISOString().slice(0, 10); }
 /**
  * Quản lý task: BOD giao, sửa, đổi trạng thái, đánh giá task của mọi thành viên (trừ BOD).
- * HR phụ trách làm giúp BOD với những người mình phụ trách (trang qltask), trừ đánh giá.
+ * HR phụ trách ban làm giúp BOD với thành viên các ban mình phụ trách (Ban phụ trách > Task), trừ đánh giá.
  * Trang task của người không phải BOD là task và KPI task của chính mình.
  */
 VIEWS.task = function () { if (NGUOI.vaiTro !== 'BOD') veKpiCaNhan('task'); else veQuanLyTask(); };
-VIEWS.qltask = function () { veQuanLyTask(); };
-function veQuanLyTask() {
-  var trang = page, bod = NGUOI.vaiTro === 'BOD', veLai = function () { VIEWS[trang](); };
+function veQuanLyTask(tabs) {
+  var trang = page, tab = sub, bod = NGUOI.vaiTro === 'BOD', veLai = function () { VIEWS[trang](); };
   dangTai();
   goiPhien('layDuLieuTask').then(function (d) {
-    if (page !== trang) return;
-    var loc = 'mo', tim = '', nhom = '';
+    if (page !== trang || sub !== tab) return;
+    var loc = 'mo', tim = '', nhom = '', khoi = 0;
     var laMo = function (t) { return t.trangThai !== 'Đã xong' && t.trangThai !== 'Đã huỷ' && t.trangThai !== 'Không hoàn thành'; };
     var hop = function (t, k) { return k === 'mo' ? laMo(t) : t.trangThai === k; };
-    var dem = function (k) { return d.task.filter(function (t) { return hop(t, k) && (!nhom || t.nhom === nhom); }).length; };
+    var dem = function (k) { return d.task.filter(function (t) { return hop(t, k) && (!nhom || t.nhom === nhom) && (!khoi || t.khoi === khoi); }).length; };
     var LOC = [['mo', 'Đang mở'], ['Sắp đến hạn', 'Sắp đến hạn'], ['Trễ hạn', 'Trễ hạn'], ['Không hoàn thành', 'Không hoàn thành'], ['Đã xong', 'Đã xong'], ['Đã huỷ', 'Đã huỷ']];
-    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(trang)) + '</h2><p class="lead">' + (bod ? 'Giao task cho thành viên (không giao cho BOD), đánh dấu xong khi thành viên báo nộp, rồi đánh giá chất lượng. HR phụ trách cũng nhập và cập nhật task giúp BOD.' : 'Nhập và cập nhật task giúp BOD cho ' + (d.phamVi ? 'những người bạn phụ trách. ' + esc(d.phamVi) : 'những người bạn phụ trách.') + ' Chỉ BOD đánh giá chất lượng.') + '</p></div>' + (d.thanhVien.length ? '<button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button>' : '') + '</div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>' + esc(tenTrang(trang)) + '</h2><p class="lead">' + (bod ? 'Giao task cho thành viên (không giao cho BOD), đánh dấu xong khi thành viên báo nộp, rồi đánh giá chất lượng. HR phụ trách cũng nhập và cập nhật task giúp BOD.' : 'Nhập và cập nhật task giúp BOD cho thành viên các ban bạn phụ trách.' + (d.phamVi ? ' ' + esc(d.phamVi) : '') + ' Chỉ BOD đánh giá chất lượng.') + '</p></div>' + (d.thanhVien.length ? '<button class="btn" id="newt">' + ic('plus', 16) + 'Tạo task</button>' : '') + '</div>' +
+      (tabs ? tabTrang(tabs) : '') +
       (bod && d.thongBao ? '<div id="zbox">' + dongThongBao(d.thongBao) + '</div>' : '') +
       '<div class="toolbar"><div class="seg" id="tfil">' + LOC.map(function (x) { return '<button data-f="' + x[0] + '" aria-pressed="' + (x[0] === loc) + '">' + x[1] + ' <span class="n">' + dem(x[0]) + '</span></button>'; }).join('') + '</div>' +
       '<input type="search" id="tq" placeholder="Tìm theo tên task hoặc người phụ trách…" aria-label="Tìm task"></div>' +
       (d.dsNhom.length > 1 ? '<div class="toolbar"><div class="seg" id="tban">' + [''].concat(d.dsNhom).map(function (n) { return '<button data-b="' + esc(n) + '" aria-pressed="' + (n === nhom) + '">' + (n ? esc(n) : 'Mọi ban') + '</button>'; }).join('') + '</div></div>' : '') +
+      (chipKhoi(d.task, 0, 'tkhoi') ? '<div class="toolbar">' + chipKhoi(d.task, 0, 'tkhoi') + '</div>' : '') +
       '<div id="tam"></div><div class="tasks" id="tl"></div>' +
       '<p class="hint">“Đang mở” gồm mọi task chưa xong, chưa huỷ và chưa bị tính không hoàn thành. “Sắp đến hạn” là còn ' + (d.sapDenHanNgay === 0 ? 'đúng ngày hạn' : d.sapDenHanNgay + ' ngày trở xuống') + '. Trễ quá ' + d.khongHoanThanhSau + ' ngày mà chưa xong thì tính là không hoàn thành và thôi nhắc, nhưng vẫn xác nhận xong được nếu người làm đã nộp. Thành viên xin gia hạn trước hạn ít nhất 24 giờ thì bấm Gia hạn. Task đã xong được BOD đánh giá chất lượng, app tự ra Đạt hoặc Chưa đạt. Task đã xong, đã huỷ hoặc không hoàn thành được giữ ở đây 120 ngày.</p>';
 
     var ve = function () {
       var q = boDau(tim);
       $$('#tfil [data-f]').forEach(function (x) { x.querySelector('.n').textContent = dem(x.getAttribute('data-f')); });
-      var rows = d.task.filter(function (t) { return hop(t, loc) && (!nhom || t.nhom === nhom) && (!q || boDau(t.ten + ' ' + t.nguoi).indexOf(q) >= 0); });
+      var rows = d.task.filter(function (t) { return hop(t, loc) && (!nhom || t.nhom === nhom) && (!khoi || t.khoi === khoi) && (!q || boDau(t.ten + ' ' + t.nguoi).indexOf(q) >= 0); });
       $('#tl').innerHTML = rows.map(function (t) {
         var i = d.task.indexOf(t), mo = laMo(t), st = ST_TASK[t.trangThai] || ['p-mute', ''];
         return '<div class="task ' + st[1] + '"><div><div class="tt">' + esc(t.ten) + '</div>' + (t.moTa ? '<div class="md">' + esc(t.moTa) + '</div>' : '') +
@@ -157,6 +158,8 @@ function veQuanLyTask() {
     if ($('#newt')) $('#newt').onclick = function () { moForm(null); };
     $('#tfil').onclick = function (e) { var b = e.target.closest('[data-f]'); if (!b) return; loc = b.getAttribute('data-f'); $$('#tfil button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     $('#tq').oninput = function (e) { tim = e.target.value; ve(); };
+    ganTabTrang();
+    ganChip('tkhoi', function (k) { khoi = k; ve(); });
     if ($('#tban')) $('#tban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; nhom = b.getAttribute('data-b'); $$('#tban button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     ve();
   }).catch(loiTai);
@@ -351,46 +354,52 @@ function vietGopY() {
 var CD = null;
 /*
  * Mục cài đặt: [mã, biểu tượng, tên, mô tả ngắn (hàm), từ khoá tìm, trang mở thẳng (nếu có)].
- * Nhóm đặt theo mục đích, xếp theo thứ tự BOD hay mở: phân quyền đầu nhiệm kỳ, rồi điểm và hoạt động, thông báo, hộp thư, giao diện;
- * phần Của tôi luôn ở cuối (người khác chỉ có phần này).
+ * Nhóm và thứ tự giữ đúng cấu trúc cha con BOD đã chốt trong sheet góc nhìn (nhóm tên trống là mục không có nhóm cha).
+ * Người khác chỉ có các mục của phần Của tôi, hiện thẳng dưới Cài đặt.
  */
-var CUA_TOI = ['Của tôi', [['tbtoi', 'bell', 'Thông báo của tôi', function () { return NGUOI.vaiTro === 'BOD' ? 'Cách nhận qua Zalo, app trên điện thoại hoặc mail' : 'Tự nhắc task, cách nhận qua Zalo, app hoặc mail'; }, 'thông báo của tôi nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử nhắc'],
+var CUA_TOI = ['Của tôi', [['tbtoi', 'bell', 'Thông báo', function () { return NGUOI.vaiTro === 'BOD' ? 'Cách nhận qua Zalo, app trên điện thoại hoặc mail' : 'Tự nhắc task, cách nhận qua Zalo, app hoặc mail'; }, 'thông báo của tôi nhận zalo app điện thoại mail cách nhận máy gỡ gửi thử nhắc'],
     ['matkhau', 'key', 'Mật khẩu', function () { return 'Đổi mật khẩu đăng nhập của bạn'; }, 'mật khẩu đổi password đăng nhập'],
     ['avatar', 'image', 'Ảnh đại diện', function () { return NGUOI.anh ? 'Đang dùng ảnh riêng' : 'Chưa có ảnh'; }, 'ảnh đại diện avatar hình'],
-    ['theme', 'sun', 'Chế độ sáng tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']]];
+    ['theme', 'sun', 'Giao diện sáng tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']]];
 var SET = [
-  ['Thành viên và phân quyền', [['hr', 'users', 'Phân quyền HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' HR · phụ trách ban, thành viên, seeding, sinh nhật'; }, 'ban nhân sự hr quyền tài khoản phân ban phụ trách thành viên seeding sinh nhật miễn task ôn thi mã hr'],
-    ['ucv', 'users', 'Phân quyền UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' UCV · gửi mail của CLB'; }, 'UCV ucv tài khoản mail'],
-    ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại quên'],
-    ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth'],
-    ['loginbg', 'eye', 'Ảnh nền đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Đang dùng nền xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background']]],
-  ['Hoạt động CLB', [['types', 'star', 'Thang điểm hoạt động', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
-    ['pins', 'pin', 'Ghim và quy chế', function () { return CD.ghim.length + ' link ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế') + '. Hiện ở trang chủ thành viên'; }, 'link ghim quy chế luật'],
-    ['logcfg', 'file', 'File mẫu log', function () { return CD.log.linkMau ? 'Đã có file mẫu' + (CD.log.linkThuMuc ? ' và thư mục lưu' : '') : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive lưu'],
-    ['seeding', 'chat', 'Báo cáo seeding', function () { return 'Điền báo cáo seeding, xem lịch sử'; }, 'seeding báo cáo react comment lịch sử điền', 'seeding']]],
-  ['Thông báo và nhắc việc', [['due', 'clock', 'Lịch nhắc task', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'không hoàn thành sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
-    ['tbkhac', 'users', 'Thông báo của thành viên', function () { return 'Cách nhận của từng người, gửi thử'; }, 'thông báo mọi người người khác chung nhận zalo app mail cách nhận máy gỡ gửi thử'],
-    ['notify', 'mail', 'Mail báo cho BOD', function () { var ds = [CD.baoGopY ? 'góp ý' : '', CD.baoThuChoDuyet ? 'mail chờ duyệt' : '', CD.baoSeeding ? 'báo cáo seeding' : ''].filter(String); return ds.length ? 'Mail cho BOD khi có ' + ds.join(', ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv seeding điền báo cáo'],
-    ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối']]],
+  ['Thông báo', [['tbkhac', 'users', 'Thông báo của thành viên', function () { return 'Cách nhận của từng người, gửi thử'; }, 'thông báo mọi người người khác chung nhận zalo app mail cách nhận máy gỡ gửi thử'],
+    ['due', 'clock', 'Lịch nhắc task', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'không hoàn thành sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
+    ['notify', 'mail', 'Thông báo khác', function () { var ds = [CD.baoGopY ? 'góp ý' : '', CD.baoThuChoDuyet ? 'mail chờ duyệt' : '', CD.baoSeeding ? 'báo cáo seeding' : ''].filter(String); return ds.length ? 'Mail cho BOD khi có ' + ds.join(', ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv seeding điền báo cáo']]],
+  ['Hoạt động CLB', [['logcfg', 'file', 'File mẫu log', function () { return CD.log.linkMau ? 'Đã có file mẫu' + (CD.log.linkThuMuc ? ' và thư mục lưu' : '') : 'Chưa có file mẫu'; }, 'log mẫu template thư mục drive lưu'],
+    ['seeding', 'chat', 'Báo cáo seeding', function () { return 'Điền báo cáo seeding, xem lịch sử'; }, 'seeding báo cáo react comment lịch sử điền', 'seeding'],
+    ['pins', 'pin', 'Ghim và quy chế', function () { return CD.ghim.length + ' link ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế') + '. Hiện ở trang chủ thành viên'; }, 'link ghim quy chế luật']]],
   ['Hộp thư', [['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt'],
     ['sign', 'edit', 'Chữ ký', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature']]],
-  ['Giao diện', [['chude', 'star', 'Chủ đề theo mùa và sự kiện', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí sự kiện']]],
+  ['Tài khoản', [['quyen', 'users', 'Phân quyền', function () { var dem = function (v) { return CD.taiKhoan.filter(function (t) { return t.vaiTro === v; }).length; }; return dem('HR') + ' HR (phụ trách ban, phụ trách seeding), ' + dem('UCV') + ' UCV'; }, 'phân quyền cấp quyền hr ucv nhân sự phụ trách ban seeding mã hr tài khoản'],
+    ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại quên'],
+    ['loginbg', 'eye', 'Ảnh nền đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Đang dùng nền xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background'],
+    ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth']]],
+  ['', [['chude', 'star', 'Giao diện theo mùa và sự kiện', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí sự kiện']]],
   CUA_TOI
 ];
+/** Mục mở từ nút trong trang khác, không nằm trong danh sách cài đặt (giữ đúng cấu trúc đã chốt). */
+var CAI_DAT_AN = [['types', 'star', 'Thang điểm hoạt động', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
+  ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối'],
+  ['hr', 'users', 'Phân quyền HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' HR · phụ trách ban, seeding, sinh nhật'; }, 'ban nhân sự hr quyền tài khoản phân ban phụ trách thành viên seeding sinh nhật miễn task ôn thi mã hr'],
+  ['ucv', 'users', 'Phân quyền UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' UCV · gửi mail của CLB'; }, 'UCV ucv tài khoản mail']];
 /** Người không phải BOD chỉ có phần Của tôi. */
-function nhomCaiDat() { return NGUOI.vaiTro === 'BOD' ? SET : [CUA_TOI]; }
+function nhomCaiDat() { return NGUOI.vaiTro === 'BOD' ? SET : [['', CUA_TOI[1]]]; }
+/** Trang quay về từ mục ẩn (mục mở từ nút ở trang khác). */
+var VE_TU_CAI_DAT = { types: 'diem' };
 var CUON_CAI_DAT = null;
 function flatCaiDat() { return nhomCaiDat().reduce(function (a, g) { return a.concat(g[1]); }, []); }
 function napCaiDat() { return goiPhien('layCaiDatDesk').then(function (d) { CD = d; return d; }); }
 VIEWS.caidat = function () {
   var SET = nhomCaiDat();
   if (!CD && NGUOI.vaiTro === 'BOD') { dangTai(); napCaiDat().then(function () { if (page === 'caidat') VIEWS.caidat(); }).catch(loiTai); return; }
-  if (sub && !SET.some(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })) sub = null;
+  var tim = SET.concat(NGUOI.vaiTro === 'BOD' ? [['', CAI_DAT_AN]] : []);
+  if (sub && !tim.some(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })) sub = null;
   if (sub) {
-    var g = SET.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
+    var g = tim.filter(function (g) { return g[1].some(function (x) { return x[0] === sub; }); })[0];
     var it = g[1].filter(function (x) { return x[0] === sub; })[0];
-    $('#main').innerHTML = '<div><button class="back" id="back">' + ic('left', 16) + 'Cài đặt</button><div class="crumb" style="margin-top:6px">' + g[0] + '</div><h2 style="margin:0;font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px"></div>';
-    $('#back').onclick = function () { diToi('caidat'); };
+    var veTu = VE_TU_CAI_DAT[sub] || 'caidat';
+    $('#main').innerHTML = '<div><button class="back" id="back">' + ic('left', 16) + esc(tenTrang(veTu)) + '</button>' + (g[0] ? '<div class="crumb" style="margin-top:6px">' + g[0] + '</div>' : '') + '<h2 style="margin:' + (g[0] ? '0' : '6px 0 0') + ';font-size:22px">' + it[2] + '</h2></div><div id="subbody" style="display:grid;gap:14px"></div>';
+    $('#back').onclick = function () { diToi(veTu); };
     window.scrollTo(0, 0);
     SUB[sub]();
     return;
@@ -401,7 +410,7 @@ VIEWS.caidat = function () {
     q = boDau(q || '');
     var html = SET.map(function (g) {
       var f = g[1].filter(function (x) { return !q || boDau(x[2] + ' ' + x[3]() + ' ' + x[4] + ' ' + g[0]).indexOf(q) >= 0; });
-      return f.length ? '<div class="sgroup"><h4>' + g[0] + '</h4><div class="slist">' + f.map(function (x) { return '<button class="sitem" data-s="' + x[0] + '"><span class="ic">' + ic(x[1]) + '</span><div><b>' + x[2] + '</b><span>' + esc(x[3]()) + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>'; }).join('') + '</div></div>' : '';
+      return f.length ? '<div class="sgroup">' + (g[0] ? '<h4>' + g[0] + '</h4>' : '') + '<div class="slist">' + f.map(function (x) { return '<button class="sitem" data-s="' + x[0] + '"><span class="ic">' + ic(x[1]) + '</span><div><b>' + x[2] + '</b><span>' + esc(x[3]()) + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>'; }).join('') + '</div></div>' : '';
     }).join('');
     $('#slists').innerHTML = html || '<p class="muted">Không tìm thấy mục cài đặt nào.</p>';
     $$('[data-s]').forEach(function (b) {
@@ -523,33 +532,7 @@ function formSeeding(box) {
   };
   nap();
 }
-/** Thành viên phụ trách riêng: mỗi thành viên (kể cả ban HR) có thể được giao cho một HR, ngoài các ban HR đó phụ trách. */
-function vePhanCong(box) {
-  box.innerHTML = '<div class="card">' + cho() + '</div>';
-  goiPhien('layPhanCongHr').then(function (d) {
-    if (!box.isConnected) return;
-    var nhom = {}, dsNhom = [];
-    d.thanhVien.forEach(function (t) { var n = t.nhom || 'Khác'; if (!nhom[n]) { nhom[n] = []; dsNhom.push(n); } nhom[n].push(t); });
-    var chon = function (t) {
-      return '<select data-pc="' + esc(t.ten) + '" style="max-width:220px" aria-label="HR phụ trách riêng ' + esc(t.ten) + '"><option value="">Không</option>' +
-        d.hr.concat(t.hr && !d.hr.some(function (h) { return h.ten === t.hr; }) ? [{ ten: t.hr }] : []).map(function (h) { return '<option' + (h.ten === t.hr ? ' selected' : '') + '>' + esc(h.ten) + '</option>'; }).join('') + '</select>';
-    };
-    box.innerHTML = '<div class="card"><div class="ctitle"><h3>' + ic('users', 18) + ' Thành viên phụ trách riêng</h3><span class="hint">' + d.thanhVien.filter(function (t) { return t.hr; }).length + ' người đang có</span></div>' +
-      '<p class="hint" style="margin-top:0">Chọn HR cho từng người khi cần (ví dụ thành viên ban HR, hoặc ban chưa có HR phụ trách). HR đó xem được KPI task, KPI log và được nhắc task của người này.</p>' +
-      dsNhom.map(function (n) {
-        var cua = d.hr.filter(function (h) { return h.ban.indexOf(n) >= 0; }).map(function (h) { return h.ten; });
-        return '<details style="border-top:1px solid var(--line);padding:8px 0"><summary style="cursor:pointer"><b>Ban ' + esc(n) + '</b> <span class="hint">' + (cua.length ? 'Phụ trách ban: ' + esc(cua.join(', ')) : 'Chưa có HR phụ trách ban') + ' · ' + nhom[n].filter(function (t) { return t.hr; }).length + ' người phụ trách riêng</span></summary>' +
-          nhom[n].map(function (t) { return '<div class="row sb" style="padding:6px 0"><span>' + esc(t.ten) + ' <span class="hint">' + esc(t.ban) + '</span></span>' + chon(t) + '</div>'; }).join('') + '</details>';
-      }).join('') +
-      '<div class="row" style="margin-top:10px"><button class="btn sm" id="pc-l">Lưu phân công riêng</button><span id="pc-m"></span></div></div>';
-    $('#pc-l').onclick = function () {
-      var ds = $$('[data-pc]', box).map(function (o) { return { ten: o.getAttribute('data-pc'), hr: o.value }; });
-      var b = this; b.disabled = true; thongBao($('#pc-m'), 'cho', 'Đang lưu…');
-      goiPhien('luuPhanCongHr', ds).then(function (n) { b.disabled = false; thongBao($('#pc-m'), 'ok', 'Đã lưu ' + n + ' người'); })
-        .catch(function (err) { b.disabled = false; thongBao($('#pc-m'), 'loi', err.message); });
-    };
-  }).catch(function (err) { box.innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
-}
+var QUYEN_TAB = 'HR';
 var SUB = {
   types: function () {
     var chep = function (l) { return { ten: l.ten, diem: l.diem, congTay: l.congTay !== false, gioiHan: l.gioiHan || '', dungCho: l.dungCho || '' }; };
@@ -842,15 +825,16 @@ var SUB = {
       '<div class="row"><button class="btn sm" id="lc-b">Lưu</button><span id="m"></span></div></form>';
     $('#lc').onsubmit = function (e) { e.preventDefault(); luuVa($('#lc-b'), $('#m'), 'luuCaiDatLog', [{ linkMau: $('#lc-m').value, linkThuMuc: $('#lc-f').value }]); };
   },
+  quyen: function () { SUB.hr(QUYEN_TAB); },
   hr: function (vaiTro) {
-    vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
+    vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR'; QUYEN_TAB = vaiTro;
     var hr = CD.taiKhoan.filter(function (t) { return t.vaiTro === vaiTro; });
     var daCo = {}; CD.taiKhoan.forEach(function (t) { if (t.vaiTro !== 'TV') daCo[t.email.toLowerCase()] = true; });
     var conLai = CD.thanhVien.filter(function (t) { return t.email && !daCo[t.email.toLowerCase()] && t.ban.trim().toUpperCase() !== 'BOD'; });
     var cacBan = [];
     CD.thanhVien.forEach(function (t) { var n = String(t.ban).trim().split(/\s+/)[0].toUpperCase(); if (n && n !== 'BOD' && n !== 'HR' && cacBan.indexOf(n) < 0) cacBan.push(n); });
-    // Quyền thêm do BOD chọn. Trong sheet vẫn lưu mã cũ (SUP-SEED, CRE, SUP-RES) để dữ liệu cũ dùng tiếp được.
-    var NHOM = vaiTro === 'HR' ? ['SUP-SEED', 'CRE', 'SUP-RES'] : ['SUP-SEED', 'SUP-RES'];
+    // Ngoài phụ trách ban, BOD chỉ cấp thêm phụ trách seeding (mã SUP-SEED trong sheet).
+    var NHOM = ['SUP-SEED'];
     var o = function (attr, val, chon, chu) { return '<label class="row" style="gap:4px;font-size:13px"><input type="checkbox" ' + attr + ' value="' + esc(val) + '"' + (chon ? ' checked' : '') + '>' + esc(chu) + '</label>'; };
     var quyen = function (t, i) {
       return '<div style="display:grid;gap:6px;margin-top:8px">' +
@@ -859,11 +843,11 @@ var SUB = {
         '<div class="row" style="gap:10px;flex-wrap:wrap">' + (vaiTro === 'HR' ? '<label class="row" style="gap:6px;font-size:13px"><span class="hint">Mã HR</span><input type="text" id="mhr' + i + '" value="' + esc(t.maHr || '') + '" maxlength="20" placeholder="VD: HR01" style="width:110px" aria-label="Mã HR của ' + esc(t.ten) + '"></label>' : '') +
         '<button class="btn ghost sm" data-luupb="' + i + '">Lưu</button><span id="pbm' + i + '"></span></div></div>';
     };
-    $('#subbody').innerHTML = '<div class="note info">' + ic('info') + '<span>' + (vaiTro === 'HR'
-      ? '<b>Phụ trách ban</b>: xem KPI task và KPI log của thành viên ban đó, và được nhắc khi task của họ sắp đến hạn. Muốn giao thêm từng người riêng thì chọn ở phần Thành viên phụ trách riêng bên dưới. <b>Phụ trách seeding</b>: đặt nhắc hẹn và điền báo cáo seeding. <b>Phụ trách sinh nhật</b> dùng app như thành viên thường. <b>Miễn task</b>: không bị giao task, không xét KPI task.'
+    $('#subbody').innerHTML = '<div class="seg" id="qtab">' + [['HR', 'HR'], ['UCV', 'UCV']].map(function (x) { return '<button data-v="' + x[0] + '" aria-pressed="' + (x[0] === vaiTro) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="note info">' + ic('info') + '<span>' + (vaiTro === 'HR'
+      ? '<b>Phụ trách ban</b>: xem KPI task, KPI log của thành viên các ban đó, nhập và cập nhật task giúp BOD, được nhắc khi task của họ sắp đến hạn. <b>Phụ trách seeding</b>: đặt nhắc hẹn và điền báo cáo seeding. HR không có quyền nào thì dùng app như thành viên thường.'
       : 'UCV gửi mail của CLB (BOD duyệt trước khi gửi) và xem được mọi thư đến, thư đi của hộp thư CLB.') + '</span></div>' +
       '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + quyen(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
-      (vaiTro === 'HR' ? '<div id="pcbox" style="display:grid;gap:14px"></div>' : '') +
       '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách thành viên</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu mới <small>Không bắt buộc. Bỏ trống thì người đó vẫn đăng nhập bằng mật khẩu đang dùng (hoặc mật khẩu chung của CLB, hoặc Google).</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
     $$('[data-luupb]').forEach(function (b) {
@@ -874,12 +858,12 @@ var SUB = {
         var ds = $$('[data-pb="' + i + '"]:checked').map(function (c) { return c.value; });
         b.disabled = true; thongBao($('#pbm' + i), 'cho', 'Đang lưu…');
         goiPhien('luuBanQuanLy', hr[Number(i)].email, ds, $('#mhr' + i).value).then(function () {
-          luuVa(b, $('#pbm' + i), 'luuNhomHr', [hr[Number(i)].email, nhom], function () { if ($('#pcbox')) vePhanCong($('#pcbox')); });
+          luuVa(b, $('#pbm' + i), 'luuNhomHr', [hr[Number(i)].email, nhom]);
         }).catch(function (err) { b.disabled = false; thongBao($('#pbm' + i), 'loi', err.message); });
       };
     });
     $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro, $('#hm') ? $('#hm').value : ''], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
-    if ($('#pcbox')) vePhanCong($('#pcbox'));
+    $('#qtab').onclick = function (e) { var b = e.target.closest('[data-v]'); if (b && b.getAttribute('data-v') !== vaiTro) SUB.hr(b.getAttribute('data-v')); };
   },
   ucv: function () { SUB.hr('UCV'); },
   google: function () {

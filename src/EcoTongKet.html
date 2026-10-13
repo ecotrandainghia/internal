@@ -31,13 +31,13 @@ VIEWS.tongket = function () {
     var veCert = function () {
       $('#tk').innerHTML = '<div class="tk-the" id="tk-loc">' + [['tat', 'Tất cả thành viên'], ['cap', 'Cấp (đạt cả hai)'], ['butru', 'Cấp nhờ bù trừ'], ['chua', 'Chưa cấp']].map(function (x) {
         return '<button data-loc="' + x[0] + '" aria-pressed="' + (TK.loc === x[0]) + '"><b>' + dem[x[0]] + '</b><span>' + x[1] + '</span></button>';
-      }).join('') + '</div><div class="xh-tools" style="margin:12px 0 10px"><input type="search" id="tk-q" placeholder="Tìm tên…" value="' + esc(TK.q) + '" aria-label="Tìm thành viên"></div>' +
+      }).join('') + '</div><div class="xh-tools" style="margin:12px 0 10px"><input type="search" id="tk-q" placeholder="Tìm tên…" value="' + esc(TK.q) + '" aria-label="Tìm thành viên">' + chipKhoi(d.cert, TK.khoi || 0, 'tk-khoi') + '</div>' +
         '<div class="card"><div class="tscroll"><table class="kpi-bang"><thead><tr><th>Thành viên</th><th>Kết quả</th><th>Ban</th><th class="n">KPI log</th><th class="n">KPI task</th><th class="n">Hạng bù trừ</th></tr></thead><tbody id="tk-b"></tbody></table></div></div>';
       var ve = function () {
         var q = boDau(TK.q);
         var ds = d.cert.filter(function (c) {
           var hop = TK.loc === 'tat' || (TK.loc === 'cap' ? c.ketQua === 'Cấp' : TK.loc === 'chua' ? c.ketQua === 'Chưa cấp' : c.ketQua === 'Cấp nhờ bù trừ');
-          return hop && boDau(c.ten).indexOf(q) >= 0;
+          return hop && (!TK.khoi || c.khoi === TK.khoi) && boDau(c.ten).indexOf(q) >= 0;
         });
         $('#tk-b').innerHTML = ds.map(function (c) {
           var duoi = function (x, mien) { return !mien && x !== null && x !== undefined && x < 80 ? ' style="color:var(--bad)"' : ''; };
@@ -49,6 +49,7 @@ VIEWS.tongket = function () {
       };
       ve();
       $('#tk-q').oninput = function (e) { TK.q = e.target.value; ve(); };
+      ganChip('tk-khoi', function (k) { TK.khoi = k; ve(); });
       $('#tk-loc').onclick = function (e) { var b = e.target.closest('[data-loc]'); if (!b) return; TK.loc = b.getAttribute('data-loc'); $$('#tk-loc button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
     };
     var veKt = function () {

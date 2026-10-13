@@ -36,7 +36,6 @@ Tên cột viết tiếng Việt không dấu, không cách. Không có cột m�
 | TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien, BanQuanLy, MaHr, NhomHr | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`, riêng UCV trống là `mail`). `GiaoDien`: sáng/tối/theo máy của từng người. |
 | CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
 | Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong, NgayNop, HanGoc, NgayXinGiaHan, ChatLuong, DauHieu, NguoiDanhGia, LucDanhGia, PhanHoi, HrPhuTrach | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. NgayNop: ngày nộp khi đánh dấu xong. HanGoc, NgayXinGiaHan: gia hạn hợp lệ. ChatLuong, DauHieu: BOD đánh giá. HrPhuTrach: HR phụ trách người làm lúc giao task. |
-| PhuTrachHr | HoVaTen, NguoiHr | HR phụ trách riêng từng thành viên, ngoài các ban ở cột BanQuanLy (BOD chọn ở Cài đặt, Phân quyền HR). HR đó xem KPI và được nhắc task của người này. |
 | AnhDaiDien | Email, Anh, ThoiGian | Ảnh đại diện (data URL nhỏ, tối đa khoảng 30 KB). Tách khỏi TaiKhoan để bộ nhớ tạm của TaiKhoan không vượt 100 KB. |
 | NhacSeeding | ThoiGian, Email, HoVaTen, LinkBai, LucDang, LucNhac, DaNhac | Nhắc 48 giờ HR phụ trách seeding tự đặt (trang Nhắc hẹn). Lịch `nhacSeedingTheoGio` chạy mỗi giờ (tự cài khi có người đặt nhắc). |
 | KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai đã kết nối bot Zalo (mọi tài khoản ECODesk đều có mã kết nối). |
@@ -209,19 +208,18 @@ BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (c�
 
 ## Góc nhìn
 
-- Ai cũng phải đăng nhập. Link sâu (ví dụ `#xephang`) được nhớ và mở sau khi đăng nhập.
-- Cách đặt tên: nhóm gọi theo mục đích, mục giữ đúng từ CLB quen dùng (task, log, KPI); cùng một việc thì cùng một tên ở mọi góc nhìn; mục dùng nhiều đứng trước, Góp ý và Cài đặt luôn ở cuối. Menu điện thoại giữ đúng các nhóm như menu máy tính.
-- **BOD**: Trang chủ (4 ô vào nhanh: Quản lý task, Sự kiện log, Cộng điểm, Hộp góp ý). Nhóm Điều hành: Quản lý task (giao task cho mọi người trừ BOD, đổi trạng thái, đánh giá), Sự kiện log (tạo sheet đăng ký, điểm danh), Cộng điểm, Hộp thư (luôn xem được mọi thư đến và đi), Hộp góp ý. Nhóm Đánh giá: KPI task, KPI log (mọi người trừ BOD, dưới 80% tô đỏ), Bảng điểm (xếp hạng, lịch sử của mọi người, nút Báo cáo điểm), Chứng nhận (certificate, khen thưởng). Cài đặt chia nhóm Thành viên và phân quyền, Hoạt động CLB, Thông báo và nhắc việc, Hộp thư, Giao diện, Của tôi.
-- **Thành viên** (và UCV, HR không phụ trách gì, HR phụ trách sinh nhật, HR miễn task): Trang chủ (Task, Log, Điểm và xếp hạng, Gửi góp ý; link ghim, quy chế). Nhóm Của tôi: Task (KPI task và task của tôi), Log (KPI log), Điểm và xếp hạng (lịch sử điểm của tôi, Ảnh thành tích). Gửi góp ý, Cài đặt (chỉ phần Của tôi: thông báo, mật khẩu, ảnh đại diện, chế độ sáng tối). KPI chỉ hiện con số, không ghi đạt hay chưa đạt; kết quả certificate chỉ có ở trang Chứng nhận của BOD.
-- **HR phụ trách ban**: thêm nhóm Phụ trách (Quản lý task, KPI task, KPI log) cho các ban ở cột BanQuanLy và những người ở tab PhuTrachHr (`phamViHr_`). BOD chọn ở Cài đặt, Phân quyền HR. HR nhập, sửa, gia hạn, đổi trạng thái task giúp BOD cho những người này (không phải task của chính mình); chỉ BOD đánh giá.
-- **HR phụ trách seeding** (`SUP-SEED`): thêm nhóm Seeding: Hẹn nhắc 48 giờ và Nộp báo cáo (không cần ghi giờ đăng, app lấy giờ gửi).
-- **UCV**: thêm nhóm Liên lạc (Hộp thư).
-- Không thông báo gì khi giao task hoặc khi task xong. Nhắc hạn task: HR phụ trách được nhắc task của người mình phụ trách (cách nhắc chính); Trưởng ban Nhân sự (BOD) được nhắc task của thành viên ban HR chưa có HR phụ trách riêng. Ai muốn tự nhận nhắc task của mình thì bật "Tự nhắc task của tôi" ở Cài đặt, Thông báo của tôi (cột TaiKhoan `TuNhac` = `bat`, mặc định tắt).
-- Tab HrQuen không còn dùng (không theo dõi HR quên nhắc nữa); dữ liệu cũ giữ nguyên, có thể ẩn tab.
+- Menu giữ đúng cấu trúc cha con trong sheet góc nhìn Van đã chốt (chỉ đổi tên cho rõ nghĩa); mục cấp 3 là tab trong cùng một trang. Ai cũng phải đăng nhập.
+- **BOD**: Trang chủ (4 ô vào nhanh), Quản lý task, Sự kiện log, Cộng điểm (nút Thang điểm mở cài đặt loại hoạt động), Hộp thư, Hộp góp ý. Nhóm Hoạt động thành viên: KPI (tab KPI task, KPI log), Bảng điểm, Chứng nhận. Cài đặt: Thông báo (của thành viên, kèm nút Bot Zalo; lịch nhắc task; thông báo khác), Hoạt động CLB (file mẫu log, báo cáo seeding, ghim và quy chế), Hộp thư (danh bạ, chữ ký), Tài khoản (phân quyền HR và UCV, đặt lại mật khẩu, ảnh nền đăng nhập, Google), Giao diện theo mùa và sự kiện, Của tôi.
+- **Thành viên** (và UCV, HR không có quyền nào): Trang chủ, nhóm KPI của tôi (Task, Log), Điểm và xếp hạng, Góp ý, Cài đặt (thông báo, mật khẩu, ảnh đại diện, giao diện sáng tối). UCV có thêm Hộp thư. KPI chỉ hiện con số; kết quả certificate chỉ có ở trang Chứng nhận của BOD.
+- **HR phụ trách ban**: thêm nhóm Ban phụ trách: Task (tab Danh sách task để nhập, sửa, gia hạn, đổi trạng thái giúp BOD; tab KPI task) và Log (KPI log), cho thành viên các ban ở cột BanQuanLy (`phamViHr_`). Không còn phân HR phụ trách từng người (tab PhuTrachHr cũ không dùng nữa).
+- **HR phụ trách seeding** (`SUP-SEED`): thêm nhóm Seeding: Hẹn nhắc 48 giờ và Nộp báo cáo (không cần ghi giờ đăng). Quyền HR chỉ còn phụ trách ban và phụ trách seeding; mã cũ CRE, SUP-RES trong cột NhomHr bị bỏ qua.
+- Bảng dữ liệu nhiều người (KPI, Bảng điểm, Chứng nhận, danh sách task) lọc được theo ban và theo khối (số đầu cột Lớp, `khoiLop_`).
+- Không thông báo gì khi giao task hoặc khi task xong. Nhắc hạn task: HR phụ trách ban được nhắc task của thành viên các ban đó; Trưởng ban Nhân sự (BOD) được nhắc task của thành viên ban HR. Ai muốn tự nhận nhắc task của mình thì bật "Tự nhắc task của tôi" (cột TaiKhoan `TuNhac` = `bat`, mặc định tắt).
+- Tab HrQuen và PhuTrachHr không còn dùng; dữ liệu cũ giữ nguyên, có thể ẩn tab.
 
 ## KPI task
 
-- Quyền task (`quyenTask_`): BOD xem, giao, sửa task của mọi người trừ BOD. HR phụ trách làm giúp BOD với người trong phạm vi của mình (trừ chính mình). Người khác chỉ xem task của mình ở trang Task.
+- Quyền task (`quyenTask_`): BOD xem, giao, sửa task của mọi người trừ BOD. HR phụ trách ban làm giúp BOD với thành viên các ban mình phụ trách (trừ chính mình). Người khác chỉ xem task của mình ở trang Task.
 - Xác nhận xong: BOD hoặc HR chọn Đúng hạn hay Trễ hạn, không chọn ngày (`ngayNopTheoKieu_` ghi NgayNop là hôm nay, hạn chót hoặc ngày sau hạn chót cho khớp lựa chọn). Task đã bị tính không hoàn thành vẫn xác nhận xong được.
 - Kết quả từng task (`ketQuaTask_`): đúng hạn so ngày nộp với hạn chót (gia hạn chỉ ghi được khi xin trước hạn ít nhất 24 giờ), chất lượng do BOD chấm; bảng 3 × 3 của quy chế. Không hoàn thành là Không làm, tự Chưa đạt.
 - KPI task (`tongKpiTask_`): số task đạt ÷ số task đã có kết quả, làm tròn. Thành viên bổ sung chỉ tính task giao từ lúc bắt đầu giai đoạn 2. Người miễn task (nhóm `SUP-RES`, ôn thi chuyển cấp) không được giao task. Thành viên ban HR tính KPI task như mọi ban khác.

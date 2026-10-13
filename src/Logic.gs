@@ -39,7 +39,6 @@ var BANG = {
   CaiDat: ['Khoa', 'GiaTri'],
   Task: ['ThoiGianTao', 'TenTask', 'MoTa', 'HanChot', 'NguoiPhuTrach', 'NguoiTao', 'KieuTao', 'TrangThai', 'ThoiGianXong',
     'NgayNop', 'HanGoc', 'NgayXinGiaHan', 'ChatLuong', 'DauHieu', 'NguoiDanhGia', 'LucDanhGia', 'PhanHoi', 'HrPhuTrach'],
-  PhuTrachHr: ['HoVaTen', 'NguoiHr'],
   NhacSeeding: ['ThoiGian', 'Email', 'HoVaTen', 'LinkBai', 'LucDang', 'LucNhac', 'DaNhac'],
   AnhDaiDien: ['Email', 'Anh', 'ThoiGian'],
   KetNoiZalo: ['HoVaTen', 'MaKetNoi', 'ChatId', 'TenZalo', 'ThoiGianKetNoi'],
@@ -608,7 +607,7 @@ function chuanChu_(s) { return String(s == null ? '' : s).trim().replace(/\s+/g,
  * Còn lại: chỉ xem task của mình. HR phụ trách xem KPI của ban và thành viên được phân ở trang riêng (phamViHr_).
  * @return {{xem:function(string):boolean, sua:function(string):boolean, moTa:string}}
  */
-function quyenTask_(tk, chucVu, banCua, phanCong) {
+function quyenTask_(tk, chucVu, banCua) {
   var toi = String(tk.HoVaTen);
   var ban = function (n) { return chuanChu_(banCua[String(n)]); };
   if (String(tk.VaiTro) === 'BOD') {
@@ -617,7 +616,7 @@ function quyenTask_(tk, chucVu, banCua, phanCong) {
   }
   if (String(tk.VaiTro) === 'HR') {
     // HR nhập, sửa, đổi trạng thái task giúp BOD cho những người mình phụ trách (không phải task của chính mình).
-    var pv = phamViHr_(tk, banCua, phanCong);
+    var pv = phamViHr_(tk, banCua);
     var quanLy = function (n) { return String(n) !== toi && pv.thuoc(n); };
     return { xem: quanLy, sua: quanLy, moTa: pv.co ? '' : 'BOD chưa giao ban hay thành viên nào cho bạn phụ trách.' };
   }
@@ -625,23 +624,18 @@ function quyenTask_(tk, chucVu, banCua, phanCong) {
 }
 
 /**
- * Những thành viên một HR phụ trách: mọi người thuộc các ban ở cột BanQuanLy, cộng những người BOD phân riêng cho HR đó
- * (tab PhuTrachHr). Chỉ tài khoản HR mới có phạm vi. BOD không nằm trong phạm vi của ai.
- * @return {{ban:Array<string>, rieng:Array<string>, co:boolean, thuoc:function(string):boolean}}
+ * Những thành viên một HR phụ trách: mọi người thuộc các ban ở cột BanQuanLy (BOD chọn ở Cài đặt, Phân quyền).
+ * Chỉ tài khoản HR mới có phạm vi. BOD không nằm trong phạm vi của ai.
+ * @return {{ban:Array<string>, co:boolean, thuoc:function(string):boolean}}
  */
-function phamViHr_(tk, banCua, phanCong) {
-  var kq = { ban: [], rieng: [], co: false, thuoc: function () { return false; } };
+function phamViHr_(tk, banCua) {
+  var kq = { ban: [], co: false, thuoc: function () { return false; } };
   if (!tk || String(tk.VaiTro) !== 'HR') return kq;
-  var toi = String(tk.HoVaTen).toLowerCase();
   kq.ban = banCuaHr_(tk.BanQuanLy);
-  (phanCong || []).forEach(function (p) { if (String(p.NguoiHr || '').trim().toLowerCase() === toi && String(p.HoVaTen).trim()) kq.rieng.push(String(p.HoVaTen).trim()); });
-  var rieng = {};
-  kq.rieng.forEach(function (n) { rieng[n.toLowerCase()] = true; });
-  kq.co = !!(kq.ban.length || kq.rieng.length);
+  kq.co = kq.ban.length > 0;
   kq.thuoc = function (n) {
     var b = nhomBan_(banCua[String(n)]);
-    if (b === 'BOD') return false;
-    return rieng[String(n).toLowerCase()] === true || kq.ban.indexOf(b) >= 0;
+    return b !== 'BOD' && kq.ban.indexOf(b) >= 0;
   };
   return kq;
 }
@@ -947,7 +941,7 @@ function tongKpiTask_(ds) {
   return kq;
 }
 
-/** HR phụ trách một thành viên: theo bảng phân công; chưa phân công thì là HR đã nhập task (nếu người nhập là HR). */
+/** HR phụ trách một thành viên lúc giao task: HR đã nhập task (nếu người nhập là HR). phanCong để trống. */
 function hrPhuTrach_(tenThanhVien, phanCong, nguoiTao, laHr) {
   var k = String(tenThanhVien).toLowerCase();
   for (var i = 0; i < phanCong.length; i++) if (String(phanCong[i].HoVaTen).toLowerCase() === k && String(phanCong[i].NguoiHr || '').trim()) return String(phanCong[i].NguoiHr).trim();
@@ -1765,10 +1759,13 @@ function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGi
 
 /* ===================== Báo cáo seeding trong app (HR phụ trách seeding) ===================== */
 
-/** Nhóm HR do BOD chọn cho từng người, ngoài COO (COO là các ban ở cột BanQuanLy). */
-var NHOM_HR = ['SUP-SEED', 'SUP-RES', 'CRE'];
+/**
+ * Quyền thêm BOD cấp cho HR, ngoài phụ trách ban (cột BanQuanLy): chỉ còn phụ trách seeding.
+ * Mã cũ khác trong sheet (CRE, SUP-RES) được bỏ qua.
+ */
+var NHOM_HR = ['SUP-SEED'];
 /** Tên tiếng Việt hiện trong app (trong sheet vẫn lưu mã cũ để dữ liệu cũ dùng tiếp được). */
-var TEN_NHOM_HR = { 'SUP-SEED': 'Phụ trách seeding', 'SUP-RES': 'Miễn task (ôn thi chuyển cấp)', 'CRE': 'Phụ trách sinh nhật' };
+var TEN_NHOM_HR = { 'SUP-SEED': 'Phụ trách seeding' };
 
 /** Đọc ô NhomHr ("SUP-SEED, CRE") thành danh sách nhóm hợp lệ. */
 function nhomHr_(giaTri) {

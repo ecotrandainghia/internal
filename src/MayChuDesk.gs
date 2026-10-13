@@ -454,7 +454,7 @@ function luuBanQuanLy(phien, email, dsBan, maHr) {
   return true;
 }
 
-/** Nhóm HR của một người (SUP-SEED, SUP-RES, CRE). HR và UCV đều được xếp nhóm. */
+/** Nhóm HR của một người (chỉ còn SUP-SEED: phụ trách seeding). HR và UCV đều được xếp nhóm. */
 function luuNhomHr(phien, email, ds) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
@@ -514,7 +514,7 @@ function soNgaySapDenHan_() {
 function quyenTaskCua_(tk) {
   var banCua = {};
   docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); });
-  return quyenTask_(tk, String(tk.VaiTro) === 'BOD' ? chucVuCua_(tk) : '', banCua, docBang_('PhuTrachHr'));
+  return quyenTask_(tk, String(tk.VaiTro) === 'BOD' ? chucVuCua_(tk) : '', banCua);
 }
 
 function kiemTraDuocGiao_(q, ten) {
@@ -546,14 +546,14 @@ function docTask_() {
 function layDuLieuTask(phien) {
   var tk = canDangNhap_(phien, 'task');
   var moc = Date.now() - GIU_TASK_DA_KET_THUC_NGAY * 864e5;
-  var q = quyenTaskCua_(tk), banCua = {};
-  docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); });
+  var q = quyenTaskCua_(tk), banCua = {}, khoiCua = {};
+  docBang_('ThanhVien').forEach(function (t) { banCua[String(t.HoVaTen)] = String(t.Ban); khoiCua[String(t.HoVaTen)] = khoiLop_(t.Lop); });
   var ds = docTask_().filter(function (t) {
     if (!q.xem(t.nguoi)) return false;
     if (t.trangThai === TRANG_THAI_TASK.KHT) return new Date(t.hanChot).getTime() >= moc;
     if (t.trangThaiLuu !== TRANG_THAI_TASK.XONG && t.trangThaiLuu !== TRANG_THAI_TASK.HUY) return true;
     return (t.thoiGianXong || t.thoiGianTao) >= moc;
-  }).map(function (t) { t.sua = q.sua(t.nguoi); t.nhom = nhomBan_(banCua[t.nguoi]) || 'Khác'; return t; })
+  }).map(function (t) { t.sua = q.sua(t.nguoi); t.nhom = nhomBan_(banCua[t.nguoi]) || 'Khác'; t.khoi = khoiCua[t.nguoi] || null; return t; })
     .sort(function (a, b) { return a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : b.thoiGianTao - a.thoiGianTao; });
   return {
     homNay: homNay_(),
@@ -577,7 +577,7 @@ function taoTask(phien, yeuCau) {
   var khoa = layKhoa_();
   var kq;
   try {
-    kq = taoDongTask_(yeuCau, docBang_('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date(), docBang_('PhuTrachHr'), tenSupRes_());
+    kq = taoDongTask_(yeuCau, docBang_('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date(), [], tenSupRes_());
     if (kq.loi) throw new Error(kq.loi);
     themDong_('Task', kq.dong);
   } finally {

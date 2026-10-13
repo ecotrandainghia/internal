@@ -37,7 +37,9 @@
 </style>
 <script>
 /* =================== Xếp hạng điểm =================== */
-var XH = { d: null, luc: 0, ban: 'Tất cả', q: '', dir: 'desc', gd: 'nay' };
+/** Khối lớp: số đứng đầu cột Lớp (9A1 là khối 9). */
+function khoiCuaLop(lop) { var m = /^\s*(\d{1,2})(?!\d)/.exec(String(lop || '')); return m ? Number(m[1]) : 0; }
+var XH = { d: null, luc: 0, ban: 'Tất cả', khoi: 0, q: '', dir: 'desc', gd: 'nay' };
 
 /** Bảng xếp hạng (phải đăng nhập), giữ 60 giây trên máy. */
 function napXepHang() {
@@ -92,11 +94,12 @@ VIEWS.xephang = function () {
         'Top 15% là ' + soTop + ' người (' + dsBang.length + ' × 15%, làm tròn, tính cả người bằng điểm).</p>' : '') +
       '<div class="xh-tools"><input type="search" id="xh-q" placeholder="Tìm theo tên…" aria-label="Tìm theo tên" value="' + esc(XH.q) + '">' +
       (nhom.length > 1 ? '<div class="row" id="xh-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" aria-pressed="' + (b === XH.ban) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
+      chipKhoi(dsBang.map(function (p) { return { khoi: khoiCuaLop(p.lop) }; }), XH.khoi, 'xh-khoi') +
       '<div class="row"><span class="hint" id="xh-dem"></span><label class="xh-sort">Sắp xếp<select id="xh-sx"><option value="desc">Điểm cao → thấp</option><option value="asc"' + (XH.dir === 'asc' ? ' selected' : '') + '>Điểm thấp → cao</option></select></label></div></div>' +
       '<div class="card flush xh"><div class="lst" id="xh-ds"></div></div></div>';
     var ve = function () {
       var tim = boDau(XH.q);
-      var ds = dsBang.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && boDau(p.ten).indexOf(tim) >= 0; });
+      var ds = dsBang.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && (!XH.khoi || khoiCuaLop(p.lop) === XH.khoi) && boDau(p.ten).indexOf(tim) >= 0; });
       ds.sort(function (a, b) { return XH.dir === 'desc' ? b[khoa] - a[khoa] : a[khoa] - b[khoa]; });
       $('#xh-dem').textContent = ds.length + ' thành viên';
       $('#xh-ds').innerHTML = ds.length ? ds.map(function (p) {
@@ -108,6 +111,7 @@ VIEWS.xephang = function () {
     };
     ve();
     $('#xh-q').oninput = function (e) { XH.q = e.target.value; ve(); };
+    ganChip('xh-khoi', function (k) { XH.khoi = k; ve(); });
     $('#xh-sx').onchange = function (e) { XH.dir = e.target.value; ve(); };
     if ($('#xh-gd')) $('#xh-gd').onclick = function (e) { var b = e.target.closest('[data-gd]'); if (!b) return; XH.gd = b.getAttribute('data-gd'); VIEWS.xephang(); };
     if ($('#xh-ban')) $('#xh-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; XH.ban = b.getAttribute('data-b'); $$('#xh-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
