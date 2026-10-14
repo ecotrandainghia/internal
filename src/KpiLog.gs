@@ -33,8 +33,9 @@ function layLog(phien) {
   qt.thoiLuongBuoi.forEach(function (p) { var l = loaiDungCho_(loai, dungChoLog_(p)); coLoai[p] = l ? Number(l.Diem) || 0 : null; });
   return {
     thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), maTV: String(t.MaTV || ''), ban: String(t.Ban || ''), lop: String(t.Lop || '') }; }),
-    dsBan: CO_CAU.ban.filter(function (b) { return b.dangDung && !b.laBod; }).map(function (b) { return b.ma; }),
+    dsBan: CO_CAU.ban.filter(function (b) { return b.dangDung && !b.laBod; }).reduce(function (a, b) { [b.ma, b.nhom].forEach(function (x) { if (a.indexOf(x) < 0) a.push(x); }); return a; }, []),
     thoiLuong: qt.thoiLuongBuoi,
+    datLog: qt.datLog,
     coLoai: coLoai,
     file: docBangNhiemKy_('FileLog', 'ThoiGian').map(function (f) { return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan) }; })
       .sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 20),
