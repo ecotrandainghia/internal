@@ -26,7 +26,7 @@ var CO_CAU_MAC_DINH = [
 ];
 var CO_CAU = { ban: CO_CAU_MAC_DINH };
 
-/** Bảng kết quả một task theo đúng hạn và chất lượng (quy chế 2026-2027). BOD sửa được trong Cài đặt. */
+/** Bảng kết quả một task theo đúng hạn và chất lượng (quy chế 2026-2027). Cố định theo quy chế. */
 var MA_TRAN_TASK_MAC_DINH = {
   'Đúng hạn': { 'Hoàn chỉnh': 'Đạt', 'Cần chỉnh sửa': 'Đạt', 'Làm quá sơ sài': 'Chưa đạt' },
   'Trễ hạn': { 'Hoàn chỉnh': 'Đạt', 'Cần chỉnh sửa': 'Chưa đạt', 'Làm quá sơ sài': 'Chưa đạt' }

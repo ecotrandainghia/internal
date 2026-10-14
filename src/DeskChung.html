@@ -298,14 +298,14 @@ var TRANG_CHU = ['home', 'Trang chủ', 'home'];
  * Mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy các mục con (giống Cài đặt).
  */
 var NAV_BOD = [
-  ['', [TRANG_CHU, ['task', 'Quản lý task', 'check'], ['log', 'Sự kiện log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Hộp góp ý', 'chat'],
-    ['hoatdong', 'Hoạt động thành viên', 'target'], ['caidat', 'Cài đặt', 'gear']]]];
+  ['', [TRANG_CHU, ['task', 'Quản lý task', 'check'], ['log', 'Quản lý log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Góp ý', 'chat'],
+    ['hoatdong', 'Thành viên', 'target'], ['caidat', 'Cài đặt', 'gear']]]];
 /*
  * Thư mục: THU_MUC[mã] = [tên, mô tả, mục con]. Mục con: [trang, tên, biểu tượng, mô tả, tab trong trang].
- * Mục con có thể là một thư mục khác (Hoạt động thành viên > KPI > Task, Log).
+ * Mục con có thể là một thư mục khác (Thành viên > KPI > Task, Log).
  */
 var THU_MUC = {
-  hoatdong: ['Hoạt động thành viên', 'Theo dõi mọi thành viên trừ BOD.', [
+  hoatdong: ['Thành viên', 'Theo dõi mọi thành viên trừ BOD.', [
     ['kpibod', 'KPI', 'target', 'KPI task và KPI log'],
     ['xephang', 'Bảng điểm', 'chart', 'Xếp hạng và lịch sử điểm'],
     ['tongket', 'Chứng nhận', 'award', 'Tình hình cấp chứng nhận']]],

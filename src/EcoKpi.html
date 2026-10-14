@@ -139,7 +139,7 @@ function veKpiBang(laTask, tabs) {
     ganChip('kb-khoi', function (k) { KPI_BANG.khoi = k; ve(); });
   }).catch(loiTai);
 }
-/** BOD: Hoạt động thành viên > KPI > KPI task (tab trống) hoặc KPI log (tab 'log'). */
+/** BOD: Thành viên > KPI > KPI task (tab trống) hoặc KPI log (tab 'log'). */
 VIEWS.kpi = function () { veKpiBang(sub !== 'log'); };
 /** HR phụ trách ban: Ban phụ trách > Task (quản lý task giúp BOD, và KPI task), Log (KPI log). */
 var TAB_PT_TASK = [['', 'Danh sách task'], ['kpi', 'KPI task']];

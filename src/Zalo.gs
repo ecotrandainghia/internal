@@ -312,20 +312,6 @@ function luuNhacViec(phien, cd) {
   if (!lich || !lich.length) throw new Error('Cần ít nhất một mốc nhắc.');
   var dsLuc = lucCuaLich_(lich);
   if (dsLuc.length > TOI_DA_GIO_NHAC) throw new Error('Các mốc chỉ được dùng tối đa ' + TOI_DA_GIO_NHAC + ' giờ khác nhau. Bạn gộp bớt giờ giống nhau nhé.');
-  if (cd.sapDenHanNgay !== undefined || cd.khongHoanThanhSau !== undefined) {
-    var qt = chepSau_(quyTac_());
-    if (cd.sapDenHanNgay !== undefined) {
-      var n = Math.round(Number(cd.sapDenHanNgay));
-      if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
-      qt.sapDenHanNgay = n;
-    }
-    if (cd.khongHoanThanhSau !== undefined) {
-      var k = Math.round(Number(cd.khongHoanThanhSau));
-      if (!(k >= 0 && k <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
-      qt.khtSauNgay = k;
-    }
-    luuQuyTac_(qt);
-  }
   datCaiDat_('LichNhac', JSON.stringify(lich));
   caiLichNhac_(dsLuc);
   return true;
