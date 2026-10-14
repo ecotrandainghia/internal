@@ -9,7 +9,8 @@ const SRC = path.join(__dirname, '..', 'src');
 const CONG_KHAI = [
   'doGet', 'include', // Apps Script tự gọi
   'khoiTaoCoSoDuLieu', // chạy tay trong Apps Script để cấp quyền; chạy lại nhiều lần không sao
-  'caiDatTaoMoi', 'caiDatDungFileCo', // cài đặt lần đầu: chỉ chủ dự án, khi chưa cài (kiểm tra canChuDuAn_)
+  'caiDatTaoMoi', 'caiDatDungFileCo', // cài đặt lần đầu: chỉ chủ dự án hoặc người có mã gửi tới mail CLB, khi chưa cài (kiểm tra canChuDuAn_)
+  'guiMaCaiDat', // chỉ gửi mã tới mail của chính tài khoản CLB, khi chưa cài
   'guiThuDaLenLich', 'nhacViecHangNgay', 'nhacSeedingTheoGio', 'chayHangDem', // lịch chạy tự động (kiểm tra laLichChay_)
   'dangNhap', 'dangNhapGoogle', 'dangXuat', 'moDesk', 'layAnhNen' // trước khi đăng nhập
 ];
@@ -36,9 +37,10 @@ test('hàm chạy theo lịch và cài đặt lần đầu có chặn người n
   const ds = hamCongKhai();
   const than = (ten) => ds.filter((h) => h.ten === ten)[0].than;
   ['nhacViecHangNgay', 'guiThuDaLenLich', 'nhacSeedingTheoGio', 'chayHangDem'].forEach((t) => assert.match(than(t), /laLichChay_\(e\)/, t));
-  ['caiDatTaoMoi', 'caiDatDungFileCo'].forEach((t) => assert.match(than(t), /^function \w+\(yc\) \{\n  canChuDuAn_\(\);/, t));
+  ['caiDatTaoMoi', 'caiDatDungFileCo'].forEach((t) => assert.match(than(t), /^function \w+\(yc\) \{\n  canChuDuAn_\(yc && yc\.maXacNhan\);/, t));
   const cd = fs.readFileSync(path.join(SRC, 'CaiDatLanDau.gs'), 'utf8');
-  assert.match(cd, /function canChuDuAn_\(\) \{\n  if \(daCaiDat_\(\)\) throw[^\n]*\n  if \(!laChuDuAn_\(\)\) throw/);
+  assert.match(cd, /function canChuDuAn_\(maXacNhan\) \{\n  if \(daCaiDat_\(\)\) throw[^\n]*\n  if \(laChuDuAn_\(\)\) return;/);
+  assert.match(than('guiMaCaiDat'), /^function guiMaCaiDat\(\) \{\n  if \(daCaiDat_\(\)\) throw[\s\S]*sendEmail\(Session\.getEffectiveUser\(\)\.getEmail\(\)/);
   assert.match(cd, /function laChuDuAn_\(\) \{[\s\S]*getActiveUser\(\)[\s\S]*getEffectiveUser\(\)[\s\S]*return !!dangMo && dangMo === chu;/);
 });
 

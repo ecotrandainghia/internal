@@ -27,12 +27,11 @@ small{display:block;color:var(--phu);font-size:12.5px;margin-top:3px}
 <body>
 <main>
   <h1>Cài đặt app CLB ECO</h1>
-<? if (!laChu) { ?>
-  <div class="the">
-    <p>App chưa được cài đặt. Người quản lý tài khoản Google của CLB mở link này (đăng nhập bằng tài khoản CLB) để cài đặt.</p>
-  </div>
-<? } else { ?>
+<? if (laChu) { ?>
   <p>Bạn đang dùng tài khoản <b><?= email ?></b>. Mọi dữ liệu của app sẽ nằm trong Google Drive của tài khoản này.</p>
+<? } else { ?>
+  <p>Mọi dữ liệu của app sẽ nằm trong Google Drive của tài khoản CLB (<b><?= email ?></b>). Để chắc chắn bạn là người quản lý tài khoản này, bấm gửi mã rồi xem hộp thư của tài khoản CLB.</p>
+<? } ?>
   <div class="chon" role="group" aria-label="Cách cài đặt">
     <button type="button" id="chonMoi" aria-pressed="true">Tạo mới</button>
     <button type="button" id="chonCo" aria-pressed="false">Dùng file có sẵn</button>
@@ -45,6 +44,11 @@ small{display:block;color:var(--phu);font-size:12.5px;margin-top:3px}
       <input id="link" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/...">
       <small>Nếu file đã có tài khoản BOD và mật khẩu chung thì các ô bên dưới có thể để trống.</small>
     </div>
+<? if (!laChu) { ?>
+    <label for="ma">Mã xác nhận</label>
+    <div style="display:flex;gap:8px"><input id="ma" inputmode="numeric" autocomplete="one-time-code" maxlength="6"><button type="button" class="nut" id="guiMa" style="margin:0;width:auto;white-space:nowrap;padding:10px 14px">Gửi mã</button></div>
+    <small id="baoMa">Mã gửi tới email tài khoản CLB, dùng được trong 30 phút.</small>
+<? } ?>
     <label for="ten">Họ và tên của bạn</label>
     <input id="ten" autocomplete="name">
     <label for="emailBod">Email đăng nhập của bạn</label>
@@ -58,9 +62,7 @@ small{display:block;color:var(--phu);font-size:12.5px;margin-top:3px}
     <div class="loi" id="loi" role="alert"></div>
     <button class="nut" id="nut" type="submit">Cài đặt</button>
   </form>
-<? } ?>
 </main>
-<? if (laChu) { ?>
 <script>
 var dungFileCo = false;
 function chon(co) {
@@ -75,7 +77,7 @@ document.getElementById('chonCo').onclick = function () { chon(true); };
 document.getElementById('form').onsubmit = function (e) {
   e.preventDefault();
   var g = function (id) { return document.getElementById(id).value; };
-  var yc = { link: g('link'), ten: g('ten'), email: g('emailBod'), matKhau: g('mk'), matKhauChung: g('mkChung') };
+  var yc = { maXacNhan: document.getElementById('ma') ? g('ma') : '', link: g('link'), ten: g('ten'), email: g('emailBod'), matKhau: g('mk'), matKhauChung: g('mkChung') };
   var nut = document.getElementById('nut'), loi = document.getElementById('loi');
   nut.disabled = true; nut.textContent = 'Đang cài đặt, chờ chút nhé…'; loi.textContent = '';
   google.script.run
@@ -83,7 +85,14 @@ document.getElementById('form').onsubmit = function (e) {
     .withFailureHandler(function (err) { nut.disabled = false; nut.textContent = 'Cài đặt'; loi.textContent = err.message || String(err); })
     [dungFileCo ? 'caiDatDungFileCo' : 'caiDatTaoMoi'](yc);
 };
+var nutMa = document.getElementById('guiMa');
+if (nutMa) nutMa.onclick = function () {
+  nutMa.disabled = true;
+  google.script.run
+    .withSuccessHandler(function (e) { nutMa.disabled = false; document.getElementById('baoMa').textContent = 'Đã gửi mã tới ' + e + '. Xem hộp thư (cả mục Spam).'; })
+    .withFailureHandler(function (err) { nutMa.disabled = false; document.getElementById('baoMa').textContent = err.message || String(err); })
+    .guiMaCaiDat();
+};
 </script>
-<? } ?>
 </body>
 </html>
