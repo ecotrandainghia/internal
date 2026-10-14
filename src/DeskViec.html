@@ -504,7 +504,7 @@ var SUB = {
       $('#save').onclick = function () { doc(); luuVa($('#save'), $('#m'), 'luuLoaiHoatDong', [ds], function () { ds = CD.loai.map(chep); ve(); thongBao($('#m'), 'ok', 'Đã lưu'); }); };
     };
     ve();
-    $('#sdbox').innerHTML = '<div class="note info">' + ic('info') + '<span>Điểm seeding do HR phụ trách seeding điền ở mục Seeding, Nộp báo cáo (BOD cấp quyền ở Cài đặt, Thành viên và phân quyền, Phân quyền HR). Không cần Google Form nữa.</span></div>';
+    $('#sdbox').innerHTML = '<div class="note info">' + ic('info') + '<span>Điểm seeding do HR phụ trách seeding điền ở mục Seeding, Nộp báo cáo (BOD cấp quyền ở Cài đặt, Tài khoản, Phân quyền). Không cần Google Form nữa.</span></div>';
   },
   pins: function () {
     var ds = CD.ghim.map(function (g) { return { tieuDe: g.tieuDe, link: g.link }; });

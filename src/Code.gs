@@ -27,7 +27,7 @@ function include(ten) {
   return HtmlService.createHtmlOutputFromFile(ten).getContent();
 }
 
-/* ===================== Tải danh sách thành viên (Cài đặt, Thành viên) ===================== */
+/* ===================== Tải danh sách thành viên (Cài đặt, Tài khoản) ===================== */
 
 /** Các lần tải trước (bảng LanTai). */
 function cacLanTai_() {
@@ -173,7 +173,8 @@ function taiDanhSachThanhVien(phien, yeuCau) {
   dong.push(ky ? 'Hiện tại: nhiệm kỳ ' + ky.NhiemKy + ', giai đoạn ' + ky.GiaiDoan + '.' : 'Chưa mở giai đoạn nào; giai đoạn 1 mở khi tải "' + kieuDot_(1) + '".');
   if (c.soTkMoi) dong.push('Đã tạo ' + c.soTkMoi + ' tài khoản mới (đăng nhập bằng mật khẩu chung của CLB hoặc Google).');
   if (c.kh.doiBan.length) dong.push(c.kh.doiBan.length + ' người đổi ban, đã ghi lại ngày đổi.');
-  if (c.kh.roi.length) dong.push('Hồ sơ và điểm của người đã rời vẫn được giữ, xem ở Cài đặt, Thành viên.');
+  if (c.kh.roi.length) dong.push('Hồ sơ và điểm của người đã rời vẫn được giữ, xem ở Cài đặt, Tài khoản, Thành viên qua các năm.');
+  ghiNhatKy_('taiDanhSach', 'OK', String(tk.HoVaTen) + ': ' + dong[c.kt.doiThanhCapNhat ? 1 : 0]);
   // Ghi mã thành viên vào sheet nguồn để các lần tải sau nhận ra đúng người dù đổi tên, đổi email.
   if (yeuCau.ghiMa) {
     try { dong.push(ghiMaVaoNguon_(c)); } catch (e) { dong.push('Chưa ghi được mã thành viên vào sheet nguồn: ' + e.message); }
@@ -313,7 +314,7 @@ function dongBoSinhNhat_(thanhVien, nhiemKy) {
   return { ten: cal.getName(), id: cal.getId(), soTao: moi.length, soXoa: kh.xoa.length, soGiu: kh.soGiu, conLai: conLai, thieuNgay: kh.thieuNgay };
 }
 
-/** Cài đặt, Thành viên, Lịch sinh nhật: lưu ID lịch của nhiệm kỳ đang chạy và đồng bộ ngay. */
+/** Cài đặt, Tài khoản, Lịch sinh nhật: lưu ID lịch của nhiệm kỳ đang chạy và đồng bộ ngay. */
 function luuLichSinhNhat(phien, id) {
   canDangNhap_(phien, 'caidat');
   var ky = layKyHienTai_();

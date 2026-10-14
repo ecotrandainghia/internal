@@ -414,7 +414,7 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
       if (matKhau) ghiMatKhau_(email, matKhau);
       return true;
     }
-    if (!matKhau && !layBiMat_('MatKhauMacDinh')) throw new Error('CLB chưa có mật khẩu chung. Nhập mật khẩu ban đầu cho ' + hoVaTen + ', hoặc đặt mật khẩu chung ở Cài đặt, Thành viên.');
+    if (!matKhau && !layBiMat_('MatKhauMacDinh')) throw new Error('CLB chưa có mật khẩu chung. Nhập mật khẩu ban đầu cho ' + hoVaTen + ', hoặc đặt mật khẩu chung ở Cài đặt, Tài khoản, Mật khẩu chung.');
     var muoi = matKhau ? Utilities.getUuid() : '';
     themDong_('TaiKhoan', [{ Email: email, MaTV: String(tv.MaTV || ''), HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: matKhau ? bamMatKhau_(matKhau, muoi) : '', Muoi: muoi, NgayTao: new Date() }]);
     return true;
@@ -445,7 +445,7 @@ function goTaiKhoan(phien, email) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk) throw new Error('Không tìm thấy tài khoản.');
-  if (tk.VaiTro === 'BOD') throw new Error('Quyền BOD đi theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại danh sách ở Cài đặt, Thành viên.');
+  if (tk.VaiTro === 'BOD') throw new Error('Quyền BOD đi theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại danh sách ở Cài đặt, Tài khoản, Tải danh sách thành viên.');
   ghiCotTaiKhoan_(String(tk.Email), 'VaiTro', 'TV');
   ghiCotTaiKhoan_(String(tk.Email), 'BanQuanLy', '');
   ghiCotTaiKhoan_(String(tk.Email), 'NhomHr', '');

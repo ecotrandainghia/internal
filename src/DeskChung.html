@@ -593,7 +593,7 @@ function bindLogin() {
 }
 function moDoiMatKhau() {
   var h = moHop({ tieuDe: 'Đổi mật khẩu', than: '<form class="form" id="pf"><label class="f">Mật khẩu hiện tại<input type="password" id="p0" autocomplete="current-password"></label><label class="f">Mật khẩu mới <small>Ít nhất 6 ký tự</small><input type="password" id="p1" autocomplete="new-password"></label><label class="f">Nhập lại mật khẩu mới<input type="password" id="p2" autocomplete="new-password"></label>' +
-    (NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Muốn đặt lại mật khẩu cho người khác, vào Cài đặt, Thành viên và phân quyền, Đặt lại mật khẩu.</p>' : '') + '<button hidden></button></form>',
+    (NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Muốn đặt lại mật khẩu cho người khác, vào Cài đặt, Tài khoản, Đặt lại mật khẩu.</p>' : '') + '<button hidden></button></form>',
     chan: '<span class="msg" id="pm"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="pb">Đổi mật khẩu</button>' });
   h.querySelector('.dlg').style.maxWidth = '440px';
   var gui = function (e) {
