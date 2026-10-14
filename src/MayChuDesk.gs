@@ -89,7 +89,7 @@ function doiMatKhau(phien, matKhauCu, matKhauMoi) {
 /** Mật khẩu có đúng không. Tài khoản chưa đổi mật khẩu thì so với mật khẩu mặc định của CLB. */
 function dungMatKhau_(tk, matKhau) {
   var bam = String(tk.MatKhau || ''), muoi = String(tk.Muoi || '');
-  if (!bam) { bam = String(layCaiDat_('MatKhauMacDinh') || ''); muoi = String(layCaiDat_('MuoiMacDinh') || ''); }
+  if (!bam) { bam = layBiMat_('MatKhauMacDinh'); muoi = layBiMat_('MuoiMacDinh'); }
   return !!bam && bamMatKhau_(String(matKhau || ''), muoi) === bam;
 }
 
@@ -109,7 +109,7 @@ function thongTinNguoiDung_(tk) {
 /** Ảnh đại diện (ảnh JPEG nhỏ dạng data URL, đã thu nhỏ trên máy người dùng). Chưa có thì ''. */
 function anhDaiDien_(email) {
   try {
-    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('AnhDaiDien');
+    var sh = soDuLieu_().getSheetByName('AnhDaiDien');
     if (!sh || sh.getLastRow() < 2) return '';
     var o = sh.getRange(2, 1, sh.getLastRow() - 1, 1).createTextFinder(String(email)).matchEntireCell(true).matchCase(false).findNext();
     return o ? String(sh.getRange(o.getRow(), 2).getValue() || '') : '';
@@ -202,8 +202,8 @@ function layDuLieuCongDiem(phien) {
   canDangNhap_(phien, 'congdiem');
   var ky = layKyHienTai_();
   return {
-    ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
-    thanhVien: docThanhVien_().filter(khongPhaiBod_).map(function (tv) { return { ten: String(tv.HoVaTen), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
+    ky: ky ? { nhiemKy: String(ky.NhiemKy), giaiDoan: Number(ky.GiaiDoan) } : null,
+    thanhVien: docThanhVien_().filter(khongPhaiBod_).map(function (tv) { return { ten: String(tv.HoVaTen), maTV: String(tv.MaTV || ''), ban: String(tv.Ban), nhom: nhomBan_(tv.Ban) }; }),
     loai: docBang_('LoaiHoatDong').filter(loaiCongTay_).map(function (l) { return { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 }; }),
     ganDay: lichSuGanDay_(ky, 30)
   };
@@ -211,7 +211,7 @@ function layDuLieuCongDiem(phien) {
 
 function lichSuGanDay_(ky, soDong) {
   if (!ky) return [];
-  return docBang_('LichSuDiem').filter(function (d) { return cungKy_(d, ky.NhiemKy, ky.HocKy); })
+  return docBang_('LichSuDiem').filter(function (d) { return cungKy_(d, ky.NhiemKy, ky.GiaiDoan); })
     .map(function (d) {
       return {
         thoiGian: new Date(d.ThoiGian).getTime(), ten: String(d.HoVaTen), loai: String(d.LoaiHoatDong),
@@ -226,7 +226,7 @@ function congDiem(phien, yeuCau) {
   var tk = canDangNhap_(phien, 'congdiem');
   var khoa = layKhoa_();
   try {
-    var kq = taoDongCongDiem_(yeuCau, docBang_('ThanhVien').filter(khongPhaiBod_), docBang_('LoaiHoatDong').filter(loaiCongTay_), String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
+    var kq = taoDongCongDiem_(yeuCau, docThanhVien_().filter(khongPhaiBod_), docBang_('LoaiHoatDong').filter(loaiCongTay_), String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
     if (kq.loi) throw new Error(kq.loi);
     themDong_('LichSuDiem', kq.dong);
     xoaBoNhoTam_();
@@ -282,7 +282,7 @@ function danhDauGopYDuocDung(phien, thoiGianMs) {
       var loai = loaiDungCho_(loaiHd, DUNG_CHO.GOP_Y);
       if (!loai) throw new Error('Chưa có loại hoạt động dùng cho góp ý. Chọn trong Cài đặt, mục Thang điểm hoạt động.');
       var kq = taoDongCongDiem_({ loai: String(loai.TenLoai), tenHoatDong: String(v[r][td.indexOf('NoiDung')]).slice(0, 80), nguoi: [ten] },
-        docBang_('ThanhVien').filter(khongPhaiBod_), loaiHd, String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
+        docThanhVien_().filter(khongPhaiBod_), loaiHd, String(tk.HoVaTen), layKyHienTai_(), new Date(), docBang_('LichSuDiem'));
       if (kq.loi) throw new Error(kq.loi);
       themDong_('LichSuDiem', kq.dong);
       sh.getRange(r + 1, cDung + 1).setValue(new Date());
@@ -323,8 +323,9 @@ function layCaiDatDesk(phien) {
     nhac: caiDatNhacZalo_(),
     anhNen: String(layCaiDat_('AnhNenPhienBan') || ''),
     ghim: docBang_('BangGhim').map(function (g) { return { tieuDe: String(g.TieuDe), link: String(g.DuongDan) }; }),
-    sapDenHanNgay: soNgaySapDenHan_(),
-    khongHoanThanhSau: soNgayKhongHoanThanh_(),
+    quyTac: quyTac_(),
+    coCau: CO_CAU.ban,
+    dungCho: cacDungCho_(),
     mail: { cheDoUcv: cheDoXemUcv_(), soDanhBa: docBang_('DanhBa').length, soThanhVien: tv.filter(function (t) { return emailHopLe_(t.Email); }).length },
     googleClientId: String(layCaiDat_('GoogleClientId') || ''),
     chuDe: chuDeHopLe_(layCaiDat_('ChuDe')),
@@ -334,7 +335,7 @@ function layCaiDatDesk(phien) {
       return { coBot: !!layTokenZalo_(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
     })(),
     taiKhoan: docBang_('TaiKhoan').filter(function (t) { return String(t.VaiTro) !== 'TV'; }).map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy), nhomHr: nhomHr_(t.NhomHr) }; }),
-    thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), email: String(t.Email || '') }; })
+    thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), maTV: String(t.MaTV || ''), ban: String(t.Ban), email: String(t.Email || '') }; })
   };
 }
 
@@ -398,11 +399,11 @@ function luuGhim(phien, ds) {
 function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
   canDangNhap_(phien, 'caidat');
-  var tv = docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen) === String(hoVaTen); })[0];
+  var tv = docThanhVien_().filter(function (t) { return String(t.HoVaTen) === String(hoVaTen); })[0];
   if (!tv) throw new Error('Không có "' + hoVaTen + '" trong danh sách thành viên.');
   var email = String(tv.Email || '').trim().toLowerCase();
   if (!email) throw new Error(hoVaTen + ' chưa có email trong danh sách thành viên.');
-  if (nhomBan_(tv.Ban) === 'BOD') throw new Error(hoVaTen + ' là BOD, đã có mọi quyền.');
+  if (laBanBod_(tv.Ban)) throw new Error(hoVaTen + ' là BOD, đã có mọi quyền.');
   matKhau = String(matKhau || '');
   if (matKhau) { var loi = kiemTraMatKhauMoi_(matKhau); if (loi) throw new Error(loi); }
   return voiKhoa_(function () {
@@ -413,9 +414,9 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
       if (matKhau) ghiMatKhau_(email, matKhau);
       return true;
     }
-    if (!matKhau && !layCaiDat_('MatKhauMacDinh')) throw new Error('CLB chưa có mật khẩu mặc định. Nhập mật khẩu ban đầu cho ' + hoVaTen + '.');
+    if (!matKhau && !layBiMat_('MatKhauMacDinh')) throw new Error('CLB chưa có mật khẩu chung. Nhập mật khẩu ban đầu cho ' + hoVaTen + ', hoặc đặt mật khẩu chung ở Cài đặt, Thành viên.');
     var muoi = matKhau ? Utilities.getUuid() : '';
-    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: matKhau ? bamMatKhau_(matKhau, muoi) : '', Muoi: muoi, NgayTao: new Date() }]);
+    themDong_('TaiKhoan', [{ Email: email, MaTV: String(tv.MaTV || ''), HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: matKhau ? bamMatKhau_(matKhau, muoi) : '', Muoi: muoi, NgayTao: new Date() }]);
     return true;
   });
 }
@@ -425,8 +426,8 @@ function luuBanQuanLy(phien, email, dsBan) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk || String(tk.VaiTro) !== 'HR') throw new Error('Chỉ phân ban cho tài khoản HR.');
-  bangDuLieu_('TaiKhoan'); // thêm cột BanQuanLy nếu sheet còn bản cũ
-  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).filter(function (b) { return banCoo_(docBang_('ThanhVien')).indexOf(b) >= 0; }).join(', '));
+  quyTac_();
+  ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).filter(function (b) { return banCoo_().indexOf(b) >= 0; }).join(', '));
   return true;
 }
 
@@ -435,7 +436,6 @@ function luuNhomHr(phien, email, ds) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk || ['HR', 'UCV'].indexOf(String(tk.VaiTro)) < 0) throw new Error('Chỉ xếp nhóm cho tài khoản HR hoặc UCV.');
-  bangDuLieu_('TaiKhoan'); // thêm cột NhomHr nếu sheet còn bản cũ
   ghiCotTaiKhoan_(String(tk.Email), 'NhomHr', nhomHr_((ds || []).join(',')).join(', '));
   return true;
 }
@@ -445,7 +445,7 @@ function goTaiKhoan(phien, email) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk) throw new Error('Không tìm thấy tài khoản.');
-  if (tk.VaiTro === 'BOD') throw new Error('Quyền BOD đi theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại.');
+  if (tk.VaiTro === 'BOD') throw new Error('Quyền BOD đi theo danh sách thành viên. Muốn gỡ, hãy sửa cột Ban trên sheet nguồn rồi tải lại danh sách ở Cài đặt, Thành viên.');
   ghiCotTaiKhoan_(String(tk.Email), 'VaiTro', 'TV');
   ghiCotTaiKhoan_(String(tk.Email), 'BanQuanLy', '');
   ghiCotTaiKhoan_(String(tk.Email), 'NhomHr', '');
@@ -466,25 +466,20 @@ var GIU_TASK_DA_KET_THUC_NGAY = 120;
 
 /** Ngày hôm nay theo giờ Việt Nam, dạng yyyy-MM-dd. */
 function homNay_() {
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return Utilities.formatDate(new Date(), muiGio_(), 'yyyy-MM-dd');
 }
 
 /** Ô ngày trong sheet có thể là kiểu ngày hoặc chữ; đưa về yyyy-MM-dd. */
 function ngayChuoi_(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+  if (v instanceof Date) return Utilities.formatDate(v, muiGio_(), 'yyyy-MM-dd');
   return String(v || '').slice(0, 10);
 }
 
-/** Trễ quá bao nhiêu ngày thì task tính là không hoàn thành (mặc định 1). */
-function soNgayKhongHoanThanh_() {
-  var n = layCaiDat_('KhongHoanThanhSauNgay');
-  return n === null || n === '' ? 1 : Number(n);
-}
+/** Trễ quá bao nhiêu ngày thì task tính là không hoàn thành (Cài đặt, Quy tắc). */
+function soNgayKhongHoanThanh_() { return quyTac_().khtSauNgay; }
 
-function soNgaySapDenHan_() {
-  var n = layCaiDat_('SapDenHanNgay');
-  return n === null || n === '' ? 2 : Number(n);
-}
+/** Còn bao nhiêu ngày thì task hiện "sắp đến hạn" (Cài đặt, Quy tắc). */
+function soNgaySapDenHan_() { return quyTac_().sapDenHanNgay; }
 
 /** Quyền với task của tài khoản đang đăng nhập (theo vai trò, ban HR được phân, chức vụ BOD). */
 function quyenTaskCua_(tk) {
@@ -553,7 +548,7 @@ function taoTask(phien, yeuCau) {
   var khoa = layKhoa_();
   var kq;
   try {
-    kq = taoDongTask_(yeuCau, docBang_('ThanhVien'), String(tk.HoVaTen), String(tk.VaiTro), new Date(), [], tenSupRes_());
+    kq = taoDongTask_(yeuCau, docThanhVien_(), String(tk.HoVaTen), String(tk.VaiTro), new Date());
     if (kq.loi) throw new Error(kq.loi);
     themDong_('Task', kq.dong);
   } finally {
@@ -576,7 +571,7 @@ function suaTask(phien, thoiGianTao, nguoiCu, moi) {
   var q = quyenTaskCua_(canDangNhap_(phien, 'task'));
   kiemTraDuocGiao_(q, nguoiCu);
   kiemTraDuocGiao_(q, moi && moi.nguoi);
-  var k = kiemTraTask_({ ten: moi && moi.ten, moTa: moi && moi.moTa, hanChot: moi && moi.hanChot, nguoi: [moi && moi.nguoi] }, docBang_('ThanhVien'));
+  var k = kiemTraTask_({ ten: moi && moi.ten, moTa: moi && moi.moTa, hanChot: moi && moi.hanChot, nguoi: [moi && moi.nguoi] }, docThanhVien_());
   if (k.loi) throw new Error(k.loi);
   var khoa = layKhoa_();
   try {
@@ -690,7 +685,7 @@ function layTrangChu(phien) {
   if (vaiTro !== 'BOD') {
     kq.taskCuaToi = dem(dsTask.filter(function (t) { return t.nguoi === ten; }));
     var tv = docThanhVien_().filter(function (t) { return String(t.HoVaTen).toLowerCase() === ten.toLowerCase(); })[0];
-    if (tv) { var lg = kpiLogCuaNguoi_(tv, docSuKienLog_(), batDauGiaiDoan2_()); kq.logCuaToi = { tiLe: lg.tiLe, thamGia: lg.thamGia, giaoCuoi: lg.giaoCuoi }; }
+    if (tv) { var lg = kpiLogCuaNguoi_(tv, docSuKienLog_(), mocGiaiDoanNay_()); kq.logCuaToi = { tiLe: lg.tiLe, thamGia: lg.thamGia, giaoCuoi: lg.giaoCuoi }; }
     if (vaiTro === 'HR') {
       var pv = phamViHrCua_(tk);
       if (pv.co) kq.taskThanhVien = dem(dsTask.filter(function (t) { return t.nguoi !== ten && pv.thuoc(t.nguoi); }));

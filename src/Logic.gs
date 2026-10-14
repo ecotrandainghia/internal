@@ -57,6 +57,12 @@ var QUY_TAC = chepSau_(QUY_TAC_MAC_DINH);
 
 function chepSau_(o) { return JSON.parse(JSON.stringify(o)); }
 
+/** Dùng cơ cấu ban và quy tắc BOD đã lưu (máy chủ gọi khi nạp cấu hình). Không truyền gì thì về mặc định. */
+function apCauHinh_(dsBan, quyTac) {
+  CO_CAU.ban = dsBan && dsBan.length ? dsBan : CO_CAU_MAC_DINH;
+  QUY_TAC = chuanHoaQuyTac_(quyTac);
+}
+
 /** Ghép quy tắc BOD đã lưu (có thể thiếu mục) với mặc định, bỏ giá trị sai. */
 function chuanHoaQuyTac_(luu) {
   var q = chepSau_(QUY_TAC_MAC_DINH);
@@ -676,7 +682,8 @@ function tongHopBangDiem_(thanhVien, lichSu, ky, qt) {
     var g = Number(d.GiaiDoan);
     if (!(g >= 1 && g <= n)) return;
     var k = String(d.HoVaTen).toLowerCase();
-    (diem[k] = diem[k] || [])[g] = ((diem[k] || [])[g] || 0) + (Number(d.Diem) || 0);
+    if (!diem[k]) diem[k] = [];
+    diem[k][g] = (diem[k][g] || 0) + (Number(d.Diem) || 0);
   });
   var ds = thanhVien.map(function (tv) {
     var k = String(tv.HoVaTen).toLowerCase(), v = gdVao_(tv), d = diem[k] || [];
@@ -879,8 +886,8 @@ function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio
   if (!loai) return { dong: [], loi: 'Không có loại hoạt động "' + yeuCau.loai + '".' };
   var ds = (yeuCau.nguoi || []).map(function (n) { return String(n); });
   if (!ds.length) return { dong: [], loi: 'Bạn chưa chọn ai.' };
-  var tenDung = {};
-  thanhVien.forEach(function (tv) { tenDung[String(tv.HoVaTen).toLowerCase()] = String(tv.HoVaTen); });
+  var tenDung = {}, maCua = {};
+  thanhVien.forEach(function (tv) { var k = String(tv.HoVaTen).toLowerCase(); tenDung[k] = String(tv.HoVaTen); maCua[k] = String(tv.MaTV || ''); });
   var khongCo = ds.filter(function (n) { return !tenDung[n.toLowerCase()]; });
   if (khongCo.length) return { dong: [], loi: 'Không có trong danh sách thành viên: ' + khongCo.join(', ') + '.' };
   var daCo = {};
@@ -890,7 +897,7 @@ function taoDongCongDiem_(yeuCau, thanhVien, loaiHoatDong, nguoiCong, ky, bayGio
     if (daCo[k]) return;
     daCo[k] = true;
     dong.push({
-      ThoiGian: bayGio, HoVaTen: tenDung[k], LoaiHoatDong: String(loai.TenLoai),
+      ThoiGian: bayGio, MaTV: maCua[k], HoVaTen: tenDung[k], LoaiHoatDong: String(loai.TenLoai),
       TenHoatDong: String(yeuCau.tenHoatDong || '').trim().slice(0, 200), Diem: Number(loai.Diem) || 0,
       NguoiCong: nguoiCong, NhiemKy: String(ky.NhiemKy), GiaiDoan: Number(ky.GiaiDoan)
     });
@@ -938,19 +945,19 @@ function dungChoLog_(phut) { return 'log' + Math.round(Number(phut)); }
 /** Các chức năng tự cộng hiện có (theo thời lượng buổi log trong quy tắc): { mã: tên }. */
 function cacDungCho_(qt) {
   var kq = { gopy: 'Góp ý được dùng', react: 'Seeding: react', comment: 'Seeding: comment' };
-  ((qt || QUY_TAC).thoiLuongBuoi || []).forEach(function (p) { kq[dungChoLog_(p)] = 'Log vượt (buổi ' + p + ' phút)'; });
+  ((qt || QUY_TAC).thoiLuongBuoi || []).forEach(function (p) { kq[dungChoLog_(p)] = 'Buổi log dư chỉ tiêu (' + p + ' phút)'; });
   return kq;
 }
 
 /** Mức điểm theo quy chế KPI 2026-2027 (mục III.3). BOD nạp vào bảng loại hoạt động bằng một nút trong Cài đặt. */
 var MUC_DIEM_QUY_CHE = [
-  { ten: 'React bài đăng trong vòng 48 giờ', diem: 1, congTay: false, dungCho: 'react' },
-  { ten: 'Comment bài đăng trong vòng 48 giờ', diem: 2, congTay: false, dungCho: 'comment' },
+  { ten: 'React bài đăng (trong số giờ seeding)', diem: 1, congTay: false, dungCho: 'react' },
+  { ten: 'Comment bài đăng (trong số giờ seeding)', diem: 2, congTay: false, dungCho: 'comment' },
   { ten: 'Làm staff ca ngắn (giờ ra chơi)', diem: 3, congTay: true },
   { ten: 'Tham gia bonding', diem: 5, congTay: true },
   { ten: 'Góp ý được CLB đưa vào sử dụng', diem: 10, congTay: false, gioiHan: 2, dungCho: 'gopy' },
-  { ten: 'Làm log vượt số buổi được giao (buổi 90 phút)', diem: 20, congTay: false, dungCho: 'log90' },
-  { ten: 'Làm log vượt số buổi được giao (buổi 180 phút)', diem: 40, congTay: false, dungCho: 'log180' },
+  { ten: 'Đi log dư chỉ tiêu (buổi 90 phút)', diem: 20, congTay: false, dungCho: 'log90' },
+  { ten: 'Đi log dư chỉ tiêu (buổi 180 phút)', diem: 40, congTay: false, dungCho: 'log180' },
   { ten: 'Đại diện CLB tham gia cuộc thi', diem: 40, congTay: true },
   { ten: 'Tham dự sự kiện của CLB hoặc của đối tác', diem: 40, congTay: true },
   { ten: 'Làm staff 1 buổi (sự kiện lớn)', diem: 50, congTay: true }
@@ -1960,7 +1967,7 @@ function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, ba
   yc = yc || {};
   var link = String(yc.link || '').trim();
   if (!linkHopLe_(link)) return loi('Dán link bài đăng (bắt đầu bằng https://).');
-  // Giờ đăng bài không bắt buộc: không ghi thì lấy giờ gửi báo cáo (người điền gửi sau khi bài đủ 48 giờ).
+  // Giờ đăng bài không bắt buộc: không ghi thì lấy giờ gửi báo cáo (người điền gửi sau khi bài đủ số giờ seeding).
   var lucDang = Number(yc.lucDang) || 0;
   if (lucDang && isNaN(new Date(lucDang).getTime())) return loi('Thời gian đăng bài chưa đúng.');
   if (lucDang > bayGio.getTime() + 5 * 60000) return loi('Thời gian đăng bài đang ở tương lai. Kiểm tra lại ngày giờ.');
@@ -1969,18 +1976,21 @@ function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, ba
   if (trung) return loi('Bài này đã có báo cáo của ' + String(trung.NguoiNop) + '. Muốn sửa thì nhờ BOD huỷ báo cáo cũ rồi điền lại.');
   var loaiReact = loaiDungCho_(loaiHoatDong, DUNG_CHO.REACT), loaiComment = loaiDungCho_(loaiHoatDong, DUNG_CHO.COMMENT);
   var r = khopTenSeeding_(yc.react, thanhVien), c = khopTenSeeding_(yc.comment, thanhVien);
-  if (r.ten.length && !loaiReact) return loi('Chưa có loại hoạt động dùng cho react. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.');
-  if (c.ten.length && !loaiComment) return loi('Chưa có loại hoạt động dùng cho comment. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.');
+  if (r.ten.length && !loaiReact) return loi('Chưa có loại điểm dùng cho react. BOD chọn trong Cài đặt, mục Thang điểm.');
+  if (c.ten.length && !loaiComment) return loi('Chưa có loại điểm dùng cho comment. BOD chọn trong Cài đặt, mục Thang điểm.');
   if (!r.ten.length && !c.ten.length && !r.khongKhop.length && !c.khongKhop.length) return loi('Bạn chưa dán tên ai.');
   kq.react = r.ten; kq.comment = c.ten;
   r.khongKhop.concat(c.khongKhop).forEach(function (x) { if (kq.khongKhop.indexOf(x) < 0) kq.khongKhop.push(x); });
-  var gio = lucDang ? (bayGio.getTime() - lucDang) / 3600000 : 48;
-  if (gio < 48) kq.canhBao.push('Bài mới đăng được ' + Math.floor(gio) + ' giờ, chưa đủ 48 giờ. Ai react hoặc comment sau lúc gửi sẽ không được cộng.');
-  if (gio > 24 * 7) kq.canhBao.push('Bài đã đăng hơn 7 ngày. Chỉ ghi những người react hoặc comment trong 48 giờ đầu.');
+  var han = QUY_TAC.seedingGio, qua = QUY_TAC.seedingQuaNgay;
+  var gio = lucDang ? (bayGio.getTime() - lucDang) / 3600000 : han;
+  if (gio < han) kq.canhBao.push('Bài mới đăng được ' + Math.floor(gio) + ' giờ, chưa đủ ' + han + ' giờ. Ai react hoặc comment sau lúc gửi sẽ không được cộng.');
+  if (gio > 24 * qua) kq.canhBao.push('Bài đã đăng hơn ' + qua + ' ngày. Chỉ ghi những người react hoặc comment trong ' + han + ' giờ đầu.');
+  var maCua = {};
+  thanhVien.forEach(function (tv) { maCua[String(tv.HoVaTen).toLowerCase()] = String(tv.MaTV || ''); });
   var them = function (ds, loai) {
     ds.forEach(function (ten) {
       kq.dong.push({
-        ThoiGian: bayGio, HoVaTen: ten, LoaiHoatDong: String(loai.TenLoai), TenHoatDong: link.slice(0, 200), Diem: Number(loai.Diem) || 0,
+        ThoiGian: bayGio, MaTV: maCua[ten.toLowerCase()] || '', HoVaTen: ten, LoaiHoatDong: String(loai.TenLoai), TenHoatDong: link.slice(0, 200), Diem: Number(loai.Diem) || 0,
         NguoiCong: 'Seeding: ' + nguoiNop, NhiemKy: String(ky.NhiemKy), GiaiDoan: Number(ky.GiaiDoan)
       });
     });
@@ -2020,9 +2030,9 @@ function chuanHoaCachNhan_(giaTri) {
 /* ===================== KPI log (quy chế 2026-2027, mục II.1) ===================== */
 
 /**
- * Mỗi sự kiện log có số buổi dự kiến và số buổi giao cho từng thành viên (mặc định, hoặc riêng theo ban, theo khối lớp).
+ * Mỗi đợt log có số buổi dự kiến và số buổi giao cho từng thành viên (mặc định, hoặc riêng theo ban, theo khối lớp).
  * Buổi huỷ vì hết việc làm số buổi được giao cuối giảm theo tỉ lệ; buổi huỷ vì lý do khác tính là đã tham gia
- * với người đã đăng ký buổi đó. Đạt khi số buổi đã tham gia ≥ 80% tổng số buổi được giao cuối.
+ * với người đã đăng ký buổi đó. Đạt khi số buổi đã tham gia đủ phần trăm đạt KPI log (Cài đặt, Quy tắc) của chỉ tiêu cuối.
  */
 var TRANG_THAI_BUOI = { CHUA: 'Chưa diễn ra', DIEN_RA: 'Đã diễn ra', HUY_HET_VIEC: 'Huỷ vì hết việc', HUY_KHAC: 'Huỷ vì lý do khác', XOA: 'Đã xoá' };
 var SU_KIEN_CHOT = 'Đã chốt', SU_KIEN_HUY = 'Đã huỷ';
@@ -2056,12 +2066,12 @@ function giaoBanDau_(suKien, tv) {
   return Number(suKien.GiaoMacDinh) || 0;
 }
 
-/** Kiểm tra sự kiện log do BOD nhập. Trả về { dong, loi }. */
+/** Kiểm tra đợt log do BOD nhập. Trả về { dong, loi }. */
 function chuanHoaSuKienLog_(yc) {
   yc = yc || {};
   var ten = String(yc.ten || '').trim();
-  if (!ten) return { loi: 'Bạn chưa đặt tên sự kiện.' };
-  if (ten.length > 150) return { loi: 'Tên sự kiện dài quá 150 ký tự.' };
+  if (!ten) return { loi: 'Bạn chưa đặt tên đợt log.' };
+  if (ten.length > 150) return { loi: 'Tên đợt log dài quá 150 ký tự.' };
   var duKien = Number(yc.soBuoiDuKien);
   if (!(duKien >= 1 && duKien <= TOI_DA_BUOI_LOG) || Math.floor(duKien) !== duKien) return { loi: 'Số buổi dự kiến phải là số nguyên từ 1 đến ' + TOI_DA_BUOI_LOG + '.' };
   var soGiao = function (v, ten2) {
@@ -2124,7 +2134,7 @@ function coTen_(ds, ten) {
   return false;
 }
 
-/** Buổi tính vào sự kiện (bỏ buổi đã xoá), xếp theo ngày rồi theo lúc tạo. */
+/** Buổi tính vào đợt log (bỏ buổi đã xoá), xếp theo ngày rồi theo lúc tạo. */
 function buoiHieuLuc_(buoi) {
   return buoi.filter(function (b) { return String(b.TrangThai) !== TRANG_THAI_BUOI.XOA; }).sort(function (a, b) {
     var na = String(a.Ngay || ''), nb = String(b.Ngay || '');
@@ -2152,7 +2162,7 @@ function giaoCuoi_(giao, duKien, thucDien) {
 }
 
 /**
- * KPI log của một người trong một sự kiện.
+ * KPI log của một người trong một đợt log.
  * thamGia: buổi đã diễn ra có mặt, và buổi huỷ vì lý do khác mà người đó đã đăng ký.
  * vuot: các buổi được cộng điểm làm vượt, là những buổi có mặt muộn nhất vượt quá số buổi được giao cuối
  * (chỉ tính buổi thực sự diễn ra).
@@ -2175,16 +2185,17 @@ function kpiLogSuKien_(suKien, buoi, tv) {
 function hienSoBuoi_(x) { return Math.round(x * 100) / 100; }
 
 /**
- * KPI log của một người qua các sự kiện của nhiệm kỳ (sự kiện đã huỷ không tính).
- * dsSuKien: mỗi sự kiện kèm mảng buoi. Thành viên bổ sung chỉ tính sự kiện tạo từ lúc bắt đầu giai đoạn 2 (moc2).
+ * KPI log của một người qua các đợt log của nhiệm kỳ (đợt log đã huỷ không tính).
+ * dsSuKien: mỗi đợt log kèm mảng buoi. Người vào ở giai đoạn 2 trở đi chỉ tính đợt log tạo từ lúc giai đoạn mình vào bắt đầu.
+ * mocGd: { số giai đoạn: lúc bắt đầu (ms) }.
  * Trả về { giaoCuoi, thamGia, tiLe, chiTiet[] }; tiLe null khi chưa được giao buổi nào.
  */
-function kpiLogCuaNguoi_(tv, dsSuKien, moc2) {
-  var boSung = tv.LoaiThanhVien === LOAI_TV.BO_SUNG;
+function kpiLogCuaNguoi_(tv, dsSuKien, mocGd) {
+  var moc = gdVao_(tv) >= 2 ? Number((mocGd || {})[gdVao_(tv)]) || 0 : 0;
   var kq = { giaoCuoi: 0, thamGia: 0, tiLe: null, chiTiet: [] };
   dsSuKien.forEach(function (s) {
     if (String(s.TrangThai) === SU_KIEN_HUY) return;
-    if (boSung && new Date(s.ThoiGian).getTime() < moc2) return;
+    if (moc && new Date(s.ThoiGian).getTime() < moc) return;
     var k = kpiLogSuKien_(s, s.buoi || [], tv);
     if (!k.giao) return;
     kq.giaoCuoi += k.giaoCuoi;
@@ -2197,7 +2208,7 @@ function kpiLogCuaNguoi_(tv, dsSuKien, moc2) {
 }
 
 /**
- * Các dòng LichSuDiem cộng điểm log vượt khi chốt sự kiện: mỗi buổi vượt một dòng, theo loại hoạt động gắn với
+ * Các dòng LichSuDiem cộng điểm log vượt khi chốt đợt log: mỗi buổi vượt một dòng, theo loại hoạt động gắn với
  * thời lượng của buổi đó (log90, log180…). Trả về { dong, loi }.
  */
 function dongDiemLogVuot_(suKien, buoi, thanhVien, loaiHoatDong, ky, nguoiCong, bayGio) {
@@ -2216,8 +2227,8 @@ function dongDiemLogVuot_(suKien, buoi, thanhVien, loaiHoatDong, ky, nguoiCong, 
     });
   });
   var tl = Object.keys(thieu);
-  if (tl.length) return { dong: [], loi: 'Chưa có loại hoạt động dùng cho log vượt buổi ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Thang điểm hoạt động.' };
-  if (dong.length && !ky) return { dong: [], loi: 'Chưa có giai đoạn nào nên chưa cộng được điểm log vượt.' };
+  if (tl.length) return { dong: [], loi: 'Chưa có loại điểm dùng cho buổi log dư ' + tl.join(' và ') + ' phút. BOD chọn trong Cài đặt, mục Thang điểm.' };
+  if (dong.length && !ky) return { dong: [], loi: 'Chưa có giai đoạn nào nên chưa cộng được điểm buổi log dư.' };
   return { dong: dong, loi: '' };
 }
 
@@ -2253,18 +2264,17 @@ function docDangKyLog_(values, toolCu) {
 
 /* ===================== Tổng kết và certificate (quy chế 2026-2027, mục II.5, III.4) ===================== */
 
-var TI_LE_BU_TRU = 40, MUC_DAT = 80, MUC_BU_TRU = 60;
 var KQ_CERT = { CAP: 'Cấp', CAP_BU_TRU: 'Cấp nhờ bù trừ', CHUA: 'Chưa cấp' };
 
 /**
- * Những người trong top tiLe% theo một cột điểm (mặc định 15%). Người bằng điểm với người cuối trong top cũng được tính,
+ * Những người trong top tiLe% theo một cột điểm. Người bằng điểm với người cuối trong top cũng được tính,
  * người 0 điểm không được tính. Trả về { top: {tên viết thường: true}, hang: {tên viết thường: hạng} }.
  */
 function xepHangTop_(ds, khoa, tiLe) {
   var top = {}, hang = {};
   var sx = ds.filter(function (p) { return p[khoa] !== null && p[khoa] !== undefined; }).sort(function (a, b) { return b[khoa] - a[khoa]; });
   sx.forEach(function (p, i) { hang[String(p.ten).toLowerCase()] = i && sx[i - 1][khoa] === p[khoa] ? hang[String(sx[i - 1].ten).toLowerCase()] : i + 1; });
-  var k = Math.round(sx.length * tiLe / 100);
+  var k = Math.round(sx.length * tiLe / 100 + 1e-9);
   if (k) {
     var nguong = sx[k - 1][khoa];
     sx.forEach(function (p) { if (p[khoa] > 0 && p[khoa] >= nguong) top[String(p.ten).toLowerCase()] = true; });
@@ -2272,79 +2282,94 @@ function xepHangTop_(ds, khoa, tiLe) {
   return { top: top, hang: hang, so: sx.length };
 }
 
-/**
- * Phần trăm KPI task để xét certificate. Người được miễn task (ôn thi chuyển cấp): null (không xét phần task).
- * Chưa có task nào có kết quả: null.
- */
+/** Phần trăm KPI task để xét chứng nhận. Chưa có task nào có kết quả: null. */
 function phanTramTaskCert_(k) {
-  if (k.mien) return null;
-  return k.task ? k.task.tiLe : null;
+  return k && k.task ? k.task.tiLe : null;
+}
+
+/** Tổng điểm từ giai đoạn g trở đi (gd: mảng điểm giai đoạn 1..n, null là chưa vào). */
+function diemTuGiaiDoan_(gd, g) {
+  var t = 0;
+  for (var i = Math.max(1, g) - 1; i < (gd || []).length; i++) t += Number(gd[i]) || 0;
+  return t;
 }
 
 /**
- * Xét certificate cho từng người.
- * ds: [{ ten, ban, boSung, kpi (như kpiCuaNguoi_), diemCaKy, diemGd2 }]. diemCaKy: tổng cả nhiệm kỳ (thành viên chính thức),
- * diemGd2: điểm giai đoạn 2.
- * - Log ≥ 80% và task ≥ 80%: cấp.
- * - Mỗi phần ≥ 60%: xét bù trừ. Chính thức xếp theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức; bổ sung xếp theo
- *   điểm giai đoạn 2 trong tất cả thành viên. Lọt top 40% (tính cả người bằng điểm, 0 điểm không tính) thì cấp.
- * - Có phần dưới 60%: chưa cấp.
- * Phần chưa được giao việc gì (null) coi như đạt.
+ * Xét chứng nhận (certificate) cho từng người theo quy tắc của nhiệm kỳ.
+ * ds: [{ ten, ban, gdVao, kpi: { log: {tiLe}, task: {tiLe} }, gd: [điểm từng giai đoạn] }].
+ * - Log và task đều đạt mức đạt của ban mình (mặc định 80%): cấp.
+ * - Mỗi phần từ mức bù trừ (mặc định 60%): xét bù trừ. Người vào ở giai đoạn g được xếp hạng theo điểm từ giai đoạn g trở đi,
+ *   cùng mọi người đã có mặt từ giai đoạn g trở về trước (chính thức xếp với chính thức theo điểm cả nhiệm kỳ; bổ sung vào ở
+ *   giai đoạn 2 xếp với tất cả theo điểm từ giai đoạn 2). Lọt top tiLeBuTru% (mặc định 40%) thì cấp.
+ * - Có phần dưới mức bù trừ: chưa cấp. Phần chưa được giao việc gì (null) coi như đạt.
  */
-function xetCertificate_(ds) {
-  var chinhThuc = ds.filter(function (p) { return !p.boSung; }).map(function (p) { return { ten: p.ten, d: p.diemCaKy === null || p.diemCaKy === undefined ? Number(p.diemGd2) || 0 : p.diemCaKy }; });
-  var tatCa = ds.map(function (p) { return { ten: p.ten, d: Number(p.diemGd2) || 0 }; });
-  var xhCt = xepHangTop_(chinhThuc, 'd', TI_LE_BU_TRU), xhBs = xepHangTop_(tatCa, 'd', TI_LE_BU_TRU);
+function xetCertificate_(ds, qt) {
+  qt = qt || QUY_TAC;
+  var gdCua = function (p) { return Math.max(1, Number(p.gdVao) || (p.boSung ? 2 : 1)); };
+  var bangCua = {};
+  var xepHang = function (g) {
+    if (!bangCua[g]) {
+      var trong = ds.filter(function (p) { return gdCua(p) <= g; }).map(function (p) { return { ten: p.ten, d: diemTuGiaiDoan_(p.gd, g) }; });
+      bangCua[g] = { xh: xepHangTop_(trong, 'd', qt.tiLeBuTru), ds: trong };
+    }
+    return bangCua[g];
+  };
   return ds.map(function (p) {
-    var log = p.kpi.log ? p.kpi.log.tiLe : null, task = phanTramTaskCert_(p.kpi);
+    var log = p.kpi && p.kpi.log ? p.kpi.log.tiLe : null, task = phanTramTaskCert_(p.kpi);
     var dat = function (x, muc) { return x === null || x === undefined || x >= muc; };
-    var kq = { ten: p.ten, ban: p.ban, boSung: !!p.boSung, log: log, task: task, mien: !!p.kpi.mien, buTru: false, top40: false, hangBuTru: null, soBuTru: null, diemBuTru: null };
-    if (dat(log, MUC_DAT) && dat(task, MUC_DAT)) kq.ketQua = KQ_CERT.CAP;
-    else if (dat(log, MUC_BU_TRU) && dat(task, MUC_BU_TRU)) {
-      var xh = p.boSung ? xhBs : xhCt, k = String(p.ten).toLowerCase();
+    var kq = { ten: p.ten, ban: p.ban, boSung: gdCua(p) >= 2, gdVao: gdCua(p), log: log, task: task, buTru: false, topBuTru: false, hangBuTru: null, soBuTru: null, diemBuTru: null,
+      datLog: mucDatCua_(p.ban, 'datLog', qt), datTask: mucDatCua_(p.ban, 'datTask', qt) };
+    if (dat(log, kq.datLog) && dat(task, kq.datTask)) kq.ketQua = KQ_CERT.CAP;
+    else if (dat(log, qt.mucBuTru) && dat(task, qt.mucBuTru)) {
+      var b = xepHang(kq.gdVao), k = String(p.ten).toLowerCase();
       kq.buTru = true;
-      kq.top40 = !!xh.top[k];
-      kq.hangBuTru = xh.hang[k] || null;
-      kq.soBuTru = xh.so;
-      kq.diemBuTru = (p.boSung ? tatCa : chinhThuc).filter(function (x) { return String(x.ten).toLowerCase() === k; })[0].d;
-      kq.ketQua = kq.top40 ? KQ_CERT.CAP_BU_TRU : KQ_CERT.CHUA;
+      kq.topBuTru = !!b.xh.top[k];
+      kq.hangBuTru = b.xh.hang[k] || null;
+      kq.soBuTru = b.xh.so;
+      kq.diemBuTru = diemTuGiaiDoan_(p.gd, kq.gdVao);
+      kq.ketQua = kq.topBuTru ? KQ_CERT.CAP_BU_TRU : KQ_CERT.CHUA;
     } else kq.ketQua = KQ_CERT.CHUA;
     return kq;
   });
 }
 
 /**
- * Danh sách khen thưởng theo điểm từ bảng xếp hạng (tongHopBangDiem_): top 15% giai đoạn 1, giai đoạn 2, và người lọt top cả hai.
- * Ở giai đoạn 1 chỉ có danh sách giai đoạn 1.
+ * Danh sách khen thưởng theo điểm từ bảng điểm (tongHopBangDiem_): top từng giai đoạn, top cả nhiệm kỳ,
+ * và người lọt top ở mọi giai đoạn (khi đã có từ hai giai đoạn).
+ * @param {number} n giai đoạn đang chạy
  */
-function danhSachKhenThuong_(bang, gd2) {
-  var lay = function (loc, khoa) {
-    return bang.filter(loc).map(function (p) { return { ten: p.ten, ban: p.ban, diem: p[khoa] }; }).sort(function (a, b) { return b.diem - a.diem; });
-  };
-  if (!gd2) return { gd1: lay(function (p) { return p.top; }, 'diem'), gd2: [], caHai: [] };
+function danhSachKhenThuong_(bang, n) {
+  var sx = function (ds) { return ds.sort(function (a, b) { return b.diem - a.diem; }); };
+  var gd = [];
+  for (var g = 1; g <= n; g++) {
+    gd.push({ giaiDoan: g, ds: sx(bang.filter(function (p) { return p.topGd && p.topGd[g - 1]; }).map(function (p) { return { ten: p.ten, ban: p.ban, diem: p.gd[g - 1] }; })) });
+  }
   return {
-    gd1: lay(function (p) { return p.topHk1; }, 'diemHk1'),
-    gd2: lay(function (p) { return p.top; }, 'diem'),
-    caHai: lay(function (p) { return p.topHk1 && p.top; }, 'diemCaKy')
+    gd: gd,
+    caKy: n >= 2 ? sx(bang.filter(function (p) { return p.topCaKy; }).map(function (p) { return { ten: p.ten, ban: p.ban, diem: p.caKy }; })) : [],
+    moiGiaiDoan: n >= 2 ? sx(bang.filter(function (p) { return p.topGd && p.topGd.length && p.topGd.every(Boolean); }).map(function (p) { return { ten: p.ten, ban: p.ban, diem: p.caKy }; })) : []
   };
 }
 
 if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI, LOAI_TV: LOAI_TV,
-    nhiemKyTheoKieu: nhiemKyTheoKieu_, kieuTaiThucTe: kieuTaiThucTe_, soSanhDanhSach: soSanhDanhSach_, ganLoaiThanhVien: ganLoaiThanhVien_,
+    kieuTaiThucTe: kieuTaiThucTe_, goiYNhiemKy: goiYNhiemKy_, keHoachTaiDanhSach: keHoachTaiDanhSach_, soDotCua: soDotCua_, cacKieuTai: cacKieuTai_, kieuDot: kieuDot_, nhiemKyHopLe: nhiemKyHopLe_,
+    maThanhVienMoi: maThanhVienMoi_, docMaThanhVien: docMaThanhVien_, TRANG_THAI_TV: TRANG_THAI_TV, apCauHinh: apCauHinh_, chuanHoaQuyTac: chuanHoaQuyTac_, chuanHoaCoCau: chuanHoaCoCau_,
+    mucDatCua: mucDatCua_, timBan: timBan_, laBanBod: laBanBod_, QUY_TAC_MAC_DINH: QUY_TAC_MAC_DINH, CO_CAU_MAC_DINH: CO_CAU_MAC_DINH, khoangNhiemKy: khoangNhiemKy_, diemTuGiaiDoan: diemTuGiaiDoan_,
+    cacDungCho: cacDungCho_, dungChoLog: dungChoLog_, gdVao: gdVao_,
     docNgaySinh: docNgaySinh_, tenLichSinhNhat: tenLichSinhNhat_, keHoachSinhNhat: keHoachSinhNhat_,
-    boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
-    docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
+    boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, thuTuBan: thuTuBan_, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
+    docDanhSachThanhVien: docDanhSachThanhVien_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
     dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
-    linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, dongBoTaiKhoan: dongBoTaiKhoan_, khongPhaiBod: khongPhaiBod_,
+    linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, dongBoTaiKhoan: dongBoTaiKhoan_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, phamViHr: phamViHr_, ngayNopTheoKieu: ngayNopTheoKieu_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
     TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
     trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_,
     CHAT_LUONG: CHAT_LUONG, DUNG_HAN: DUNG_HAN, KET_QUA: KET_QUA, dungHanTask: dungHanTask_, ketQuaTask: ketQuaTask_, kiemTraDanhGia: kiemTraDanhGia_,
-    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, hrPhuTrach: hrPhuTrach_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
     lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,
@@ -2356,7 +2381,7 @@ if (typeof module !== 'undefined') {
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_,
     CHU_DE: CHU_DE, chuDeHopLe: chuDeHopLe_, thuocTinhChuDe: thuocTinhChuDe_,
     chuanTenFb: chuanTenFb_,
-    TI_LE_TOP: TI_LE_TOP, soNguoiTop: soNguoiTop_, topTheoDiem: topTheoDiem_, vuotGioiHan: vuotGioiHan_, gioiHanLoai: gioiHanLoai_,
+    soNguoiTop: soNguoiTop_, topTheoDiem: topTheoDiem_, vuotGioiHan: vuotGioiHan_, gioiHanLoai: gioiHanLoai_,
     DUNG_CHO: DUNG_CHO, MUC_DIEM_QUY_CHE: MUC_DIEM_QUY_CHE, loaiDungCho: loaiDungCho_,
     NHOM_HR: NHOM_HR, TEN_NHOM_HR: TEN_NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_,
     TRANG_THAI_BUOI: TRANG_THAI_BUOI, SU_KIEN_CHOT: SU_KIEN_CHOT, SU_KIEN_HUY: SU_KIEN_HUY, khoiLop: khoiLop_, giaoBanDau: giaoBanDau_, chuanHoaSuKienLog: chuanHoaSuKienLog_, chuanHoaBuoiLog: chuanHoaBuoiLog_,

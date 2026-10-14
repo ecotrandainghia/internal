@@ -8,7 +8,7 @@ function ngayCuaThoiGian_(v) {
   if (!v) return '';
   var d = v instanceof Date ? v : new Date(v);
   if (isNaN(d.getTime())) return '';
-  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return Utilities.formatDate(d, muiGio_(), 'yyyy-MM-dd');
 }
 
 function truMotNgay_(ngay) {
@@ -16,24 +16,24 @@ function truMotNgay_(ngay) {
   return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - 1)).toISOString().slice(0, 10);
 }
 
-/** Các mốc thời gian chọn nhanh: giai đoạn, nhiệm kỳ (từ tab KyHoatDong) và các tháng. */
+/** Các mốc thời gian chọn nhanh: giai đoạn, nhiệm kỳ (từ bảng GiaiDoan) và các tháng. */
 function layThongTinBaoCao(phien) {
   canDangNhap_(phien, 'baocao');
   var hom = homNay_();
-  var ky = docBangNhiemKy_('KyHoatDong', 'BatDau').map(function (k) { return { nhiemKy: String(k.NhiemKy), hocKy: Number(k.HocKy), tu: ngayCuaThoiGian_(k.BatDau) }; })
+  var ky = docBang_('GiaiDoan').map(function (k) { return { nhiemKy: String(k.NhiemKy), giaiDoan: Number(k.GiaiDoan), tu: ngayCuaThoiGian_(k.BatDau) }; })
     .filter(function (k) { return k.tu; }).sort(function (a, b) { return a.tu < b.tu ? -1 : 1; })
-    // Lỡ tải cùng một đợt hai lần thì vẫn chỉ là một giai đoạn.
-    .filter(function (k, i, ds) { return !i || ds[i - 1].nhiemKy !== k.nhiemKy || ds[i - 1].hocKy !== k.hocKy; });
-  var hocKy = ky.map(function (k, i) {
-    return { ten: 'Giai đoạn ' + k.hocKy + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
-  }).reverse();
+    .filter(function (k, i, ds) { return !i || ds[i - 1].nhiemKy !== k.nhiemKy || ds[i - 1].giaiDoan !== k.giaiDoan; });
+  var giaiDoan = ky.map(function (k, i) {
+    return { ten: 'Giai đoạn ' + k.giaiDoan + ' · ' + k.nhiemKy, tu: k.tu, den: i + 1 < ky.length ? truMotNgay_(ky[i + 1].tu) : hom };
+  });
   var nhiemKy = [];
-  hocKy.slice().reverse().forEach(function (h, i) {
+  giaiDoan.forEach(function (h, i) {
     var ten = 'Nhiệm kỳ ' + ky[i].nhiemKy;
     var co = nhiemKy.filter(function (n) { return n.ten === ten; })[0];
     if (co) co.den = h.den; else nhiemKy.push({ ten: ten, tu: h.tu, den: h.den });
   });
-  return { homNay: hom, hocKy: hocKy, nhiemKy: nhiemKy.reverse(), batDau: ky.length ? ky[0].tu : hom };
+  var moc = batDauNhiemKy_(), tuNay = moc ? ngayCuaThoiGian_(new Date(moc)) : hom;
+  return { homNay: hom, hocKy: giaiDoan.filter(function (g) { return g.tu >= tuNay; }).reverse(), nhiemKy: nhiemKy.reverse(), batDau: tuNay };
 }
 
 function duLieuBaoCao_() {
@@ -122,7 +122,7 @@ function maTuLink_(link) {
 function layDuLieuLog(phien) {
   canDangNhap_(phien, 'log');
   return {
-    thanhVien: docThanhVien_().map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoaiCaNhan || '') }; }),
+    thanhVien: docThanhVien_().map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), nhom: nhomBan_(t.Ban), sdt: String(t.SoDienThoai || '') }; }),
     linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || ''),
     ganDay: docBangNhiemKy_('FileLog', 'ThoiGian').map(function (f) {
       return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan), soNguoi: Number(f.SoNguoi) || 0, soBuoi: Number(f.SoBuoi) || 0, nguoiTao: String(f.NguoiTao) };
@@ -133,7 +133,7 @@ function layDuLieuLog(phien) {
 /** Tạo file đăng ký log: chép sheet mẫu (nếu có) vào thư mục đã chọn, điền thành viên và các buổi. */
 function taoFileLog(phien, yc) {
   var tk = canDangNhap_(phien, 'log');
-  var tv = docBang_('ThanhVien');
+  var tv = docThanhVien_();
   var maMau = maTuLink_(layCaiDat_('LinkMauLog'));
   var k = kiemTraFileLog_({ coMau: !!maMau, tenFile: yc && yc.tenFile, nguoi: yc && yc.nguoi, buoi: yc && yc.buoi }, tv);
   if (k.loi) throw new Error(k.loi);
@@ -192,7 +192,7 @@ function dienMauChung_(sh, nguoi, buoi) {
   ghiCot(td.cot.stt, nguoi.map(function (_, i) { return i + 1; }));
   ghiCot(td.cot.ten, nguoi.map(function (t) { return String(t.HoVaTen); }), true);
   ghiCot(td.cot.ban, nguoi.map(function (t) { return String(t.Ban); }), true);
-  ghiCot(td.cot.sdt, nguoi.map(function (t) { return String(t.SoDienThoaiCaNhan || ''); }), true);
+  ghiCot(td.cot.sdt, nguoi.map(function (t) { return String(t.SoDienThoai || ''); }), true);
 
   var oTieuDe = sh.getRange(td.dong + 1, td.cotBuoi + 1, 1, buoi.length);
   if (td.cotBuoi > 0) sh.getRange(td.dong + 1, td.cotBuoi).copyTo(oTieuDe, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
@@ -217,7 +217,7 @@ function dienMauToolCu_(ss, sh, xep, buoi) {
   if (sh.getMaxRows() < dongCuoi) sh.insertRowsAfter(sh.getMaxRows(), dongCuoi - sh.getMaxRows());
 
   sh.getRange(5, 1, n, 4).setValues(nguoi.map(function (t) {
-    return [String(t.HoVaTen), String(t.Lop || ''), String(t.Ban || ''), "'" + String(t.SoDienThoaiCaNhan || '')];
+    return [String(t.HoVaTen), String(t.Lop || ''), String(t.Ban || ''), "'" + String(t.SoDienThoai || '')];
   }));
   sh.getRange(5, 1, n, 1).setHorizontalAlignment('left');
   sh.getRange(5, 2, n, 3).setHorizontalAlignment('center');
