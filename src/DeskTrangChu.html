@@ -81,8 +81,8 @@ function oNhanh(k, d) {
     else if (d.taskCuaToi) { so = d.taskCuaToi.dangLam; phu = 'đang làm · ' + phuTask(d.taskCuaToi); lop = d.taskCuaToi.tre ? 'do' : d.taskCuaToi.sap ? 'vang' : ''; }
   }
   if (d && k === 'log') {
-    if (bod && d.logMo !== undefined) { so = d.logMo; phu = 'sự kiện đang mở'; }
-    else if (d.logCuaToi) { so = d.logCuaToi.tiLe === null ? '–' : d.logCuaToi.tiLe + '%'; phu = d.logCuaToi.tiLe === null ? 'Chưa được giao buổi nào' : 'Tham gia ' + d.logCuaToi.thamGia + '/' + String(d.logCuaToi.giaoCuoi).replace('.', ',') + ' buổi'; }
+    if (bod && d.logMo !== undefined) { so = d.logMo; phu = 'đợt log đang mở'; }
+    else if (d.logCuaToi) { so = d.logCuaToi.tiLe === null ? '–' : d.logCuaToi.tiLe + '%'; phu = d.logCuaToi.tiLe === null ? 'Chưa có chỉ tiêu' : 'Đi ' + d.logCuaToi.thamGia + '/' + String(d.logCuaToi.giaoCuoi).replace('.', ',') + ' buổi'; }
   }
   if (d && k === 'xephang' && d.diemCuaToi) { so = d.diemCuaToi.diem; phu = 'điểm · hạng ' + d.diemCuaToi.hang + '/' + d.diemCuaToi.tong; }
   if (d && k === 'diem') phu = 'Cộng điểm hoạt động';

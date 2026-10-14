@@ -19,7 +19,7 @@ VIEWS.seeding = function () {
   goiPhien('layBaoCaoSeeding').then(function (d) {
     if (page !== 'seeding') return;
     var muc = function (m, ten) { return m ? ten + ' +' + m.diem + ' điểm' : ten + ' chưa có mức điểm'; };
-    $('#main').innerHTML = '<div class="head"><div><h2>' + (NGUOI.vaiTro === 'BOD' ? 'Báo cáo seeding' : 'Nộp báo cáo seeding') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') +
+    $('#main').innerHTML = '<div class="head"><div><h2>' + (NGUOI.vaiTro === 'BOD' ? 'Báo cáo seeding' : 'Nộp báo cáo seeding') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.giaiDoan + '. ' : '') +
       'Khi bài đăng đủ 48 giờ, dán tên Facebook của những người đã react và comment. Không cần ghi giờ đăng: app lấy giờ bạn gửi. App tự cộng điểm: ' + muc(d.react, 'react') + ', ' + muc(d.comment, 'comment') + ' mỗi bài.</p></div></div>' +
       (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào nên chưa cộng được điểm. BOD cần tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.</span></div>') +
       (!d.react || !d.comment ? '<div class="note">' + ic('info') + '<span>BOD cần chọn loại hoạt động dùng cho react và comment trong Cài đặt, mục Thang điểm hoạt động.</span></div>' : '') +

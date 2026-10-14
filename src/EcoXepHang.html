@@ -54,17 +54,17 @@ function hangTheoDiem(ds, khoa) {
   return hang;
 }
 /**
- * Bảng đang xem: giai đoạn hiện tại, giai đoạn 1 (khi đang ở giai đoạn 2) hoặc cả nhiệm kỳ.
- * Giai đoạn 1 và cả nhiệm kỳ chỉ có thành viên chính thức đã ở giai đoạn 1.
+ * Các bảng xem được: giai đoạn đang chạy, từng giai đoạn trước, cả nhiệm kỳ.
+ * Giai đoạn k xếp hạng người đã vào từ giai đoạn k trở về trước; cả nhiệm kỳ chỉ có người vào từ giai đoạn 1.
  */
-var BANG_XH = {
-  nay: { diem: 'diem', top: 'top', ten: function (d) { return 'Giai đoạn ' + d.ky.hocKy; } },
-  '1': { diem: 'diemHk1', top: 'topHk1', ten: function () { return 'Giai đoạn 1'; } },
-  ky: { diem: 'diemCaKy', top: 'topCaKy', ten: function () { return 'Cả nhiệm kỳ'; } }
-};
-function dsTheoBang(d, gd) {
-  if (gd === 'nay') return d.thanhVien.filter(function (p) { return d.ky.hocKy === 2 || !p.boSung; });
-  return d.thanhVien.filter(function (p) { return p.diemHk1 !== null && p.diemHk1 !== undefined; });
+function cacBangXh(d) {
+  var n = d.ky ? d.ky.giaiDoan : 0, ds = [];
+  ds.push({ ma: 'nay', ten: 'Giai đoạn ' + n, g: n, diem: function (p) { return p.diem; }, top: function (p) { return p.top; }, co: function () { return true; } });
+  for (var k = n - 1; k >= 1; k--) (function (k) {
+    ds.push({ ma: 'g' + k, ten: 'Giai đoạn ' + k, g: k, diem: function (p) { return p.gd[k - 1]; }, top: function (p) { return p.topGd[k - 1]; }, co: function (p) { return p.gdVao <= k; } });
+  })(k);
+  if (n > 1) ds.push({ ma: 'ky', ten: 'Cả nhiệm kỳ', g: 0, diem: function (p) { return p.caKy; }, top: function (p) { return p.topCaKy; }, co: function (p) { return p.caKy !== null && p.caKy !== undefined; } });
+  return ds;
 }
 function laToi(ten) { return NGUOI && String(ten).toLowerCase() === String(NGUOI.ten).toLowerCase(); }
 /** Ai xem được lịch sử của ai: BOD xem mọi người, còn lại xem của mình. */
@@ -74,24 +74,26 @@ VIEWS.xephang = function () {
   dangTai();
   napXepHang().then(function (d) {
     if (page !== 'xephang') return;
-    var coGd1 = d.ky && d.ky.hocKy === 2 && d.thanhVien.some(function (p) { return p.diemHk1 !== null && p.diemHk1 !== undefined; });
-    if (!coGd1) XH.gd = 'nay';
-    var bang = BANG_XH[XH.gd], khoa = bang.diem;
-    var dsBang = d.ky ? dsTheoBang(d, XH.gd) : [];
-    var hang = hangTheoDiem(dsBang, khoa);
-    var soTop = dsBang.filter(function (p) { return p[bang.top]; }).length;
-    var toi = d.ky ? dsTheoBang(d, 'nay').filter(function (p) { return laToi(p.ten); })[0] : null;
-    var hangNay = toi ? hangTheoDiem(dsTheoBang(d, 'nay'), 'diem')[toi.ten] : 0;
+    var cac = cacBangXh(d);
+    var bang = cac.filter(function (x) { return x.ma === XH.gd; })[0] || cac[0];
+    XH.gd = bang.ma;
+    var top = 'Top ' + d.quyTac.tiLeTop + '%';
+    var dsBang = d.ky ? d.thanhVien.filter(bang.co).map(function (p) { return Object.assign({}, p, { _d: bang.diem(p), _top: bang.top(p) }); }) : [];
+    var hang = hangTheoDiem(dsBang, '_d');
+    var soTop = dsBang.filter(function (p) { return p._top; }).length;
+    var toi = d.ky ? d.thanhVien.filter(function (p) { return laToi(p.ten); })[0] : null;
+    var hangNay = toi ? hangTheoDiem(d.thanhVien, 'diem')[toi.ten] : 0;
     var nhom = [];
     dsBang.forEach(function (t) { if (t.nhom && nhom.indexOf(t.nhom) < 0) nhom.push(t.nhom); });
     if (XH.ban !== 'Tất cả' && nhom.indexOf(XH.ban) < 0) XH.ban = 'Tất cả';
     var bod = NGUOI.vaiTro === 'BOD';
-    $('#main').innerHTML = '<div id="xh-trang" style="display:grid;gap:14px"><div class="head"><div><h2>' + (bod ? 'Bảng điểm' : 'Điểm và xếp hạng') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy : 'Chưa bắt đầu giai đoạn') + (bod ? '. Bấm vào một người để xem lịch sử cộng điểm.' : '') + '</p></div>' +
+    $('#main').innerHTML = '<div id="xh-trang" style="display:grid;gap:14px"><div class="head"><div><h2>' + (bod ? 'Bảng điểm' : 'Điểm và xếp hạng') + '</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.giaiDoan : 'Chưa bắt đầu giai đoạn') + (bod ? '. Bấm vào một người để xem lịch sử cộng điểm.' : '') + '</p></div>' +
       (bod ? '<button class="btn ghost" data-p="baocao">' + ic('chart', 16) + 'Báo cáo theo khoảng ngày</button>' : '') + '</div>' +
-      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hangNay + ' với ' + toi.diem + ' điểm</b>' + (toi.top ? ' <span class="xh-ban xh-top">Top 15%</span>' : '') + '<div class="hint">Giai đoạn ' + d.ky.hocKy + ', trong ' + dsTheoBang(d, 'nay').length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Lịch sử điểm</button><button class="btn ghost sm" data-p="anh">' + ic('image', 14) + 'Ảnh thành tích</button></div>' : '') +
-      (coGd1 ? '<div class="row" id="xh-gd">' + ['nay', '1', 'ky'].map(function (k) { return '<button class="chip" aria-pressed="' + (k === XH.gd) + '" data-gd="' + k + '">' + BANG_XH[k].ten(d) + '</button>'; }).join('') + '</div>' : '') +
-      (d.ky ? '<p class="hint" style="margin:0">' + (XH.gd === 'nay' && d.ky.hocKy === 1 ? 'Giai đoạn 1 xếp hạng thành viên chính thức. ' : XH.gd === 'nay' ? 'Giai đoạn 2 xếp hạng tất cả thành viên. ' : XH.gd === '1' ? 'Điểm giai đoạn 1 của thành viên chính thức. ' : 'Tổng điểm hai giai đoạn của thành viên chính thức, dùng khi xét bù trừ KPI. ') +
-        'Top 15% là ' + soTop + ' người (' + dsBang.length + ' × 15%, làm tròn, tính cả người bằng điểm).</p>' : '') +
+      (toi ? '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1 1 200px"><b>Bạn đang hạng ' + hangNay + ' với ' + toi.diem + ' điểm</b>' + (toi.top ? ' <span class="xh-ban xh-top">' + top + '</span>' : '') + '<div class="hint">Giai đoạn ' + d.ky.giaiDoan + ', trong ' + d.thanhVien.length + ' thành viên</div></div><button class="btn ghost sm" data-ls="' + esc(toi.ten) + '">Lịch sử điểm</button><button class="btn ghost sm" data-p="anh">' + ic('image', 14) + 'Ảnh thành tích</button></div>' : '') +
+      (cac.length > 1 ? '<div class="row" id="xh-gd">' + cac.map(function (k) { return '<button class="chip" aria-pressed="' + (k === bang) + '" data-gd="' + k.ma + '">' + k.ten + '</button>'; }).join('') + '</div>' : '') +
+      (d.ky ? '<p class="hint" style="margin:0">' + (bang.ma === 'ky' ? 'Tổng điểm các giai đoạn của người vào từ giai đoạn 1, dùng khi xét bù trừ KPI. ' : bang.g > 1 ? 'Giai đoạn ' + bang.g + ' xếp hạng cả thành viên bổ sung. ' : '') +
+        (d.quyTac.diemVe0 && bang.ma !== 'ky' ? 'Điểm mỗi giai đoạn bắt đầu từ 0. ' : '') +
+        top + ' là ' + soTop + ' người (' + dsBang.length + ' × ' + d.quyTac.tiLeTop + '%, làm tròn, tính cả người bằng điểm).</p>' : '') +
       '<div class="xh-tools"><input type="search" id="xh-q" placeholder="Tìm theo tên…" aria-label="Tìm theo tên" value="' + esc(XH.q) + '">' +
       (nhom.length > 1 ? '<div class="row" id="xh-ban">' + ['Tất cả'].concat(nhom).map(function (b) { return '<button class="chip" aria-pressed="' + (b === XH.ban) + '" data-b="' + esc(b) + '">' + esc(b) + '</button>'; }).join('') + '</div>' : '') +
       chipKhoi(dsBang.map(function (p) { return { khoi: khoiCuaLop(p.lop) }; }), XH.khoi, 'xh-khoi') +
@@ -100,13 +102,13 @@ VIEWS.xephang = function () {
     var ve = function () {
       var tim = boDau(XH.q);
       var ds = dsBang.filter(function (p) { return (XH.ban === 'Tất cả' || p.nhom === XH.ban) && (!XH.khoi || khoiCuaLop(p.lop) === XH.khoi) && boDau(p.ten).indexOf(tim) >= 0; });
-      ds.sort(function (a, b) { return XH.dir === 'desc' ? b[khoa] - a[khoa] : a[khoa] - b[khoa]; });
+      ds.sort(function (a, b) { return XH.dir === 'desc' ? b._d - a._d : a._d - b._d; });
       $('#xh-dem').textContent = ds.length + ' thành viên';
       $('#xh-ds').innerHTML = ds.length ? ds.map(function (p) {
         var r = hang[p.ten], the = xemDuocLichSu(p.ten) ? 'button' : 'div';
-        return '<' + the + ' class="li' + (laToi(p.ten) ? ' toi' : '') + '"' + (the === 'button' ? ' data-ls="' + esc(p.ten) + '"' : '') + '><span class="xh-hang' + (r <= 3 && p[khoa] > 0 ? ' r' + r : '') + '">' + r + '</span>' +
-          '<span class="c"><b class="t">' + esc(p.ten) + (laToi(p.ten) ? ' <span class="hint">(bạn)</span>' : '') + '</b><span class="s">' + (p[bang.top] ? '<span class="xh-ban xh-top">Top 15%</span>' : '') + '<span class="xh-ban">' + esc(p.ban) + '</span>' + (p.boSung ? '<span class="xh-ban xh-bs">bổ sung</span>' : '') + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</span></span>' +
-          '<span class="xh-diem">' + p[khoa] + '<small>điểm</small></span></' + the + '>';
+        return '<' + the + ' class="li' + (laToi(p.ten) ? ' toi' : '') + '"' + (the === 'button' ? ' data-ls="' + esc(p.ten) + '"' : '') + '><span class="xh-hang' + (r <= 3 && p._d > 0 ? ' r' + r : '') + '">' + r + '</span>' +
+          '<span class="c"><b class="t">' + esc(p.ten) + (laToi(p.ten) ? ' <span class="hint">(bạn)</span>' : '') + '</b><span class="s">' + (p._top ? '<span class="xh-ban xh-top">' + top + '</span>' : '') + '<span class="xh-ban">' + esc(p.ban) + '</span>' + (p.boSung ? '<span class="xh-ban xh-bs">bổ sung</span>' : '') + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</span></span>' +
+          '<span class="xh-diem">' + p._d + '<small>điểm</small></span></' + the + '>';
       }).join('') : rong(dsBang.length ? 'Không có ai khớp với tìm kiếm.' : 'Chưa có danh sách thành viên.');
     };
     ve();
@@ -115,26 +117,31 @@ VIEWS.xephang = function () {
     $('#xh-sx').onchange = function (e) { XH.dir = e.target.value; ve(); };
     if ($('#xh-gd')) $('#xh-gd').onclick = function (e) { var b = e.target.closest('[data-gd]'); if (!b) return; XH.gd = b.getAttribute('data-gd'); VIEWS.xephang(); };
     if ($('#xh-ban')) $('#xh-ban').onclick = function (e) { var b = e.target.closest('[data-b]'); if (!b) return; XH.ban = b.getAttribute('data-b'); $$('#xh-ban .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); };
-    $('#xh-trang').onclick = function (e) { var b = e.target.closest('[data-ls]'); if (b) moLichSuDiem(b.getAttribute('data-ls'), XH.gd === '1'); };
+    $('#xh-trang').onclick = function (e) { var b = e.target.closest('[data-ls]'); if (b) moLichSuDiem(b.getAttribute('data-ls'), bang.ma === 'nay' ? d.ky.giaiDoan : bang.g); };
   }).catch(loiTai);
 };
 
-/** Hộp lịch sử cộng điểm của một người (giai đoạn này, hoặc giai đoạn 1 khi đang ở giai đoạn 2). */
-function moLichSuDiem(ten, hk1) {
-  var p = XH.d && XH.d.thanhVien.filter(function (x) { return x.ten === ten; })[0];
-  if (!p || !xemDuocLichSu(ten)) return;
+/** Hộp lịch sử cộng điểm của một người trong giai đoạn g (0 là cả nhiệm kỳ). */
+function moLichSuDiem(ten, g) {
+  var d = XH.d, p = d && d.thanhVien.filter(function (x) { return x.ten === ten; })[0];
+  if (!p || !xemDuocLichSu(ten) || !d.ky) return;
+  if (g === undefined) g = d.ky.giaiDoan;
+  var cacG = [];
+  for (var k = d.ky.giaiDoan; k >= Math.max(1, p.gdVao); k--) cacG.push(k);
+  if (p.caKy !== null && p.caKy !== undefined && d.ky.giaiDoan > 1) cacG.push(0);
+  var diemCua = function (k) { return k === 0 ? p.caKy : p.gd[k - 1]; };
   var khung = function (than, ls) {
     var dem = {};
     (ls || []).forEach(function (x) { dem[x.loai] = (dem[x.loai] || 0) + 1; });
     return '<div class="hint" style="margin-bottom:10px"><span class="xh-ban">' + esc(p.ban) + '</span>' + (p.lop ? 'Lớp ' + esc(p.lop) : '') + '</div>' +
-      '<div class="xh-stat"><div><b>' + (hk1 ? p.diemHk1 : p.diem) + '</b><span>' + (hk1 ? 'Điểm giai đoạn 1' : 'Tổng điểm giai đoạn này') + '</span></div>' +
+      '<div class="xh-stat"><div><b>' + diemCua(g) + '</b><span>' + (g === 0 ? 'Điểm cả nhiệm kỳ' : 'Điểm giai đoạn ' + g) + '</span></div>' +
       Object.keys(dem).map(function (k) { return '<div><b>' + dem[k] + '</b><span>lần ' + esc(k) + '</span></div>'; }).join('') + '</div>' +
-      (p.diemHk1 !== null && p.diemHk1 !== undefined ? '<div class="row" style="margin-bottom:12px"><button class="chip" aria-pressed="' + !hk1 + '" data-hk="0">Giai đoạn này</button><button class="chip" aria-pressed="' + !!hk1 + '" data-hk="1">Giai đoạn 1</button></div>' : '') + than;
+      (cacG.length > 1 ? '<div class="row" style="margin-bottom:12px">' + cacG.map(function (k) { return '<button class="chip" aria-pressed="' + (k === g) + '" data-hk="' + k + '">' + (k === 0 ? 'Cả nhiệm kỳ' : 'Giai đoạn ' + k) + '</button>'; }).join('') + '</div>' : '') + than;
   };
   var h = moHop({ tieuDe: p.ten, than: khung(cho(), null) });
   h.querySelector('.dlg').style.maxWidth = '560px';
-  h.addEventListener('click', function (e) { var b = e.target.closest('[data-hk]'); if (b) moLichSuDiem(ten, b.getAttribute('data-hk') === '1'); });
-  goiPhien('layLichSuDiem', ten, hk1 ? 1 : 0).then(function (ls) {
+  h.addEventListener('click', function (e) { var b = e.target.closest('[data-hk]'); if (b) moLichSuDiem(ten, Number(b.getAttribute('data-hk'))); });
+  goiPhien('layLichSuDiem', ten, g).then(function (ls) {
     if (!document.body.contains(h)) return;
     h.querySelector('.dlg-b').innerHTML = khung(ls.length ? '<table class="xh-ls"><thead><tr><th>Ngày</th><th>Hoạt động</th><th style="text-align:right">Điểm</th></tr></thead><tbody>' + ls.map(function (x) {
       var n = new Date(x.thoiGian);

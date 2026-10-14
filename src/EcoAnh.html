@@ -48,18 +48,18 @@ function veAnhThanhTich(cv, d, logo) {
   var y = 190;
   if (logo) { c.save(); c.beginPath(); c.arc(W / 2, y, 80, 0, Math.PI * 2); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.clip(); c.drawImage(logo, W / 2 - 80, y - 80, 160, 160); c.restore(); y += 150; }
   c.fillStyle = m.phu; c.font = '600 38px ' + FONT_ANH; c.fillText('CLB ECO Trần Đại Nghĩa', W / 2, y);
-  if (d.ky) { c.font = '400 32px ' + FONT_ANH; c.fillText('Nhiệm kỳ ' + d.ky.nhiemKy + ' · Giai đoạn ' + d.ky.hocKy, W / 2, y + 50); }
+  if (d.ky) { c.font = '400 32px ' + FONT_ANH; c.fillText('Nhiệm kỳ ' + d.ky.nhiemKy + ' · Giai đoạn ' + d.ky.giaiDoan, W / 2, y + 50); }
   y += 190;
   c.fillStyle = m.chu; c.font = '800 92px ' + FONT_ANH;
   chiaDong(c, d.ten, W - 140).forEach(function (s) { c.fillText(s, W / 2, y); y += 108; });
   c.fillStyle = m.phu; c.font = '500 40px ' + FONT_ANH; c.fillText('Ban ' + d.ban, W / 2, y - 30);
   y += 200;
   c.fillStyle = m.chu; c.font = '800 230px ' + FONT_ANH; c.fillText(String(d.diem), W / 2, y);
-  c.fillStyle = m.phu; c.font = '500 42px ' + FONT_ANH; c.fillText('điểm giai đoạn ' + (d.ky ? d.ky.hocKy : ''), W / 2, y + 70);
+  c.fillStyle = m.phu; c.font = '500 42px ' + FONT_ANH; c.fillText('điểm giai đoạn ' + (d.ky ? d.ky.giaiDoan : ''), W / 2, y + 70);
   y += 130;
   var nhan = [];
-  if (d.top) nhan.push('TOP 15% GIAI ĐOẠN ' + (d.ky ? d.ky.hocKy : ''));
-  if (d.topHk1 && d.ky && d.ky.hocKy === 2) nhan.push('TOP 15% GIAI ĐOẠN 1');
+  (d.topGd || []).forEach(function (t, i) { if (t) nhan.push('TOP ' + d.tiLeTop + '% GIAI ĐOẠN ' + (i + 1)); });
+  if (d.topCaKy && d.topGd && d.topGd.length > 1) nhan.push('TOP ' + d.tiLeTop + '% CẢ NHIỆM KỲ');
   if (ANH.hang && d.hang) nhan.push('HẠNG ' + d.hang + ' / ' + d.soNguoi);
   c.font = '700 38px ' + FONT_ANH;
   nhan.forEach(function (s, i) {
@@ -71,7 +71,7 @@ function veAnhThanhTich(cv, d, logo) {
   var o = [];
   if (ANH.kpi) {
     if (d.log !== null) o.push([d.log + '%', 'KPI log']);
-    if (d.mien) o.push(['Miễn', 'KPI task']); else if (d.task !== null) o.push([d.task + '%', 'KPI task']);
+    if (d.task !== null) o.push([d.task + '%', 'KPI task']);
   }
   if (d.soLan) o.push([String(d.soLan), 'lần cộng điểm']);
   if (o.length) {

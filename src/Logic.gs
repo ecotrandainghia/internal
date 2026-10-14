@@ -2299,7 +2299,7 @@ function diemTuGiaiDoan_(gd, g) {
 /**
  * Xét chứng nhận (certificate) cho từng người theo quy tắc của nhiệm kỳ.
  * ds: [{ ten, ban, gdVao, kpi: { log: {tiLe}, task: {tiLe} }, gd: [điểm từng giai đoạn] }].
- * - Log và task đều đạt mức đạt của ban mình (mặc định 80%): cấp.
+ * - Log và task đều đạt mức đạt (80% theo quy chế): cấp.
  * - Mỗi phần từ mức bù trừ (mặc định 60%): xét bù trừ. Người vào ở giai đoạn g được xếp hạng theo điểm từ giai đoạn g trở đi,
  *   cùng mọi người đã có mặt từ giai đoạn g trở về trước (chính thức xếp với chính thức theo điểm cả nhiệm kỳ; bổ sung vào ở
  *   giai đoạn 2 xếp với tất cả theo điểm từ giai đoạn 2). Lọt top tiLeBuTru% (mặc định 40%) thì cấp.
