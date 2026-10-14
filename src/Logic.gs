@@ -33,26 +33,30 @@ var MA_TRAN_TASK_MAC_DINH = {
 };
 
 /**
- * Quy tắc tính điểm, KPI, chứng nhận. Mỗi nhiệm kỳ giữ một bản riêng (bảng NhiemKy, cột QuyTac):
- * đổi quy tắc chỉ đổi nhiệm kỳ đang chạy, nhiệm kỳ cũ vẫn xem lại đúng như lúc đó.
+ * Quy tắc tính điểm, KPI, chứng nhận theo quy chế. Phần lớn cố định; BOD chỉ chỉnh được trong Cài đặt các mục
+ * ở CHINH_DUOC (Van chốt). Mỗi nhiệm kỳ giữ một bản riêng (bảng NhiemKy, cột QuyTac): đổi chỉ áp cho nhiệm kỳ
+ * đang chạy, nhiệm kỳ cũ vẫn xem lại đúng như lúc đó.
  */
 var QUY_TAC_MAC_DINH = {
-  soGiaiDoan: 2,          // số giai đoạn (số đợt tuyển) mỗi nhiệm kỳ, 1 đến 4
-  diemVe0: true,          // mỗi giai đoạn xếp hạng riêng (điểm tính lại từ 0); tắt thì xếp hạng theo điểm cộng dồn cả nhiệm kỳ
+  // BOD chỉnh được trong Cài đặt
   tiLeTop: 15,            // khen thưởng top bao nhiêu % mỗi giai đoạn
-  datTask: 80,            // KPI task đạt từ bao nhiêu %
-  datLog: 80,             // KPI log đạt từ bao nhiêu %
-  theoBan: {},            // phần trăm đạt riêng cho từng ban: { 'HR': { datTask: 70 } }
-  mucBuTru: 60,           // mỗi phần từ bao nhiêu % thì được xét bù trừ
-  tiLeBuTru: 40,          // lọt top bao nhiêu % bảng bù trừ thì được cấp chứng nhận
-  maTran: MA_TRAN_TASK_MAC_DINH,
-  giaHanNgay: 1,          // xin gia hạn trước hạn chót ít nhất bao nhiêu ngày (1 ngày = 24 giờ)
   sapDenHanNgay: 2,       // còn bao nhiêu ngày thì task hiện "sắp đến hạn"
   khtSauNgay: 1,          // trễ quá bao nhiêu ngày thì task tính là không hoàn thành
-  seedingGio: 48,         // react, comment trong bao nhiêu giờ đầu thì được cộng
-  seedingQuaNgay: 7,      // bài đăng quá bao nhiêu ngày thì cảnh báo
-  thoiLuongBuoi: [90, 180] // các thời lượng buổi log (phút); mỗi thời lượng gắn với một loại điểm log vượt
+  thoiLuongBuoi: [90, 180], // các thời lượng buổi log (phút); mỗi thời lượng gắn với một loại điểm buổi dư
+  // Cố định theo quy chế
+  soGiaiDoan: 2,          // mỗi nhiệm kỳ hai giai đoạn (hai đợt tuyển)
+  diemVe0: true,          // mỗi giai đoạn xếp hạng riêng, điểm tính lại từ 0
+  datTask: 80,            // KPI task đạt từ 80%
+  datLog: 80,             // KPI log đạt từ 80%
+  mucBuTru: 60,           // mỗi phần từ 60% thì được xét bù trừ
+  tiLeBuTru: 40,          // lọt top 40% bảng bù trừ thì được cấp chứng nhận
+  maTran: MA_TRAN_TASK_MAC_DINH,
+  giaHanNgay: 1,          // xin gia hạn trước hạn chót ít nhất 24 giờ
+  seedingGio: 48,         // react, comment trong 48 giờ đầu thì được cộng
+  seedingQuaNgay: 7       // bài đăng quá 7 ngày thì cảnh báo
 };
+/** Các mục quy tắc BOD chỉnh được trong Cài đặt. */
+var CHINH_DUOC = ['tiLeTop', 'sapDenHanNgay', 'khtSauNgay', 'thoiLuongBuoi'];
 var QUY_TAC = chepSau_(QUY_TAC_MAC_DINH);
 
 function chepSau_(o) { return JSON.parse(JSON.stringify(o)); }
@@ -63,37 +67,18 @@ function apCauHinh_(dsBan, quyTac) {
   QUY_TAC = chuanHoaQuyTac_(quyTac);
 }
 
-/** Ghép quy tắc BOD đã lưu (có thể thiếu mục) với mặc định, bỏ giá trị sai. */
+/** Ghép quy tắc BOD đã lưu với mặc định: chỉ nhận các mục chỉnh được, bỏ giá trị sai. */
 function chuanHoaQuyTac_(luu) {
   var q = chepSau_(QUY_TAC_MAC_DINH);
   var x = luu;
   if (typeof x === 'string') { try { x = JSON.parse(x); } catch (e) { x = null; } }
   if (!x || typeof x !== 'object') return q;
-  var so = function (k, min, max, nguyen) {
+  var so = function (k, min, max) {
     if (x[k] === undefined || x[k] === null || x[k] === '') return;
     var n = Number(x[k]);
-    if (isFinite(n) && n >= min && n <= max && (!nguyen || Math.floor(n) === n)) q[k] = n;
+    if (isFinite(n) && n >= min && n <= max && Math.floor(n) === n) q[k] = n;
   };
-  so('soGiaiDoan', 1, 4, true); so('tiLeTop', 0, 100); so('datTask', 0, 100); so('datLog', 0, 100);
-  so('mucBuTru', 0, 100); so('tiLeBuTru', 0, 100); so('giaHanNgay', 0, 14, true); so('sapDenHanNgay', 0, 30, true);
-  so('khtSauNgay', 0, 60, true); so('seedingGio', 1, 720, true); so('seedingQuaNgay', 1, 60, true);
-  if (typeof x.diemVe0 === 'boolean') q.diemVe0 = x.diemVe0;
-  if (x.theoBan && typeof x.theoBan === 'object') {
-    q.theoBan = {};
-    Object.keys(x.theoBan).forEach(function (b) {
-      var r = x.theoBan[b] || {}, kq = {};
-      ['datTask', 'datLog'].forEach(function (k) { var n = Number(r[k]); if (r[k] !== '' && r[k] !== null && r[k] !== undefined && isFinite(n) && n >= 0 && n <= 100) kq[k] = n; });
-      if (Object.keys(kq).length) q.theoBan[chuanChu_(b)] = kq;
-    });
-  }
-  if (x.maTran && typeof x.maTran === 'object') {
-    Object.keys(q.maTran).forEach(function (h) {
-      Object.keys(q.maTran[h]).forEach(function (c) {
-        var v = x.maTran[h] && x.maTran[h][c];
-        if (v === 'Đạt' || v === 'Chưa đạt') q.maTran[h][c] = v;
-      });
-    });
-  }
+  so('tiLeTop', 1, 100); so('sapDenHanNgay', 0, 30); so('khtSauNgay', 0, 60);
   if (Array.isArray(x.thoiLuongBuoi)) {
     var tl = [];
     x.thoiLuongBuoi.forEach(function (n) { n = Math.round(Number(n)); if (n >= 15 && n <= 600 && tl.indexOf(n) < 0) tl.push(n); });
@@ -102,13 +87,9 @@ function chuanHoaQuyTac_(luu) {
   return q;
 }
 
-/** Phần trăm đạt KPI task hoặc log (khoa 'datTask' / 'datLog') của một ban: riêng của ban (hoặc nhóm ban), không có thì chung. */
+/** Phần trăm đạt KPI task hoặc log (khoa 'datTask' / 'datLog'). Cùng một mức cho mọi ban. */
 function mucDatCua_(ban, khoa, qt) {
-  qt = qt || QUY_TAC;
-  var tb = qt.theoBan || {}, b = chuanChu_(ban), n = nhomBan_(ban);
-  if (tb[b] && tb[b][khoa] !== undefined) return tb[b][khoa];
-  if (tb[n] && tb[n][khoa] !== undefined) return tb[n][khoa];
-  return qt[khoa];
+  return (qt || QUY_TAC)[khoa];
 }
 
 /** Kiểm tra danh sách ban do BOD sửa. Trả về { ds, loi }. */
@@ -373,9 +354,10 @@ function keHoachTaiDanhSach_(moi, tatCa, o) {
     dung[i] = true;
     var c = ra[i];
     var quayLai = !dangHd(c);
-    var doi = COT_HO_SO.some(function (k) { return k === 'Ban' ? chuanChu_(c.Ban) !== ban.ma : chuOSoSanh_(c[k]) !== chuOSoSanh_(t[k]); });
+    // Cột không có trên sheet nguồn (undefined) thì giữ giá trị cũ.
+    var doi = COT_HO_SO.some(function (k) { return k === 'Ban' ? chuanChu_(c.Ban) !== ban.ma : t[k] !== undefined && chuOSoSanh_(c[k]) !== chuOSoSanh_(t[k]); });
     if (chuanChu_(c.Ban) !== ban.ma && !quayLai) kq.doiBan.push({ MaTV: c.MaTV, HoVaTen: t.HoVaTen, BanCu: chuanChu_(c.Ban), BanMoi: ban.ma });
-    COT_HO_SO.forEach(function (k) { c[k] = t[k] === undefined ? '' : t[k]; });
+    COT_HO_SO.forEach(function (k) { if (t[k] !== undefined) c[k] = t[k]; });
     c.Ban = ban.ma;
     if (o.dauNhiemKy) { c.LoaiThanhVien = LOAI_TV.CHINH_THUC; c.GiaiDoanVao = Math.max(1, dot); }
     else if (quayLai) { c.GiaiDoanVao = gdVaoMoi; c.LoaiThanhVien = gdVaoMoi >= 2 ? LOAI_TV.BO_SUNG : LOAI_TV.CHINH_THUC; }
@@ -540,13 +522,14 @@ function docDanhSachThanhVien_(values) {
     var tv = {};
     COT_THANH_VIEN.forEach(function (c) {
       var i = nd.viTri[c[0]];
-      var v = i === undefined ? '' : dong[i];
+      if (i === undefined) return; // sheet nguồn không có cột này: giữ giá trị cũ trong app
+      var v = dong[i];
       tv[c[0]] = typeof v === 'string' ? v.trim() : v;
     });
     tv.HoVaTen = String(tv.HoVaTen || '').replace(/\s+/g, ' ').trim();
     if (!tv.HoVaTen) continue;
     tv.Ban = chuanChu_(tv.Ban);
-    tv.Email = String(tv.Email || '').trim().toLowerCase();
+    if (tv.Email !== undefined) tv.Email = String(tv.Email || '').trim().toLowerCase();
     tv.MaTV = String(tv.MaTV || '').trim().toUpperCase();
     tv.dong = r + 1;
     var khoa = tv.HoVaTen.toLowerCase();
@@ -633,6 +616,38 @@ function khoangNhiemKy_(dsGiaiDoan) {
   var ds = Object.keys(tu).sort(function (a, b) { return tu[a] - tu[b]; });
   var kq = {};
   ds.forEach(function (nk, i) { kq[nk] = { tu: tu[nk], den: i + 1 < ds.length ? tu[ds[i + 1]] : 0 }; });
+  return kq;
+}
+
+/** Nhiệm kỳ đã kết thúc quá bao nhiêu ngày thì dữ liệu chi tiết được chuyển sang file lưu trữ. */
+var LUU_TRU_SAU_NGAY = 365;
+
+/**
+ * Các nhiệm kỳ cần chuyển sang file lưu trữ: đã kết thúc (nhiệm kỳ sau đã bắt đầu) hơn LUU_TRU_SAU_NGAY ngày
+ * và chưa chuyển (daLuu: { nhiệm kỳ: true }).
+ */
+function nhiemKyCanLuuTru_(khoang, bayGioMs, daLuu) {
+  return Object.keys(khoang).filter(function (nk) {
+    var k = khoang[nk];
+    return k.den && bayGioMs - k.den > LUU_TRU_SAU_NGAY * 864e5 && !(daLuu || {})[nk];
+  });
+}
+
+/**
+ * Chia các dòng của một bảng: dòng thuộc nhiệm kỳ nk (theo cột NhiemKy nếu có, không thì theo cột thời gian
+ * nằm trong khoảng của nhiệm kỳ) và dòng còn lại. Trả về { chuyen, giu }.
+ */
+function chiaDongLuuTru_(ds, cotThoiGian, khoang, nk) {
+  var k = khoang[nk] || { tu: 0, den: 0 }, kq = { chuyen: [], giu: [] };
+  ds.forEach(function (d) {
+    var thuoc;
+    if (d.NhiemKy !== undefined && String(d.NhiemKy) !== '') thuoc = String(d.NhiemKy) === String(nk);
+    else {
+      var t = cotThoiGian && d[cotThoiGian] !== '' && d[cotThoiGian] != null ? new Date(d[cotThoiGian]).getTime() : NaN;
+      thuoc = !isNaN(t) && t >= k.tu && (!k.den || t < k.den);
+    }
+    (thuoc ? kq.chuyen : kq.giu).push(d);
+  });
   return kq;
 }
 
@@ -1157,10 +1172,8 @@ function tongKpiTask_(ds) {
   return kq;
 }
 
-
 /* ===================== Nhắc việc qua Zalo ===================== */
 
-var NHAC_TRE = { MOI_NGAY: 'Mỗi ngày', MOT_LAN: 'Chỉ một lần', KHONG: 'Không nhắc' };
 
 /**
  * Lịch nhắc deadline (BOD chỉnh): danh sách mốc { ngay, gio, phut }.
@@ -1193,17 +1206,6 @@ function chuanHoaLichNhac_(v) {
   var thuTu = function (m) { return m.ngay === MOC_TRE_MOI_NGAY ? 1000 : m.ngay; };
   kq.sort(function (a, b) { return thuTu(a) - thuTu(b) || lucNhac_(a) - lucNhac_(b); });
   return kq;
-}
-
-/** Lịch nhắc từ cài đặt kiểu cũ (một danh sách giờ chung), để app đã chạy giữ nguyên cách nhắc. */
-function lichNhacTuCaiDatCu_(soNgaySap, dsGio, nhacSap, nhacTre) {
-  var ds = [];
-  var them = function (ngay) { dsGio.forEach(function (g) { ds.push({ ngay: ngay, gio: g, phut: 0 }); }); };
-  if (nhacSap) for (var d = 0; d <= soNgaySap; d++) them(-d);
-  if (nhacTre === NHAC_TRE.MOI_NGAY) them(MOC_TRE_MOI_NGAY);
-  else if (nhacTre === NHAC_TRE.MOT_LAN) them(1);
-  var kq = chuanHoaLichNhac_(ds);
-  return kq.length ? kq : [{ ngay: 0, gio: dsGio[0], phut: 0 }];
 }
 
 /** Các thời điểm (phút trong ngày) cần chạy nhắc, không trùng, tăng dần. */
@@ -2355,8 +2357,8 @@ if (typeof module !== 'undefined') {
   module.exports = {
     COT_THANH_VIEN: COT_THANH_VIEN, BANG: BANG, KIEU_TAI: KIEU_TAI, LOAI_TV: LOAI_TV,
     kieuTaiThucTe: kieuTaiThucTe_, goiYNhiemKy: goiYNhiemKy_, keHoachTaiDanhSach: keHoachTaiDanhSach_, soDotCua: soDotCua_, cacKieuTai: cacKieuTai_, kieuDot: kieuDot_, nhiemKyHopLe: nhiemKyHopLe_,
-    maThanhVienMoi: maThanhVienMoi_, docMaThanhVien: docMaThanhVien_, TRANG_THAI_TV: TRANG_THAI_TV, apCauHinh: apCauHinh_, chuanHoaQuyTac: chuanHoaQuyTac_, chuanHoaCoCau: chuanHoaCoCau_,
-    mucDatCua: mucDatCua_, timBan: timBan_, laBanBod: laBanBod_, QUY_TAC_MAC_DINH: QUY_TAC_MAC_DINH, CO_CAU_MAC_DINH: CO_CAU_MAC_DINH, khoangNhiemKy: khoangNhiemKy_, diemTuGiaiDoan: diemTuGiaiDoan_,
+    maThanhVienMoi: maThanhVienMoi_, docMaThanhVien: docMaThanhVien_, TRANG_THAI_TV: TRANG_THAI_TV, apCauHinh: apCauHinh_, chuanHoaQuyTac: chuanHoaQuyTac_, CHINH_DUOC: CHINH_DUOC, chuanHoaCoCau: chuanHoaCoCau_,
+    mucDatCua: mucDatCua_, timBan: timBan_, laBanBod: laBanBod_, QUY_TAC_MAC_DINH: QUY_TAC_MAC_DINH, CO_CAU_MAC_DINH: CO_CAU_MAC_DINH, khoangNhiemKy: khoangNhiemKy_, nhiemKyCanLuuTru: nhiemKyCanLuuTru_, chiaDongLuuTru: chiaDongLuuTru_, diemTuGiaiDoan: diemTuGiaiDoan_,
     cacDungCho: cacDungCho_, dungChoLog: dungChoLog_, gdVao: gdVao_,
     docNgaySinh: docNgaySinh_, tenLichSinhNhat: tenLichSinhNhat_, keHoachSinhNhat: keHoachSinhNhat_,
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, thuTuBan: thuTuBan_, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
@@ -2366,10 +2368,10 @@ if (typeof module !== 'undefined') {
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, phamViHr: phamViHr_, ngayNopTheoKieu: ngayNopTheoKieu_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
     chuanHoaLoaiHoatDong: chuanHoaLoaiHoatDong_, chuanHoaGhim: chuanHoaGhim_,
-    TRANG_THAI_TASK: TRANG_THAI_TASK, NHAC_TRE: NHAC_TRE, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
+    TRANG_THAI_TASK: TRANG_THAI_TASK, ngayHopLe: ngayHopLe_, soNgayGiua: soNgayGiua_, hienNgay: hienNgay_,
     trangThaiTask: trangThaiTask_, laKhongHoanThanh: laKhongHoanThanh_,
     CHAT_LUONG: CHAT_LUONG, DUNG_HAN: DUNG_HAN, KET_QUA: KET_QUA, dungHanTask: dungHanTask_, ketQuaTask: ketQuaTask_, kiemTraDanhGia: kiemTraDanhGia_,
-    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_, lichNhacTuCaiDatCu: lichNhacTuCaiDatCu_,
+    kiemTraGiaHan: kiemTraGiaHan_, tongKpiTask: tongKpiTask_, banCoo: banCoo_, kiemTraTask: kiemTraTask_, taoDongTask: taoDongTask_, chonTaskTheoLich: chonTaskTheoLich_, chuanHoaLichNhac: chuanHoaLichNhac_,
     lucCuaLich: lucCuaLich_, moTaMocNhac: moTaMocNhac_, MOC_TRE_MOI_NGAY: MOC_TRE_MOI_NGAY,
     moTaHan: moTaHan_, soanTinNhac: soanTinNhac_, chiaTin: chiaTin_, timMaTrongTin: timMaTrongTin_,
     THAO_TAC_MAIL: THAO_TAC_MAIL, TRANG_THAI_VIEC: TRANG_THAI_VIEC, emailHopLe: emailHopLe_, tachEmail: tachEmail_,

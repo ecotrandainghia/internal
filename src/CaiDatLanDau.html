@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+:root{--nen:#f4f7f1;--the:#fff;--chu:#1b2a16;--phu:#5d6b57;--vien:#dfe6da;--chinh:#2f6b1f;--chinh-dam:#274e13;--loi:#b3261e}
+@media (prefers-color-scheme:dark){:root{--nen:#10160e;--the:#18211a;--chu:#e7eee3;--phu:#a3b09d;--vien:#2b3628;--chinh:#7cc35b;--chinh-dam:#9ad17f;--loi:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nen);color:var(--chu);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:520px;margin:0 auto;padding:32px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}
+p{margin:6px 0;color:var(--phu)}
+.the{background:var(--the);border:1px solid var(--vien);border-radius:14px;padding:18px;margin-top:16px}
+.chon{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+.chon button{padding:12px;border-radius:12px;border:1px solid var(--vien);background:var(--the);color:var(--chu);font:inherit;font-weight:600;cursor:pointer}
+.chon button[aria-pressed=true]{border-color:var(--chinh);box-shadow:inset 0 0 0 1px var(--chinh)}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--vien);background:var(--nen);color:var(--chu);font:inherit}
+small{display:block;color:var(--phu);font-size:12.5px;margin-top:3px}
+.nut{margin-top:18px;width:100%;padding:12px;border:0;border-radius:12px;background:var(--chinh-dam);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.nut:disabled{opacity:.6;cursor:wait}
+.loi{color:var(--loi);font-weight:600;margin-top:10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <h1>Cài đặt app CLB ECO</h1>
+<? if (!laChu) { ?>
+  <div class="the">
+    <p>App chưa được cài đặt. Người quản lý tài khoản Google của CLB mở link này (đăng nhập bằng tài khoản CLB) để cài đặt.</p>
+  </div>
+<? } else { ?>
+  <p>Bạn đang dùng tài khoản <b><?= email ?></b>. Mọi dữ liệu của app sẽ nằm trong Google Drive của tài khoản này.</p>
+  <div class="chon" role="group" aria-label="Cách cài đặt">
+    <button type="button" id="chonMoi" aria-pressed="true">Tạo mới</button>
+    <button type="button" id="chonCo" aria-pressed="false">Dùng file có sẵn</button>
+  </div>
+  <form class="the" id="form">
+    <p id="moTaMoi">App tạo thư mục "CLB ECO - App" trên Drive, file dữ liệu, các lịch chạy tự động, và tài khoản BOD đầu tiên là bạn.</p>
+    <div id="phanFile" hidden>
+      <p>Dùng khi khôi phục từ bản sao lưu, hoặc khi chuyển app sang tài khoản CLB khác.</p>
+      <label for="link">Link file dữ liệu</label>
+      <input id="link" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/...">
+      <small>Nếu file đã có tài khoản BOD và mật khẩu chung thì các ô bên dưới có thể để trống.</small>
+    </div>
+    <label for="ten">Họ và tên của bạn</label>
+    <input id="ten" autocomplete="name">
+    <label for="emailBod">Email đăng nhập của bạn</label>
+    <input id="emailBod" type="email" autocomplete="email">
+    <small>Dùng đúng email bạn ghi trong danh sách thành viên, cột Ban là BOD.</small>
+    <label for="mk">Mật khẩu của bạn</label>
+    <input id="mk" type="password" autocomplete="new-password">
+    <label for="mkChung">Mật khẩu chung của CLB</label>
+    <input id="mkChung" type="password" autocomplete="off">
+    <small>Thành viên chưa đổi mật khẩu sẽ đăng nhập bằng mật khẩu này. Đổi được sau ở Cài đặt, Thành viên.</small>
+    <div class="loi" id="loi" role="alert"></div>
+    <button class="nut" id="nut" type="submit">Cài đặt</button>
+  </form>
+<? } ?>
+</main>
+<? if (laChu) { ?>
+<script>
+var dungFileCo = false;
+function chon(co) {
+  dungFileCo = co;
+  document.getElementById('chonMoi').setAttribute('aria-pressed', String(!co));
+  document.getElementById('chonCo').setAttribute('aria-pressed', String(co));
+  document.getElementById('phanFile').hidden = !co;
+  document.getElementById('moTaMoi').hidden = co;
+}
+document.getElementById('chonMoi').onclick = function () { chon(false); };
+document.getElementById('chonCo').onclick = function () { chon(true); };
+document.getElementById('form').onsubmit = function (e) {
+  e.preventDefault();
+  var g = function (id) { return document.getElementById(id).value; };
+  var yc = { link: g('link'), ten: g('ten'), email: g('emailBod'), matKhau: g('mk'), matKhauChung: g('mkChung') };
+  var nut = document.getElementById('nut'), loi = document.getElementById('loi');
+  nut.disabled = true; nut.textContent = 'Đang cài đặt, chờ chút nhé…'; loi.textContent = '';
+  google.script.run
+    .withSuccessHandler(function (url) { nut.textContent = 'Xong! Đang mở app…'; window.top.location.href = url; })
+    .withFailureHandler(function (err) { nut.disabled = false; nut.textContent = 'Cài đặt'; loi.textContent = err.message || String(err); })
+    [dungFileCo ? 'caiDatDungFileCo' : 'caiDatTaoMoi'](yc);
+};
+</script>
+<? } ?>
+</body>
+</html>

@@ -75,18 +75,18 @@ function taoFileMau() {
 }
 
 const TV = [
-  { HoVaTen: 'Nguyễn An', Lop: '11A1', Ban: 'PR CAP', SoDienThoaiCaNhan: '0912000001' },
-  { HoVaTen: 'Trần Bình', Lop: '10A2', Ban: 'PG', SoDienThoaiCaNhan: '0912000002' },
-  { HoVaTen: 'Lê Chi', Lop: '11A3', Ban: 'PR CAP', SoDienThoaiCaNhan: '' },
-  { HoVaTen: 'Phạm Dũng', Lop: '12A1', Ban: 'BOD', SoDienThoaiCaNhan: '0912000004' },
-  { HoVaTen: 'Võ Em', Lop: '10A1', Ban: 'PR DES', SoDienThoaiCaNhan: '0912000005' }
+  { HoVaTen: 'Nguyễn An', Lop: '11A1', Ban: 'PR CAP', SoDienThoai: '0912000001' },
+  { HoVaTen: 'Trần Bình', Lop: '10A2', Ban: 'PG', SoDienThoai: '0912000002' },
+  { HoVaTen: 'Lê Chi', Lop: '11A3', Ban: 'PR CAP', SoDienThoai: '' },
+  { HoVaTen: 'Phạm Dũng', Lop: '12A1', Ban: 'BOD', SoDienThoai: '0912000004' },
+  { HoVaTen: 'Võ Em', Lop: '10A1', Ban: 'PR DES', SoDienThoai: '0912000005' }
 ];
 // Tool cũ xếp ban theo chữ cái; với các ban này thứ tự chữ cái trùng thứ tự chuẩn nên hai bên phải ra giống hệt.
 const KIEU = { BorderStyle: { SOLID: 'SOLID' } };
 
 function chayToolCu(buoi) {
   const mau = taoFileMau();
-  const nguon = { getSheetByName: () => ({ getDataRange: () => ({ getValues: () => [['Tên', 'Lớp', 'Ban', 'x', 'SĐT']].concat(TV.map((t) => [t.HoVaTen, t.Lop, t.Ban, '', t.SoDienThoaiCaNhan])) }) }) };
+  const nguon = { getSheetByName: () => ({ getDataRange: () => ({ getValues: () => [['Tên', 'Lớp', 'Ban', 'x', 'SĐT']].concat(TV.map((t) => [t.HoVaTen, t.Lop, t.Ban, '', t.SoDienThoai])) }) }) };
   const traLoi = ['ODAY', buoi.join(', ')];
   const ui = { ButtonSet: { OK_CANCEL: 1, OK: 2 }, Button: { OK: 'ok' }, prompt: () => { const t = traLoi.shift(); return { getSelectedButton: () => 'ok', getResponseText: () => t }; }, alert() {} };
   let tenFile = '';
@@ -123,7 +123,7 @@ for (const buoi of [['Sáng T7'], ['Sáng T7', 'Chiều T7', 'Sáng CN']]) {
 }
 
 test('tab Đăng ký log điền đúng chỗ', () => {
-  TV.push({ HoVaTen: 'Đỗ Giang', Lop: '10A4', Ban: 'HR', SoDienThoaiCaNhan: '' }, { HoVaTen: 'Hồ Hà', Lop: '10A5', Ban: 'AD', SoDienThoaiCaNhan: '' });
+  TV.push({ HoVaTen: 'Đỗ Giang', Lop: '10A4', Ban: 'HR', SoDienThoai: '' }, { HoVaTen: 'Hồ Hà', Lop: '10A5', Ban: 'AD', SoDienThoai: '' });
   const { mau } = chayApp(['A', 'B'], TV.map((t) => t.HoVaTen));
   TV.splice(5, 2);
   const dk = mau.tabs[0], o = (r, c) => dk.o[r + ',' + c] || {};

@@ -59,21 +59,21 @@ test('KPI log một sự kiện: ví dụ trong quy chế, buổi huỷ vì lý 
   assert.strictEqual(k2.vuot.length, 0);
 });
 
-test('KPI log cả nhiệm kỳ: cộng các sự kiện, bỏ sự kiện huỷ, thành viên bổ sung chỉ tính từ giai đoạn 2', () => {
+test('KPI log cả nhiệm kỳ: cộng các sự kiện, bỏ sự kiện huỷ, người vào ở giai đoạn 2 chỉ tính từ giai đoạn 2', () => {
   const s1 = Object.assign({}, SK, { ThoiGian: new Date(1000), SoBuoiDuKien: 4, GiaoMacDinh: 2, buoi: [buoi(1, B.DIEN_RA, ['Nguyễn A'])] });
   const s2 = Object.assign({}, SK, { ThoiGian: new Date(5000), TenSuKien: 'B', SoBuoiDuKien: 3, GiaoMacDinh: 1, buoi: [buoi(1, B.DIEN_RA, ['Nguyễn A']), buoi(2, B.DIEN_RA, ['Nguyễn A'])] });
   const s3 = Object.assign({}, SK, { ThoiGian: new Date(6000), TrangThai: L.SU_KIEN_HUY, buoi: [] });
-  const k = L.kpiLogCuaNguoi(A, [s1, s2, s3], 4000);
+  const k = L.kpiLogCuaNguoi(A, [s1, s2, s3], { 1: 0, 2: 4000 });
   assert.strictEqual(k.giaoCuoi, 3);
   assert.strictEqual(k.thamGia, 3);
   assert.strictEqual(k.tiLe, 100);
   assert.strictEqual(k.chiTiet.length, 2);
-  const bs = L.kpiLogCuaNguoi(Object.assign({}, A, { LoaiThanhVien: L.LOAI_TV.BO_SUNG }), [s1, s2], 4000);
+  const bs = L.kpiLogCuaNguoi(Object.assign({}, A, { GiaiDoanVao: 2 }), [s1, s2], { 1: 0, 2: 4000 });
   assert.deepStrictEqual([bs.giaoCuoi, bs.thamGia, bs.tiLe], [1, 2, 200]);
-  assert.strictEqual(L.kpiLogCuaNguoi(A, [], 0).tiLe, null);
+  assert.strictEqual(L.kpiLogCuaNguoi(A, [], {}).tiLe, null);
   // Số lẻ: 2/12 × 7 = 1,1667 buổi; tham gia 1 buổi -> 85,7% -> 86%.
   const s4 = Object.assign({}, SK, { TrangThai: L.SU_KIEN_CHOT, buoi: [1, 2, 3, 4, 5, 6, 7].map((i) => buoi(i, B.DIEN_RA, i === 1 ? ['Nguyễn A'] : [])) });
-  const k4 = L.kpiLogCuaNguoi(A, [s4], 0);
+  const k4 = L.kpiLogCuaNguoi(A, [s4], {});
   assert.strictEqual(k4.giaoCuoi, 1.17);
   assert.strictEqual(k4.tiLe, 86);
 });

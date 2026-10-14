@@ -1,11 +1,11 @@
-// Kiểm tra khoá ghi và bộ nhớ tạm của bảng (Code.gs) bằng Google Sheet giả.
+// Kiểm tra khoá ghi và bộ nhớ tạm của bảng (DuLieu.gs) bằng Google Sheet giả.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const MA = ['Logic.gs', 'Code.gs'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
+const MA = ['Logic.gs', 'DuLieu.gs'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
 
 /** Một "máy chủ" giả: sheet, bộ nhớ tạm và khoá dùng chung giữa các lần chạy. */
 function mayChu() {
@@ -13,7 +13,7 @@ function mayChu() {
   const dem = { docSheet: 0, flush: 0, khoa: 0 };
   const cache = new Map();
   const khoaChung = { dangGiu: false };
-  const props = new Map();
+  const props = new Map([['IdFileDuLieu', 'file-du-lieu']]);
   function tab(ten) {
     const sh = {
       ten, o: [],
@@ -54,7 +54,8 @@ function mayChu() {
   /** Một lần chạy mới: biến toàn cục làm lại từ đầu, dữ liệu thì dùng chung. */
   function lanChay() {
     const ctx = {
-      SpreadsheetApp: { getActiveSpreadsheet: () => ss, flush: () => { dem.flush++; } },
+      SpreadsheetApp: { openById: (id) => { if (id !== 'file-du-lieu') throw new Error('sai file'); return ss; }, flush: () => { dem.flush++; } },
+      Session: { getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },
       CacheService: { getScriptCache: () => ({
         get: (k) => (cache.has(k) ? cache.get(k) : null),
         getAll: (ks) => { const o = {}; ks.forEach((k) => { if (cache.has(k)) o[k] = cache.get(k); }); return o; },
@@ -65,7 +66,7 @@ function mayChu() {
         tryLock() { if (khoaChung.dangGiu) return false; khoaChung.dangGiu = true; dem.khoa++; return true; },
         releaseLock() { khoaChung.dangGiu = false; }
       }) },
-      PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, v) }) },
+      PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, v), deleteProperty: (k) => props.delete(k) }) },
       Utilities: { getUuid: () => Math.random().toString(36).slice(2) }
     };
     vm.createContext(ctx);
@@ -118,16 +119,24 @@ test('bản đọc cũ cất vào sau khi người khác đã ghi thì không đ
   assert.strictEqual(m.lanChay().layCaiDat_('X'), 'moi');
 });
 
-test('sửa tay trên sheet (onEdit) thì bỏ bản nhớ tạm', () => {
+test('sửa tay trên file dữ liệu rồi bấm Làm mới dữ liệu thì bỏ bản nhớ tạm', () => {
   const m = mayChu();
   const a = m.lanChay();
   a.khoiTaoCoSoDuLieu_();
   a.datCaiDat_('X', 'cu');
   m.lanChay().layCaiDat_('X');
-  m.tabs.CaiDat.o[1][1] = 'sua-tay';
-  const b = m.lanChay();
-  b.onEdit({ range: { getSheet: () => m.tabs.CaiDat } });
+  m.tabs.CaiDat.o.filter((d) => d[0] === 'X')[0][1] = 'sua-tay';
+  assert.strictEqual(m.lanChay().layCaiDat_('X'), 'cu');
+  m.lanChay().xoaMoiBoNhoTam_();
   assert.strictEqual(m.lanChay().layCaiDat_('X'), 'sua-tay');
+});
+
+test('chưa cài đặt lần đầu thì báo CHUA_CAI_DAT', () => {
+  const m = mayChu();
+  const a = m.lanChay();
+  a.PropertiesService.getScriptProperties().deleteProperty('IdFileDuLieu');
+  assert.strictEqual(a.daCaiDat_(), false);
+  assert.throws(() => a.soDuLieu_(), /CHUA_CAI_DAT/);
 });
 
 test('khoá lồng nhau chỉ khoá một lần, ghi xong thì nhả và đẩy dữ liệu xuống sheet', () => {

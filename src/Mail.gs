@@ -74,11 +74,7 @@ function taiLaiChuKy(phien) {
 
 /** Thư mục Drive giữ tệp đính kèm UCV tải lên (tự tạo lần đầu). */
 function thuMucDinhKem_() {
-  var id = layCaiDat_('ThuMucDinhKemId');
-  if (id) { try { return DriveApp.getFolderById(String(id)); } catch (e) { /* bị xoá thì tạo lại */ } }
-  var f = DriveApp.createFolder('ECO - Đính kèm mail');
-  datCaiDat_('ThuMucDinhKemId', f.getId());
-  return f;
+  return thuMucCon_('Đính kèm mail');
 }
 
 function escHtml_(s) {
@@ -86,7 +82,7 @@ function escHtml_(s) {
 }
 
 function ngayGioChu_(d) {
-  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+  return Utilities.formatDate(d, muiGio_(), 'dd/MM/yyyy HH:mm');
 }
 
 /** Tóm tắt một luồng thư cho danh sách. */
@@ -460,7 +456,7 @@ function layNguonGui(phien) {
   // Thông tin chèn được đặt tên đúng như tiêu đề cột của danh sách thành viên (có dấu, viết hoa), ví dụ {Họ và tên}.
   var tv = docThanhVien_().map(function (t) {
     var o = {};
-    COT_THANH_VIEN.forEach(function (c) { o[c[1]] = t[c[0]] instanceof Date ? Utilities.formatDate(t[c[0]], Session.getScriptTimeZone(), 'dd/MM/yyyy') : String(t[c[0]] == null ? '' : t[c[0]]); });
+    COT_THANH_VIEN.forEach(function (c) { o[c[1]] = t[c[0]] instanceof Date ? Utilities.formatDate(t[c[0]], muiGio_(), 'dd/MM/yyyy') : String(t[c[0]] == null ? '' : t[c[0]]); });
     return o;
   });
   return {
@@ -552,7 +548,7 @@ function caiLichGuiThu_() {
  */
 function guiThuDaLenLich(e) {
   if (!laLichChay_(e)) return;
-  guiThuHenGio_();
+  chayViec_('guiThuDaLenLich', guiThuHenGio_);
 }
 function guiThuHenGio_() {
   var khoa = layKhoa_(1000, true);
@@ -599,6 +595,7 @@ function guiThuHenGio_() {
       }
     });
   });
+  return canGui.length ? 'Đã xử lý ' + canGui.length + ' lượt thư hẹn giờ' : '';
 }
 
 function layLichGui(phien) {

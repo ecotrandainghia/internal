@@ -42,7 +42,7 @@ function tenBotZalo_() {
 }
 
 function layTokenZalo_() {
-  return String(layCaiDat_('ZaloToken') || '').trim();
+  return String(layBiMat_('ZaloToken') || '').trim();
 }
 
 /** Gửi một tin (tự chia nếu dài). */
@@ -179,18 +179,10 @@ function ghiKetNoiZalo_(ten, chatId, tenZalo) {
 
 /* ---------- Nhắc việc hằng ngày ---------- */
 
-/** Lịch nhắc deadline. Chưa lưu lịch mới thì đổi từ cài đặt cũ (một danh sách giờ chung) để cách nhắc không đổi. */
+/** Lịch nhắc deadline. Chưa ai chỉnh thì dùng lịch trong tài liệu training HR (tối trước hạn 1 ngày, sáng ngày hạn, sáng sau hạn 1 ngày). */
 function caiDatNhacZalo_() {
   var lich = chuanHoaLichNhac_(layCaiDat_('LichNhac'));
-  if ((!lich || !lich.length) && layCaiDat_('ZaloGioNhac') === null && layCaiDat_('ZaloNhacSapDenHan') === null) {
-    // Chưa ai chỉnh lịch: dùng lịch trong tài liệu training HR (tối trước hạn 1 ngày, sáng ngày hạn, sáng sau hạn 1 ngày).
-    lich = [{ ngay: -1, gio: 20, phut: 0 }, { ngay: 0, gio: 7, phut: 0 }, { ngay: 1, gio: 7, phut: 0 }];
-  }
-  if (!lich || !lich.length) {
-    var sap = layCaiDat_('ZaloNhacSapDenHan');
-    lich = lichNhacTuCaiDatCu_(soNgaySapDenHan_(), chuanHoaDsGio_(layCaiDat_('ZaloGioNhac')),
-      sap === null ? true : (sap === true || sap === 'TRUE' || sap === 'true'), String(layCaiDat_('ZaloNhacTre') || NHAC_TRE.MOI_NGAY));
-  }
+  if (!lich || !lich.length) lich = [{ ngay: -1, gio: 20, phut: 0 }, { ngay: 0, gio: 7, phut: 0 }, { ngay: 1, gio: 7, phut: 0 }];
   return { lich: lich, dsLuc: lucCuaLich_(lich) };
 }
 
@@ -198,7 +190,7 @@ function caiDatNhacZalo_() {
 /** Chỉ lịch chạy tự động mới gọi được (người ngoài không gọi thẳng từ trang web được). */
 function nhacViecHangNgay(e) {
   if (!laLichChay_(e)) return null;
-  return nhacViec_(lucCuaLanChay_(e));
+  return chayViec_('nhacViecHangNgay', function () { return nhacViec_(lucCuaLanChay_(e)); });
 }
 
 /** Lần chạy này ứng với giờ nhắc nào (phút trong ngày). Google có thể chạy sớm hay muộn vài phút nên tra theo mã lịch. */
@@ -209,7 +201,7 @@ function lucCuaLanChay_(e) {
     var l = theoMa[String(e.triggerUid)];
     if (typeof l === 'number' && dsLuc.indexOf(l) >= 0) return l;
   } catch (x) { /* tra theo giờ hiện tại */ }
-  var bayGio = Number(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'H')) * 60 + Number(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'm'));
+  var bayGio = Number(Utilities.formatDate(new Date(), muiGio_(), 'H')) * 60 + Number(Utilities.formatDate(new Date(), muiGio_(), 'm'));
   var gan = dsLuc[0], lech = 1e9;
   dsLuc.forEach(function (l) { var d = Math.abs(bayGio - l); d = Math.min(d, 1440 - d); if (d < lech) { lech = d; gan = l; } });
   return gan;
@@ -219,15 +211,15 @@ function lucCuaLanChay_(e) {
 function nhacViec_(luc) {
   if (layTokenZalo_()) { try { nhanTinMoiZalo_(); } catch (e) { /* vẫn nhắc những người đã kết nối */ } }
   try { donThongBaoCu_(); } catch (e) { /* bỏ qua */ }
-  // Gỡ lịch của Google Form seeding cũ (đã thay bằng Báo cáo seeding trong app).
-  try { ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'khiNopForm') ScriptApp.deleteTrigger(t); }); } catch (e) { /* bỏ qua */ }
   var cd = caiDatNhacZalo_();
   var hom = homNay_();
   var canNhac = chonTaskTheoLich_(docTask_(), hom, cd.lich, luc == null ? null : luc);
   var nguoiNhan = nguoiNhanThongBao_();
   // HR phụ trách được nhắc task của ban và thành viên mình phụ trách (cách nhắc chính).
   // Ai bật "Tự nhắc task của tôi" trong Cài đặt thì được nhắc thêm task của chính mình.
-  // Ban HR không có HR phụ trách theo ban nên Head HR được nhắc task của thành viên ban HR.
+  // Ban không có HR phụ trách (trong cơ cấu ban, ví dụ ban HR) thì BOD có chức vụ ghi tên nhóm ban đó
+  // (ví dụ "Head HR") được nhắc task của thành viên ban đó.
+  var banTuQuan = CO_CAU.ban.filter(function (b) { return b.dangDung && !b.laBod && !b.phuTrach; }).map(function (b) { return b.nhom; });
   var taiKhoan = docBang_('TaiKhoan'), banCua = {}, chucVuTheoEmail = {};
   docBang_('ThanhVien').forEach(function (t) {
     banCua[String(t.HoVaTen)] = String(t.Ban);
@@ -240,8 +232,10 @@ function nhacViec_(luc) {
   nguoiNhan.forEach(function (n) {
     var cuaToi = n.tuNhac ? soanTinNhac_(n.ten, canNhac.filter(function (t) { return t.nguoi === n.ten; }), hom, false) : '';
     var khac = [];
-    if (n.vaiTro === 'BOD' && chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]) === 'HEAD HR') {
-      khac = canNhac.filter(function (t) { return nhomBan_(banCua[t.nguoi]) === 'HR' && t.nguoi !== n.ten; });
+    if (n.vaiTro === 'BOD') {
+      var cv = chuanChu_(chucVuTheoEmail[n.email.toLowerCase()]).split(/[^A-Z0-9]+/);
+      var quan = banTuQuan.filter(function (b) { return cv.indexOf(b) >= 0; });
+      khac = canNhac.filter(function (t) { return quan.indexOf(nhomBan_(banCua[t.nguoi])) >= 0 && t.nguoi !== n.ten; });
     } else if (n.vaiTro === 'HR') {
       var pv = phamViHr_(tkTheoEmail[n.email.toLowerCase()], banCua);
       khac = canNhac.filter(function (t) { return t.nguoi !== n.ten && pv.thuoc(t.nguoi); });
@@ -261,7 +255,7 @@ function caiLichNhac_(dsLuc) {
   });
   var theoMa = {};
   dsLuc.forEach(function (l) {
-    var t = ScriptApp.newTrigger('nhacViecHangNgay').timeBased().atHour(Math.floor(l / 60)).nearMinute(l % 60).everyDays(1).inTimezone(Session.getScriptTimeZone()).create();
+    var t = ScriptApp.newTrigger('nhacViecHangNgay').timeBased().atHour(Math.floor(l / 60)).nearMinute(l % 60).everyDays(1).inTimezone(muiGio_()).create();
     theoMa[t.getUniqueId()] = l;
   });
   datCaiDat_('LichNhacTheoMa', JSON.stringify(theoMa));
@@ -294,7 +288,7 @@ function luuCaiDatZalo(phien, cd) {
   if (token && token !== layTokenZalo_()) {
     var bot;
     try { bot = goiZalo_(token, 'getMe', {}); } catch (e) { throw new Error('Mã bot không dùng được. Bạn kiểm tra lại đã chép đủ mã chưa. (' + e.message + ')'); }
-    datCaiDat_('ZaloToken', token);
+    datBiMat_('ZaloToken', token);
     datCaiDat_('ZaloTenBot', tenHienThiBot_(bot));
     boWebhookZalo_();
     // Bot mới thì mọi người phải nhắn mã kết nối lại.
@@ -318,15 +312,19 @@ function luuNhacViec(phien, cd) {
   if (!lich || !lich.length) throw new Error('Cần ít nhất một mốc nhắc.');
   var dsLuc = lucCuaLich_(lich);
   if (dsLuc.length > TOI_DA_GIO_NHAC) throw new Error('Các mốc chỉ được dùng tối đa ' + TOI_DA_GIO_NHAC + ' giờ khác nhau. Bạn gộp bớt giờ giống nhau nhé.');
-  if (cd.sapDenHanNgay !== undefined) {
-    var n = Math.round(Number(cd.sapDenHanNgay));
-    if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
-    datCaiDat_('SapDenHanNgay', n);
-  }
-  if (cd.khongHoanThanhSau !== undefined) {
-    var k = Math.round(Number(cd.khongHoanThanhSau));
-    if (!(k >= 0 && k <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
-    datCaiDat_('KhongHoanThanhSauNgay', k);
+  if (cd.sapDenHanNgay !== undefined || cd.khongHoanThanhSau !== undefined) {
+    var qt = chepSau_(quyTac_());
+    if (cd.sapDenHanNgay !== undefined) {
+      var n = Math.round(Number(cd.sapDenHanNgay));
+      if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
+      qt.sapDenHanNgay = n;
+    }
+    if (cd.khongHoanThanhSau !== undefined) {
+      var k = Math.round(Number(cd.khongHoanThanhSau));
+      if (!(k >= 0 && k <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
+      qt.khtSauNgay = k;
+    }
+    luuQuyTac_(qt);
   }
   datCaiDat_('LichNhac', JSON.stringify(lich));
   caiLichNhac_(dsLuc);

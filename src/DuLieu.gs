@@ -40,6 +40,25 @@ function datFileDuLieu_(id) {
 /** Múi giờ của app (giờ Việt Nam theo cài đặt dự án). */
 function muiGio_() { return Session.getScriptTimeZone(); }
 
+/* ===================== Thư mục của app trên Google Drive ===================== */
+
+var TEN_THU_MUC_GOC = 'CLB ECO - App';
+
+/** Thư mục gốc của app (chứa file dữ liệu, sao lưu, lưu trữ, tệp đính kèm...). Bị xoá thì tạo lại. */
+function thuMucGoc_() {
+  var kho = PropertiesService.getScriptProperties(), id = kho.getProperty('ThuMucGocId');
+  if (id) { try { var f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) { /* tạo lại */ } }
+  var moi = DriveApp.createFolder(TEN_THU_MUC_GOC);
+  kho.setProperty('ThuMucGocId', moi.getId());
+  return moi;
+}
+
+/** Thư mục con trong thư mục gốc theo tên (Sao lưu, Lưu trữ, Đính kèm mail, Ảnh nền...). Chưa có thì tạo. */
+function thuMucCon_(ten) {
+  var goc = thuMucGoc_(), it = goc.getFoldersByName(ten);
+  return it.hasNext() ? it.next() : goc.createFolder(ten);
+}
+
 /* ===================== Cấu trúc bảng ===================== */
 
 /** Chọn hàm này rồi bấm Chạy trong Apps Script nếu Google cần cấp lại quyền (thường không cần). */
@@ -374,7 +393,9 @@ function chayViec_(ten, viec) {
   var batDau = Date.now();
   try {
     var kq = viec();
-    ghiNhatKy_(ten, 'OK', kq && typeof kq === 'object' ? JSON.stringify(kq).slice(0, 500) : (kq || ''), Date.now() - batDau);
+    ghiLanChayCuoi_(ten);
+    // Lần chạy không làm gì (ví dụ 10 phút một lần mà không có thư hẹn giờ) thì không ghi, để nhật ký gọn.
+    if (kq) ghiNhatKy_(ten, 'OK', typeof kq === 'object' ? JSON.stringify(kq).slice(0, 500) : kq, Date.now() - batDau);
     return kq;
   } catch (e) {
     var loi = String(e && e.message || e);
@@ -389,6 +410,11 @@ function chayViec_(ten, viec) {
     } catch (x) { /* bỏ qua */ }
     return null;
   }
+}
+
+/** Ghi lúc chạy gần nhất của một việc (để trang Hệ thống biết lịch còn chạy đều dù không có gì để làm). */
+function ghiLanChayCuoi_(ten) {
+  try { PropertiesService.getScriptProperties().setProperty('chaycuoi_' + ten, String(Date.now())); } catch (e) { /* bỏ qua */ }
 }
 
 /* ===================== Lịch chạy tự động ===================== */
@@ -419,5 +445,6 @@ function caiLichChay_() {
 function tinhTrangLichChay_() {
   var co = {};
   ScriptApp.getProjectTriggers().forEach(function (t) { co[t.getHandlerFunction()] = (co[t.getHandlerFunction()] || 0) + 1; });
-  return Object.keys(TEN_VIEC).map(function (k) { return { viec: k, ten: TEN_VIEC[k], so: co[k] || 0 }; });
+  var kho = PropertiesService.getScriptProperties();
+  return Object.keys(TEN_VIEC).map(function (k) { return { viec: k, ten: TEN_VIEC[k], so: co[k] || 0, chayCuoi: Number(kho.getProperty('chaycuoi_' + k)) || 0 }; });
 }

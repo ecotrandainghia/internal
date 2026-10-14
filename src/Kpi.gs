@@ -170,7 +170,7 @@ function nhacSeedingTheoGio_() {
       den.push({ email: String(v[r][td.indexOf('Email')]), link: String(v[r][td.indexOf('LinkBai')] || ''), lucDang: new Date(v[r][td.indexOf('LucDang')]) });
     }
   });
-  if (!den.length) return 'Không có bài cần nhắc';
+  if (!den.length) return '';
   var nguoi = {};
   nguoiNhanThongBao_().forEach(function (n) { nguoi[n.email.toLowerCase()] = n; });
   den.forEach(function (d) {

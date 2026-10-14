@@ -7,10 +7,10 @@ const path = require('path');
 
 const SRC = path.join(__dirname, '..', 'src');
 const CONG_KHAI = [
-  'doGet', 'include', 'onOpen', 'onEdit', // Apps Script tự gọi
+  'doGet', 'include', // Apps Script tự gọi
   'khoiTaoCoSoDuLieu', // chạy tay trong Apps Script để cấp quyền; chạy lại nhiều lần không sao
-  'moHopThoaiTaiDanhSach', 'taiDanhSachThanhVien', 'xemTruocTaiDanhSach', // menu trong Sheet (có vé dùng một lần)
-  'guiThuDaLenLich', 'nhacViecHangNgay', 'nhacSeedingTheoGio', // lịch chạy tự động (kiểm tra laLichChay_)
+  'caiDatTaoMoi', 'caiDatDungFileCo', // cài đặt lần đầu: chỉ chủ dự án, khi chưa cài (kiểm tra canChuDuAn_)
+  'guiThuDaLenLich', 'nhacViecHangNgay', 'nhacSeedingTheoGio', 'chayHangDem', // lịch chạy tự động (kiểm tra laLichChay_)
   'dangNhap', 'dangNhapGoogle', 'dangXuat', 'moDesk', 'layAnhNen' // trước khi đăng nhập
 ];
 
@@ -32,13 +32,18 @@ test('hàm gọi được từ trang web đều kiểm tra đăng nhập', () =>
   assert.deepStrictEqual(thieu.map((h) => h.file + ': ' + h.ten), []);
 });
 
-test('hàm chạy theo lịch và tải danh sách có chặn người ngoài', () => {
+test('hàm chạy theo lịch và cài đặt lần đầu có chặn người ngoài', () => {
   const ds = hamCongKhai();
   const than = (ten) => ds.filter((h) => h.ten === ten)[0].than;
-  assert.match(than('nhacViecHangNgay'), /laLichChay_\(e\)/);
-  assert.match(than('guiThuDaLenLich'), /laLichChay_\(e\)/);
-  assert.match(than('nhacSeedingTheoGio'), /laLichChay_\(e\)/);
-  assert.match(fs.readFileSync(path.join(SRC, 'Code.gs'), 'utf8'), /function kiemTraVeTai_\(yeuCau\) \{\n  var ve = CacheService\.getScriptCache\(\)\.get\('ve_tai_danh_sach'\);/);
-  assert.match(than('taiDanhSachThanhVien'), /kiemTraVeTai_\(yeuCau\)/);
-  assert.match(than('xemTruocTaiDanhSach'), /kiemTraVeTai_\(yeuCau\)/);
+  ['nhacViecHangNgay', 'guiThuDaLenLich', 'nhacSeedingTheoGio', 'chayHangDem'].forEach((t) => assert.match(than(t), /laLichChay_\(e\)/, t));
+  ['caiDatTaoMoi', 'caiDatDungFileCo'].forEach((t) => assert.match(than(t), /^function \w+\(yc\) \{\n  canChuDuAn_\(\);/, t));
+  const cd = fs.readFileSync(path.join(SRC, 'CaiDatLanDau.gs'), 'utf8');
+  assert.match(cd, /function canChuDuAn_\(\) \{\n  if \(daCaiDat_\(\)\) throw[^\n]*\n  if \(!laChuDuAn_\(\)\) throw/);
+  assert.match(cd, /function laChuDuAn_\(\) \{[\s\S]*getActiveUser\(\)[\s\S]*getEffectiveUser\(\)[\s\S]*return !!dangMo && dangMo === chu;/);
+});
+
+test('lịch chạy tự động có ghi nhật ký và báo lỗi cho BOD', () => {
+  const ds = hamCongKhai();
+  const than = (ten) => ds.filter((h) => h.ten === ten)[0].than;
+  ['nhacViecHangNgay', 'guiThuDaLenLich', 'nhacSeedingTheoGio', 'chayHangDem'].forEach((t) => assert.match(than(t), new RegExp("chayViec_\\('" + t + "'"), t));
 });

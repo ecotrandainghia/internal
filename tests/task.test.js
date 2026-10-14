@@ -71,13 +71,6 @@ test('chuanHoaLichNhac bỏ mốc sai và trùng, xếp theo ngày', () => {
   assert.strictEqual(L.moTaMocNhac(kq[2]), 'Trễ hạn, mỗi ngày lúc 20:00');
 });
 
-test('lichNhacTuCaiDatCu giữ nguyên cách nhắc cũ', () => {
-  const ten = (l) => l.map((m) => m.ngay + '@' + m.gio);
-  assert.deepStrictEqual(ten(L.lichNhacTuCaiDatCu(2, [20], true, L.NHAC_TRE.MOI_NGAY)), ['-2@20', '-1@20', '0@20', 'T@20']);
-  assert.deepStrictEqual(ten(L.lichNhacTuCaiDatCu(1, [7, 20], false, L.NHAC_TRE.MOT_LAN)), ['1@7', '1@20']);
-  assert.deepStrictEqual(ten(L.lichNhacTuCaiDatCu(2, [20], false, L.NHAC_TRE.KHONG)), ['0@20']);
-});
-
 test('soanTinNhac và chiaTin', () => {
   const hom = '2026-10-05';
   const ds = [{ ten: 'B', nguoi: 'Nguyễn A', hanChot: '2026-10-06' }, { ten: 'A', nguoi: 'Lê B', hanChot: '2026-10-03' }];
@@ -99,7 +92,7 @@ test('timMaTrongTin', () => {
 test('quyền task: mọi BOD như nhau, không giao cho BOD; HR làm giúp cho người mình phụ trách; còn lại chỉ xem task của mình', () => {
   assert.deepStrictEqual(L.banQuanLy('ad, PR cap; pg,'), ['PG', 'PR', 'AD']);
   assert.deepStrictEqual(L.banQuanLy(''), []);
-  assert.deepStrictEqual(L.banCuaHr('HR, BOD, ER'), ['ER'], 'HR không phụ trách ban BOD, HR; chưa phân thì rỗng');
+  assert.deepStrictEqual(L.banCuaHr('HR, BOD, AD, ER'), ['AD'], 'HR chỉ phụ trách ban có đánh dấu "HR phụ trách" trong cơ cấu (không BOD, HR, ban lạ)');
   const ban = { An: 'PG', Binh: 'PR CAP', Bao: 'PR DES', Chi: 'AD', Dung: 'BOD', Duy: 'BOD', Em: 'HR', Ha: 'HR' };
   const ds = Object.keys(ban).concat(['Người cũ']);
   const ha = L.quyenTask({ VaiTro: 'HR', HoVaTen: 'Ha', BanQuanLy: 'PR, HR' }, '', ban);
@@ -117,7 +110,7 @@ test('quyền task: mọi BOD như nhau, không giao cho BOD; HR làm giúp cho 
   const tv = L.quyenTask({ VaiTro: 'TV', HoVaTen: 'An' }, '', ban);
   assert.deepStrictEqual(ds.filter(tv.xem), ['An']);
   assert.deepStrictEqual(ds.filter(tv.sua), []);
-  assert.deepStrictEqual(L.banCoo([{ Ban: 'PR DES' }, { Ban: 'BOD' }, { Ban: 'HR' }, { Ban: 'PG' }, { Ban: 'PR CAP' }]), ['PG', 'PR']);
+  assert.deepStrictEqual(L.banCoo(), ['PG', 'PR', 'AD']);
 });
 
 test('phạm vi HR phụ trách: chỉ các ban được phân, không gồm BOD', () => {
@@ -157,22 +150,20 @@ test('gia hạn chỉ hợp lệ khi xin trước hạn ít nhất 24 giờ', ()
   assert.match(L.kiemTraGiaHan('2026-10-10', '2026-10-10', '2026-10-01'), /sau hạn/);
 });
 
-test('tổng KPI task, HR phụ trách ghi trên task', () => {
+test('tổng KPI task', () => {
   const t = (trangThai, ketQua) => ({ trangThai, ketQua });
   const kq = L.tongKpiTask([t('Đã xong', 'Đạt'), t('Đã xong', 'Đạt'), t('Không hoàn thành', 'Chưa đạt'), t('Đã xong', 'Chờ đánh giá'), t('Đã giao', ''), t('Đã huỷ', '')]);
   assert.deepStrictEqual(kq, { giao: 5, dat: 2, chuaDat: 1, cho: 1, dangLam: 1, tiLe: 67 });
   assert.strictEqual(L.tongKpiTask([]).tiLe, null);
-  assert.strictEqual(L.hrPhuTrach('an', [{ HoVaTen: 'An', NguoiHr: 'Hà' }], 'Em', true), 'Hà');
-  assert.strictEqual(L.hrPhuTrach('Bình', [{ HoVaTen: 'An', NguoiHr: 'Hà' }], 'Em', true), 'Em');
-  assert.strictEqual(L.hrPhuTrach('Bình', [], 'BOD A', false), '');
 });
 
-test('không giao task cho người được miễn task (ôn thi chuyển cấp)', () => {
-  const tv = [{ HoVaTen: 'An' }, { HoVaTen: 'Bình' }];
-  const kq = L.taoDongTask({ ten: 'X', hanChot: '2026-10-10', nguoi: ['An', 'Bình'] }, tv, 'Dung', 'BOD', new Date(), [], ['bình']);
-  assert.match(kq.loi, /Bình đang được miễn task/);
-  const ok = L.taoDongTask({ ten: 'X', hanChot: '2026-10-10', nguoi: ['An'] }, tv, 'Dung', 'BOD', new Date(), [{ HoVaTen: 'An', NguoiHr: 'Em' }], []);
-  assert.strictEqual(ok.dong[0].HrPhuTrach, 'Em');
+test('tạo task: ghi mã thành viên, HR nhập thì ghi HR phụ trách', () => {
+  const tv = [{ MaTV: '26-1-PG-01', HoVaTen: 'An' }, { MaTV: '26-1-AD-01', HoVaTen: 'Bình' }];
+  const kq = L.taoDongTask({ ten: 'X', hanChot: '2026-10-10', nguoi: ['An', 'Bình'] }, tv, 'Dung', 'BOD', new Date());
+  assert.strictEqual(kq.loi, '');
+  assert.deepStrictEqual(kq.dong.map((d) => [d.MaTV, d.KieuTao, d.HrPhuTrach]), [['26-1-PG-01', 'Giao task', ''], ['26-1-AD-01', 'Giao task', '']]);
+  const hr = L.taoDongTask({ ten: 'X', hanChot: '2026-10-10', nguoi: ['An'] }, tv, 'Em', 'HR', new Date());
+  assert.deepStrictEqual([hr.dong[0].KieuTao, hr.dong[0].HrPhuTrach], ['Nhập task', 'Em']);
 });
 
 test('task trễ quá số ngày cài đặt thì tính là không hoàn thành và thôi nhắc', () => {

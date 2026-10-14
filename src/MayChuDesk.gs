@@ -642,11 +642,7 @@ function luuAnhNen(phien, base64) {
 }
 
 function thuMucAnhNen_() {
-  var id = layCaiDat_('ThuMucAnhNenId');
-  if (id) { try { return DriveApp.getFolderById(String(id)); } catch (e) { /* bị xoá thì tạo lại */ } }
-  var f = DriveApp.createFolder('ECO - Ảnh nền app CLB ECO');
-  datCaiDat_('ThuMucAnhNenId', f.getId());
-  return f;
+  return thuMucCon_('Ảnh nền');
 }
 
 /** Trang đăng nhập hỏi ảnh nền (không cần đăng nhập). Máy đã có đúng bản thì không gửi lại ảnh. */
