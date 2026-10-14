@@ -10,7 +10,7 @@ const CONG_KHAI = [
   'doGet', 'include', 'onOpen', 'onEdit', // Apps Script tự gọi
   'khoiTaoCoSoDuLieu', // chạy tay trong Apps Script để cấp quyền; chạy lại nhiều lần không sao
   'moHopThoaiTaiDanhSach', 'taiDanhSachThanhVien', 'xemTruocTaiDanhSach', // menu trong Sheet (có vé dùng một lần)
-  'guiThuDaLenLich', 'nhacViecHangNgay', 'khiNopForm', 'nhacSeedingTheoGio', // lịch chạy tự động (kiểm tra laLichChay_)
+  'guiThuDaLenLich', 'nhacViecHangNgay', 'nhacSeedingTheoGio', // lịch chạy tự động (kiểm tra laLichChay_)
   'dangNhap', 'dangNhapGoogle', 'dangXuat', 'moDesk', 'layAnhNen' // trước khi đăng nhập
 ];
 
@@ -37,7 +37,6 @@ test('hàm chạy theo lịch và tải danh sách có chặn người ngoài', 
   const than = (ten) => ds.filter((h) => h.ten === ten)[0].than;
   assert.match(than('nhacViecHangNgay'), /laLichChay_\(e\)/);
   assert.match(than('guiThuDaLenLich'), /laLichChay_\(e\)/);
-  assert.match(than('khiNopForm'), /laLichChay_\(e\)/);
   assert.match(than('nhacSeedingTheoGio'), /laLichChay_\(e\)/);
   assert.match(fs.readFileSync(path.join(SRC, 'Code.gs'), 'utf8'), /function kiemTraVeTai_\(yeuCau\) \{\n  var ve = CacheService\.getScriptCache\(\)\.get\('ve_tai_danh_sach'\);/);
   assert.match(than('taiDanhSachThanhVien'), /kiemTraVeTai_\(yeuCau\)/);

@@ -98,7 +98,7 @@ function thongTinNguoiDung_(tk) {
   var gd = String(tk.GiaoDien || '');
   var pv = vaiTro === 'HR' ? phamViHrCua_(tk) : { co: false };
   return {
-    email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua_(tk) : '', maHr: vaiTro === 'HR' ? String(tk.MaHr || '').trim() : '',
+    email: String(tk.Email), ten: String(tk.HoVaTen), vaiTro: vaiTro, chucVu: vaiTro === 'BOD' ? chucVuCua_(tk) : '',
     nhomHr: nhomHr_(tk.NhomHr), phuTrach: !!pv.co, anh: anhDaiDien_(tk.Email),
     gmail: vaiTro === 'BOD' ? linkGmail_('#inbox') : '', giaoDien: ['light', 'dark'].indexOf(gd) >= 0 ? gd : 'auto'
   };
@@ -328,13 +328,12 @@ function layCaiDatDesk(phien) {
     mail: { cheDoUcv: cheDoXemUcv_(), soDanhBa: docBang_('DanhBa').length, soThanhVien: tv.filter(function (t) { return emailHopLe_(t.Email); }).length },
     googleClientId: String(layCaiDat_('GoogleClientId') || ''),
     chuDe: chuDeHopLe_(layCaiDat_('ChuDe')),
-    formSeeding: (function () { var ch = docCauHinhSeeding_(); return { bat: !!(ch.tab && !ch.tat && coLichForm_()) }; })(),
     log: { linkMau: String(layCaiDat_('LinkMauLog') || ''), linkThuMuc: String(layCaiDat_('LinkThuMucLog') || '') },
     zalo: (function () {
       var n = dongBoNguoiNhanZalo_();
       return { coBot: !!layTokenZalo_(), daKetNoi: n.filter(function (x) { return x.chatId; }).length, tong: n.length };
     })(),
-    taiKhoan: docBang_('TaiKhoan').filter(function (t) { return String(t.VaiTro) !== 'TV'; }).map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy), maHr: String(t.MaHr || ''), nhomHr: nhomHr_(t.NhomHr) }; }),
+    taiKhoan: docBang_('TaiKhoan').filter(function (t) { return String(t.VaiTro) !== 'TV'; }).map(function (t) { return { email: String(t.Email), ten: String(t.HoVaTen), vaiTro: String(t.VaiTro), banQuanLy: banQuanLy_(t.BanQuanLy), nhomHr: nhomHr_(t.NhomHr) }; }),
     thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban), email: String(t.Email || '') }; })
   };
 }
@@ -373,12 +372,6 @@ function baoGopYQuaMail_() {
   return String(layCaiDat_('BaoGopYQuaMail') || '') !== 'tat';
 }
 
-function luuBaoGopY_(phien, bat) {
-  canDangNhap_(phien, 'caidat');
-  datCaiDat_('BaoGopYQuaMail', bat ? 'bat' : 'tat');
-  return true;
-}
-
 /** Báo góp ý mới cho BOD (theo cách mỗi người chọn). Tối đa một lần mỗi 10 phút để không tốn lượt gửi trong ngày. */
 function thongBaoGopYMoi_(noiDung) {
   if (!baoGopYQuaMail_()) return;
@@ -398,19 +391,11 @@ function luuGhim(phien, ds) {
   return true;
 }
 
-function luuSapDenHan_(phien, soNgay) {
-  canDangNhap_(phien, 'caidat');
-  var n = Math.round(Number(soNgay));
-  if (!(n >= 0 && n <= 30)) throw new Error('Số ngày phải từ 0 đến 30.');
-  datCaiDat_('SapDenHanNgay', n);
-  return true;
-}
-
 /**
  * Nâng quyền một thành viên lên ban nhân sự (HR) hoặc UCV. Thành viên đã có tài khoản thì giữ mật khẩu cũ;
  * chưa có thì tạo, dùng mật khẩu ban đầu (nếu nhập) hoặc mật khẩu mặc định của CLB.
  */
-function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro, maHr) {
+function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro) {
   vaiTro = vaiTro === 'UCV' ? 'UCV' : 'HR';
   canDangNhap_(phien, 'caidat');
   var tv = docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen) === String(hoVaTen); })[0];
@@ -421,35 +406,26 @@ function themBanNhanSu(phien, hoVaTen, matKhau, vaiTro, maHr) {
   matKhau = String(matKhau || '');
   if (matKhau) { var loi = kiemTraMatKhauMoi_(matKhau); if (loi) throw new Error(loi); }
   return voiKhoa_(function () {
-    bangDuLieu_('TaiKhoan'); // thêm cột MaHr nếu sheet còn bản cũ
-    var ma = vaiTro === 'HR' ? kiemTraMaHr_(maHr, docBang_('TaiKhoan'), email) : { ma: '', loi: '' };
-    if (ma.loi) throw new Error(ma.loi);
     var tk = timTaiKhoan_(email);
     if (tk && String(tk.VaiTro) === vaiTro) throw new Error(hoVaTen + ' đã là ' + vaiTro + '.');
     if (tk) {
       ghiCotTaiKhoan_(email, 'VaiTro', vaiTro);
-      if (vaiTro === 'HR') ghiCotTaiKhoan_(email, 'MaHr', ma.ma);
       if (matKhau) ghiMatKhau_(email, matKhau);
       return true;
     }
     if (!matKhau && !layCaiDat_('MatKhauMacDinh')) throw new Error('CLB chưa có mật khẩu mặc định. Nhập mật khẩu ban đầu cho ' + hoVaTen + '.');
     var muoi = matKhau ? Utilities.getUuid() : '';
-    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: matKhau ? bamMatKhau_(matKhau, muoi) : '', Muoi: muoi, NgayTao: new Date(), MaHr: ma.ma }]);
+    themDong_('TaiKhoan', [{ Email: email, HoVaTen: tv.HoVaTen, VaiTro: vaiTro, MatKhau: matKhau ? bamMatKhau_(matKhau, muoi) : '', Muoi: muoi, NgayTao: new Date() }]);
     return true;
   });
 }
 
-/** Lưu mã HR và phân ban cho một tài khoản HR (danh sách nhóm ban, trống là chưa phân ban: thấy mọi task). maHr bỏ trống = không có mã. */
-function luuBanQuanLy(phien, email, dsBan, maHr) {
+/** Lưu phân ban cho một tài khoản HR (danh sách nhóm ban, trống là chưa phân ban: không phụ trách task nào). */
+function luuBanQuanLy(phien, email, dsBan) {
   canDangNhap_(phien, 'caidat');
   var tk = timTaiKhoan_(email);
   if (!tk || String(tk.VaiTro) !== 'HR') throw new Error('Chỉ phân ban cho tài khoản HR.');
-  bangDuLieu_('TaiKhoan'); // thêm cột BanQuanLy, MaHr nếu sheet còn bản cũ
-  if (maHr !== undefined) {
-    var ma = kiemTraMaHr_(maHr, docBang_('TaiKhoan'), tk.Email);
-    if (ma.loi) throw new Error(ma.loi);
-    ghiCotTaiKhoan_(tk.Email, 'MaHr', ma.ma);
-  }
+  bangDuLieu_('TaiKhoan'); // thêm cột BanQuanLy nếu sheet còn bản cũ
   ghiCotTaiKhoan_(tk.Email, 'BanQuanLy', banQuanLy_((dsBan || []).join(',')).filter(function (b) { return banCoo_(docBang_('ThanhVien')).indexOf(b) >= 0; }).join(', '));
   return true;
 }

@@ -400,17 +400,6 @@ function batDauNhiemKyTu_(ds) {
   return kq;
 }
 
-/** Mã HR do Head HR tự phân (ví dụ HR01). Bỏ khoảng trắng thừa, tối đa 20 ký tự. Trả về { ma, loi }. */
-function kiemTraMaHr_(ma, taiKhoan, email) {
-  ma = String(ma == null ? '' : ma).replace(/\s+/g, ' ').trim();
-  if (ma.length > 20) return { ma: ma, loi: 'Mã HR dài quá 20 ký tự.' };
-  var trung = ma && (taiKhoan || []).filter(function (t) {
-    return String(t.VaiTro) === 'HR' && String(t.Email).toLowerCase() !== String(email || '').toLowerCase() && String(t.MaHr || '').trim().toLowerCase() === ma.toLowerCase();
-  })[0];
-  if (trung) return { ma: ma, loi: 'Mã ' + ma + ' đã dùng cho ' + trung.HoVaTen + '.' };
-  return { ma: ma, loi: '' };
-}
-
 function cungKy_(dong, nhiemKy, hocKy) {
   return String(dong.NhiemKy) === String(nhiemKy) && Number(dong.HocKy) === Number(hocKy);
 }
@@ -1681,80 +1670,11 @@ function chuanHoaDsGio_(v) {
   return kq.length ? kq.slice(0, 6) : [20];
 }
 
-/* ===================== Form cộng điểm seeding ===================== */
-
-/** Cột app tự thêm vào tab câu trả lời form để đánh dấu câu nào đã cộng (không cộng lại lần hai). */
-var COT_DA_CONG_FORM = 'ECO đã cộng';
+/* ===================== Seeding ===================== */
 
 /** Tên Facebook để so: bỏ dấu, chữ thường, bỏ ký tự lạ (biểu tượng, dấu chấm…), gộp khoảng trắng. */
 function chuanTenFb_(s) {
   return boDau_(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-/**
- * Nhận diện cột của tab câu trả lời: dấu thời gian, người nộp, cột đánh dấu, email (bỏ qua),
- * còn lại là các cột danh sách tên (Reaction, Comment…).
- */
-function cotFormSeeding_(tieuDe) {
-  var kq = { thoiGian: -1, nguoiNop: -1, daCong: -1, seeding: [] };
-  (tieuDe || []).forEach(function (t, i) {
-    var c = chuanHoaTenCot_(t);
-    if (!c) return;
-    if (String(t).trim() === COT_DA_CONG_FORM) kq.daCong = i;
-    else if (c === 'dauthoigian' || c === 'timestamp') kq.thoiGian = i;
-    else if (kq.nguoiNop < 0 && (c.indexOf('hovaten') >= 0 || c.indexOf('nguoinop') >= 0 || c.indexOf('hoten') >= 0)) kq.nguoiNop = i;
-    else if (c.indexOf('email') >= 0) return;
-    else kq.seeding.push({ cot: i, ten: String(t).trim() });
-  });
-  return kq;
-}
-
-/** Loại hoạt động gợi ý cho một cột: loại có tên chứa tên cột (ví dụ "Seeding Reaction" cho cột Reaction), không có thì loại có chữ "seeding". */
-function goiYLoaiSeeding_(tenCot, loaiHoatDong) {
-  var c = chuanHoaTenCot_(tenCot), i;
-  for (i = 0; i < loaiHoatDong.length; i++) if (c && chuanHoaTenCot_(loaiHoatDong[i].TenLoai).indexOf(c) >= 0) return String(loaiHoatDong[i].TenLoai);
-  for (i = 0; i < loaiHoatDong.length; i++) if (chuanHoaTenCot_(loaiHoatDong[i].TenLoai).indexOf('seeding') >= 0) return String(loaiHoatDong[i].TenLoai);
-  return '';
-}
-
-/**
- * Một câu trả lời form thành các dòng cộng điểm. Mỗi dòng trong ô Reaction/Comment là một tên Facebook,
- * khớp nguyên dòng với cột Tên Facebook của thành viên (không phân biệt dấu, hoa thường, ký tự lạ).
- * anhXa: { tên cột: tên loại hoạt động }. thanhVien: những người được cộng (danh sách thành viên hiện tại, gồm cả BOD).
- * Trả về { dong, khongKhop (tên không khớp ai), nguoiNop, loi }.
- */
-function congTuFormSeeding_(dong, cot, anhXa, thanhVien, loaiHoatDong, ky, bayGio) {
-  var nguoiNop = cot.nguoiNop >= 0 ? String(dong[cot.nguoiNop] == null ? '' : dong[cot.nguoiNop]).trim() : '';
-  var kq = { dong: [], khongKhop: [], nguoiNop: nguoiNop, loi: '' };
-  if (!ky) { kq.loi = 'Chưa có giai đoạn nào nên chưa cộng được. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" trước.'; return kq; }
-  var loaiTheoTen = {};
-  loaiHoatDong.forEach(function (l) { loaiTheoTen[String(l.TenLoai)] = l; });
-  var theoFb = {};
-  thanhVien.forEach(function (tv) {
-    var k = chuanTenFb_(tv.TenFacebook);
-    if (k) (theoFb[k] = theoFb[k] || []).push(String(tv.HoVaTen));
-  });
-  var tg = cot.thoiGian >= 0 ? dong[cot.thoiGian] : null;
-  var thoiGian = tg !== null && String(tg).trim() !== '' && !isNaN(new Date(tg).getTime()) ? new Date(tg) : bayGio;
-  cot.seeding.forEach(function (c) {
-    var loai = loaiTheoTen[(anhXa || {})[c.ten]];
-    if (!loai) return;
-    var daCo = {};
-    String(dong[c.cot] == null ? '' : dong[c.cot]).split(/\r?\n/).forEach(function (dongTen) {
-      var k = chuanTenFb_(dongTen);
-      if (!k) return;
-      if (!theoFb[k]) { var goc = String(dongTen).trim(); if (kq.khongKhop.indexOf(goc) < 0) kq.khongKhop.push(goc); return; }
-      theoFb[k].forEach(function (ten) {
-        if (daCo[ten]) return;
-        daCo[ten] = true;
-        kq.dong.push({
-          ThoiGian: thoiGian, HoVaTen: ten, LoaiHoatDong: String(loai.TenLoai), TenHoatDong: c.ten, Diem: Number(loai.Diem) || 0,
-          NguoiCong: 'Form' + (nguoiNop ? ': ' + nguoiNop : ''), NhiemKy: String(ky.NhiemKy), HocKy: Number(ky.HocKy)
-        });
-      });
-    });
-  });
-  return kq;
 }
 
 /* ===================== Báo cáo seeding trong app (HR phụ trách seeding) ===================== */
@@ -2203,7 +2123,7 @@ if (typeof module !== 'undefined') {
     docNgaySinh: docNgaySinh_, tenLichSinhNhat: tenLichSinhNhat_, keHoachSinhNhat: keHoachSinhNhat_,
     boDau: boDau_, chuanHoaTenCot: chuanHoaTenCot_, nhomBan: nhomBan_, THU_TU_BAN: THU_TU_BAN, hangBan: hangBan_, soSanhBan: soSanhBan_, xepThanhVienTheoBan: xepThanhVienTheoBan_, nhanDienCot: nhanDienCot_,
     docDanhSachThanhVien: docDanhSachThanhVien_, capNhatThanhVienCu: capNhatThanhVienCu_, tenNhiemKy: tenNhiemKy_, tinhKyMoi: tinhKyMoi_,
-    dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, kiemTraMaHr: kiemTraMaHr_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
+    dongThanhDoiTuong: dongThanhDoiTuong_, locNhiemKy: locNhiemKy_, batDauNhiemKyTu: batDauNhiemKyTu_, maHoaBang: maHoaBang_, giaiMaBang: giaiMaBang_, tongHopBangDiem: tongHopBangDiem_, lichSuCongKhai: lichSuCongKhai_,
     linkHopLe: linkHopLe_, kiemTraGopY: kiemTraGopY_, taiKhoanBodCanCo: taiKhoanBodCanCo_, dongBoTaiKhoan: dongBoTaiKhoan_, khongPhaiBod: khongPhaiBod_,
     htmlSangChu: htmlSangChu_, lamSachHtml: lamSachHtml_, chuanBiGuiTuNhap: chuanBiGuiTuNhap_,
     coQuyen: coQuyen_, banQuanLy: banQuanLy_, quyenTask: quyenTask_, phamViHr: phamViHr_, ngayNopTheoKieu: ngayNopTheoKieu_, banCuaHr: banCuaHr_, kiemTraMatKhauMoi: kiemTraMatKhauMoi_, taoDongCongDiem: taoDongCongDiem_,
@@ -2222,10 +2142,10 @@ if (typeof module !== 'undefined') {
     base64Url: base64Url_, khoaCongP256: khoaCongP256_, kyP256: kyP256_, maHoaAesGcm: maHoaAesGcm_, maHoaThongBaoDay: maHoaThongBaoDay_, gocDiaChi: gocDiaChi_, diaChiDayHopLe: diaChiDayHopLe_,
     CACH_THONG_BAO: CACH_THONG_BAO, chuanHoaCachNhan: chuanHoaCachNhan_, loaiCongTay: loaiCongTay_, chuanHoaDsGio: chuanHoaDsGio_,
     CHU_DE: CHU_DE, chuDeHopLe: chuDeHopLe_, thuocTinhChuDe: thuocTinhChuDe_,
-    COT_DA_CONG_FORM: COT_DA_CONG_FORM, chuanTenFb: chuanTenFb_,
+    chuanTenFb: chuanTenFb_,
     TI_LE_TOP: TI_LE_TOP, soNguoiTop: soNguoiTop_, topTheoDiem: topTheoDiem_, vuotGioiHan: vuotGioiHan_, gioiHanLoai: gioiHanLoai_,
     DUNG_CHO: DUNG_CHO, MUC_DIEM_QUY_CHE: MUC_DIEM_QUY_CHE, loaiDungCho: loaiDungCho_,
-    NHOM_HR: NHOM_HR, TEN_NHOM_HR: TEN_NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_, cotFormSeeding: cotFormSeeding_, goiYLoaiSeeding: goiYLoaiSeeding_, congTuFormSeeding: congTuFormSeeding_,
+    NHOM_HR: NHOM_HR, TEN_NHOM_HR: TEN_NHOM_HR, nhomHr: nhomHr_, duocBaoCaoSeeding: duocBaoCaoSeeding_, chuanLinkBai: chuanLinkBai_, khopTenSeeding: khopTenSeeding_, taoBaoCaoSeeding: taoBaoCaoSeeding_,
     TRANG_THAI_BUOI: TRANG_THAI_BUOI, SU_KIEN_CHOT: SU_KIEN_CHOT, SU_KIEN_HUY: SU_KIEN_HUY, khoiLop: khoiLop_, giaoBanDau: giaoBanDau_, chuanHoaSuKienLog: chuanHoaSuKienLog_, chuanHoaBuoiLog: chuanHoaBuoiLog_,
     soBuoiThucDien: soBuoiThucDien_, giaoCuoi: giaoCuoi_, kpiLogSuKien: kpiLogSuKien_, kpiLogCuaNguoi: kpiLogCuaNguoi_, dongDiemLogVuot: dongDiemLogVuot_, docDangKyLog: docDangKyLog_,
     KQ_CERT: KQ_CERT, xepHangTop: xepHangTop_, phanTramTaskCert: phanTramTaskCert_, xetCertificate: xetCertificate_, danhSachKhenThuong: danhSachKhenThuong_

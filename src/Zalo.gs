@@ -219,8 +219,8 @@ function lucCuaLanChay_(e) {
 function nhacViec_(luc) {
   if (layTokenZalo_()) { try { nhanTinMoiZalo_(); } catch (e) { /* vẫn nhắc những người đã kết nối */ } }
   try { donThongBaoCu_(); } catch (e) { /* bỏ qua */ }
-  // Cộng bù câu trả lời form seeding nếu lần nộp nào đó Google không gọi được app.
-  try { var fs = docCauHinhSeeding_(); if (fs.tab && !fs.tat) xuLyFormSeeding_(); } catch (e) { /* bỏ qua */ }
+  // Gỡ lịch của Google Form seeding cũ (đã thay bằng Báo cáo seeding trong app).
+  try { ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'khiNopForm') ScriptApp.deleteTrigger(t); }); } catch (e) { /* bỏ qua */ }
   var cd = caiDatNhacZalo_();
   var hom = homNay_();
   var canNhac = chonTaskTheoLich_(docTask_(), hom, cd.lich, luc == null ? null : luc);

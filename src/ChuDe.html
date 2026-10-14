@@ -365,11 +365,6 @@ function trangTriChao() {
   var f = TRANG_TRI[CHU_DE];
   return f ? '<div class="tt-chao" aria-hidden="true">' + f().map(function (x) { return x.h; }).join('') + '</div>' : '';
 }
-function trangTriDau() {
-  var f = TRANG_TRI[CHU_DE];
-  return f ? '<div class="tt-chao tt-dau" aria-hidden="true">' + f().filter(function (x) { return x.dau; }).map(function (x) { return x.h; }).join('') + '</div>' : '';
-}
-
 /* ---------- Lời chúc trong khung chào và màu lá ở màn chờ ---------- */
 var LOI_CHUC = {
   xuan: ['Xuân về rồi, cây đâm chồi, mình cũng nạp năng lượng mới nha.', 'Mùa xuân là mùa trồng cây. Năm nay bạn trồng được cây nào chưa?'],

@@ -362,7 +362,7 @@ var TEN_DAY_DU = { BOD: {}, khac: { task: 'Task của tôi', log: 'Log của tô
 function trangAn() { return NGUOI ? (TRANG_AN[vaiTro()] || TRANG_AN.khac).filter(function (x) { return !flat().some(function (y) { return y[0] === x[0]; }); }) : []; }
 function thanhDuoi() { return BOTTOM[vaiTro()] || BOTTOM.khac; }
 /** Nhãn dưới tên người dùng: BOD hiện chức vụ (nếu danh sách thành viên có ghi), còn lại hiện vai trò. */
-function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : NGUOI.vaiTro === 'HR' && NGUOI.maHr ? VAI_TRO.HR + ' · ' + esc(NGUOI.maHr) : esc(VAI_TRO[NGUOI.vaiTro] || NGUOI.vaiTro); }
+function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : esc(VAI_TRO[NGUOI.vaiTro] || NGUOI.vaiTro); }
 /** Ảnh đại diện tròn (ảnh riêng nếu có, không thì chữ cái cuối tên). */
 function anhTron(lop, kieu, thuocTinh) {
   var anh = NGUOI && NGUOI.anh ? ' style="background-image:url(&quot;' + NGUOI.anh + '&quot;);background-size:cover;background-position:center;color:transparent' + (kieu ? ';' + kieu : '') + '"' : kieu ? ' style="' + kieu + '"' : '';

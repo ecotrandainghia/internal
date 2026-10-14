@@ -295,12 +295,6 @@ function layViecDuyet(phien) {
     }).slice(0, 300);
 }
 
-/** Đếm việc chờ duyệt (hiện số trên menu). */
-function demViecChoDuyet_(phien) {
-  canDangNhap_(phien, 'duyetmail');
-  return docBangNhiemKy_('ViecMail', 'ThoiGian').filter(function (v) { return String(v.TrangThai) === TRANG_THAI_VIEC.CHO; }).length;
-}
-
 function xemLuongKhiDuyet(phien, maThu) {
   canDangNhap_(phien, 'duyetmail');
   return chiTietLuong_(maThu);
