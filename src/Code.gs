@@ -208,6 +208,45 @@ function ghiMaVaoNguon_(c) {
   return so ? 'Đã ghi mã thành viên của ' + so + ' người vào sheet nguồn.' : 'Mã thành viên trên sheet nguồn đã đủ.';
 }
 
+/* ===================== Danh sách thành viên qua các năm (BOD) ===================== */
+
+/** Mọi thành viên từng có trong CLB, cả người đã rời. Chỉ BOD xem. */
+function layDanhSachThanhVien(phien) {
+  canDangNhap_(phien, 'caidat');
+  var ngay = function (v) { var t = v ? new Date(v).getTime() : 0; return isNaN(t) ? 0 : t; };
+  return xepThanhVienTheoBan_(docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen || '').trim(); })).map(function (t) {
+    var m = docMaThanhVien_(t.MaTV);
+    return {
+      ma: String(t.MaTV || ''), ten: String(t.HoVaTen), ban: String(t.Ban || ''), lop: String(t.Lop || ''), chucVu: String(t.ChucVu || ''),
+      roi: String(t.TrangThai || '') === TRANG_THAI_TV.ROI, gdVao: gdVao_(t), nhiemKyVao: m ? m.nhiemKy : '', dotVao: m ? m.dot : null,
+      ngayVao: ngay(t.NgayVao), ngayRoi: ngay(t.NgayRoi)
+    };
+  });
+}
+
+/** Hồ sơ một thành viên theo mã: thông tin liên lạc, các giai đoạn đã tham gia, đổi ban, kết quả từng nhiệm kỳ. */
+function layHoSoThanhVien(phien, ma) {
+  canDangNhap_(phien, 'caidat');
+  ma = String(ma || '').trim().toUpperCase();
+  var tv = docBang_('ThanhVien').filter(function (t) { return String(t.MaTV).toUpperCase() === ma; })[0];
+  if (!tv) throw new Error('Không tìm thấy thành viên có mã ' + ma + '.');
+  var cua = function (d) { return String(d.MaTV || '').toUpperCase() === ma; };
+  var ngay = function (v) { return v instanceof Date ? Utilities.formatDate(v, muiGio_(), 'dd/MM/yyyy') : String(v || ''); };
+  return {
+    ma: ma, ten: String(tv.HoVaTen), ban: String(tv.Ban || ''), lop: String(tv.Lop || ''), chucVu: String(tv.ChucVu || ''),
+    email: String(tv.Email || ''), sdt: String(tv.SoDienThoai || ''), ngaySinh: ngay(tv.NgaySinh), facebook: String(tv.LinkFacebook || ''),
+    roi: String(tv.TrangThai || '') === TRANG_THAI_TV.ROI, ngayVao: ngay(tv.NgayVao), ngayRoi: ngay(tv.NgayRoi),
+    giaiDoan: docBang_('ThanhVienGiaiDoan').filter(cua).map(function (d) {
+      return { nhiemKy: String(d.NhiemKy), giaiDoan: Number(d.GiaiDoan), ban: String(d.Ban || ''), chucVu: String(d.ChucVu || ''), loai: String(d.LoaiThanhVien || '') };
+    }),
+    doiBan: docBang_('DoiBan').filter(cua).map(function (d) { return { luc: new Date(d.ThoiGian).getTime(), cu: String(d.BanCu), moi: String(d.BanMoi) }; }),
+    ketQua: docBang_('KetQuaNhiemKy').filter(cua).map(function (d) {
+      return { nhiemKy: String(d.NhiemKy), ban: String(d.Ban || ''), diemGd: String(d.DiemTheoGiaiDoan || ''), top: String(d.Top || ''),
+        task: d.KpiTask === '' ? null : Number(d.KpiTask), log: d.KpiLog === '' ? null : Number(d.KpiLog), chungNhan: String(d.ChungNhan || '') };
+    })
+  };
+}
+
 /* ===================== Lịch sinh nhật (Google Calendar của tài khoản CLB) ===================== */
 
 /** ID lịch sinh nhật đã lưu theo nhiệm kỳ: { nhiệm kỳ: ID lịch }. */
