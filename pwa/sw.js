@@ -1,6 +1,6 @@
 /* Service worker tối giản: giữ sẵn các file của trang vỏ để app mở nhanh và cài được lên màn hình chính. */
-var BO_NHO = 'eco-vo-8';
-var TEP = ['./config.js', './vo.js', './vo.css', './home/', './home/index.html', './home/manifest.webmanifest',
+var BO_NHO = 'eco-vo-9';
+var TEP = ['./config.js', './vo.js', './vo.css', './app/', './app/index.html', './app/manifest.webmanifest',
   './icons/eco-192.png', './icons/eco-512.png', './icons/tab-eco.png', './icons/apple-eco.png', './icons/badge-96.png'];
 
 self.addEventListener('install', function (e) {
@@ -33,7 +33,7 @@ self.addEventListener('push', function (e) {
   var hien = function (ds) {
     return Promise.all((ds.length ? ds : [mac]).slice(-3).map(function (t, i) {
       return self.registration.showNotification(t.tieuDe === 'CLB ECO' ? 'CLB ECO' : 'CLB ECO: ' + t.tieuDe, {
-        body: String(t.noiDung || '').slice(0, 400), icon: '../icons/eco-192.png', badge: '../icons/badge-96.png', tag: 'eco-' + Date.now() + '-' + i, data: { url: './' }
+        body: String(t.noiDung || '').slice(0, 400), icon: './icons/eco-192.png', badge: './icons/badge-96.png', tag: 'eco-' + Date.now() + '-' + i, data: { url: './app/' }
       });
     }));
   };

@@ -32,10 +32,10 @@
     var c = getComputedStyle(do_);
     return { t: parseFloat(c.paddingTop) || 0, r: parseFloat(c.paddingRight) || 0, b: parseFloat(c.paddingBottom) || 0, l: parseFloat(c.paddingLeft) || 0 };
   }
-  /* Ghi nhớ đăng nhập ngay ở trang vỏ (bộ nhớ của khung bên trong hay bị điện thoại xoá). Đọc được cả phiên của ECODesk cũ. */
+  /* Ghi nhớ đăng nhập ngay ở trang vỏ (bộ nhớ của khung bên trong hay bị điện thoại xoá). */
   var KHOA_PHIEN = 'eco_phien_vo';
-  function docPhien() { try { return localStorage.getItem(KHOA_PHIEN) || localStorage.getItem('eco_desk_phien') || ''; } catch (e) { return ''; } }
-  function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); localStorage.removeItem('eco_desk_phien'); } catch (e) {} }
+  function docPhien() { try { return localStorage.getItem(KHOA_PHIEN) || ''; } catch (e) { return ''; } }
+  function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); } catch (e) {} }
 
   var nguon = null, nguonOrigin = '', appCon = null, appOrigin = '';
   /* iPhone (app trên màn hình chính) đôi khi báo chiều cao màn hình thiếu một đoạn ở dưới: kéo khung xuống tận đáy. */
