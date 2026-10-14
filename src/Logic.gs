@@ -2008,16 +2008,14 @@ function taoBaoCaoSeeding_(yc, thanhVien, loaiHoatDong, ky, nguoiNop, bayGio, ba
   return kq;
 }
 
-/** Giao diện theo mùa và ngày lễ do BOD chọn (trống là giao diện xanh mặc định). Tên, màu, hình nằm ở ChuDe.html. */
+/** Giao diện theo mùa và ngày lễ do BOD chọn (trống là không có dải trang trí). Tên, hình nằm ở ChuDe.html. */
 var CHU_DE = ['xuan', 'ha', 'thu', 'dong', 'tet', 'phunu', 'traidat', 'quockhanh', 'trungthu', 'halloween', 'nhagiao', 'giangsinh'];
-/** Giao diện luôn tối (bất kể người dùng chọn sáng hay tối). */
-var CHU_DE_TOI = ['halloween'];
 function chuDeHopLe_(ma) { ma = String(ma == null ? '' : ma).trim(); return CHU_DE.indexOf(ma) >= 0 ? ma : ''; }
-/** Thuộc tính gắn vào thẻ html khi trang được tạo, để giao diện hiện đúng ngay từ đầu, không bị nháy màu xanh. */
+/** Thuộc tính gắn vào thẻ html khi trang được tạo. */
 function thuocTinhChuDe_(ma) {
   ma = chuDeHopLe_(ma);
   if (!ma) return '';
-  return ' data-chude="' + ma + '"' + (CHU_DE_TOI.indexOf(ma) >= 0 ? ' data-theme="dark"' : '');
+  return ' data-chude="' + ma + '"';
 }
 
 /** Các cách nhận thông báo. */

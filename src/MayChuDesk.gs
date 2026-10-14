@@ -678,16 +678,31 @@ function layTrangChu(phien) {
   var dem = function (ds) {
     return { dangLam: ds.length, sap: ds.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.SAP; }).length, tre: ds.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.TRE; }).length };
   };
+  // Danh sách "Cần làm hôm nay" trên trang chủ: task gấp lên trước (trễ hạn, sắp đến hạn), rồi theo hạn chót.
+  var THU_GAP = {}; THU_GAP[TRANG_THAI_TASK.TRE] = 0; THU_GAP[TRANG_THAI_TASK.SAP] = 1;
+  var gap = function (ds) {
+    return ds.slice().sort(function (a, b) {
+      var x = a.trangThai in THU_GAP ? THU_GAP[a.trangThai] : 2, y = b.trangThai in THU_GAP ? THU_GAP[b.trangThai] : 2;
+      return x - y || (a.hanChot < b.hanChot ? -1 : a.hanChot > b.hanChot ? 1 : 0);
+    }).slice(0, 8).map(function (t) { return { ten: t.ten, nguoi: t.nguoi, han: t.hanChot, trangThai: t.trangThai }; });
+  };
   if (vaiTro !== 'BOD') {
-    kq.taskCuaToi = dem(dsTask.filter(function (t) { return t.nguoi === ten; }));
+    var cuaToi = dsTask.filter(function (t) { return t.nguoi === ten; });
+    kq.taskCuaToi = dem(cuaToi);
+    kq.viecCuaToi = gap(cuaToi);
     var tv = docThanhVien_().filter(function (t) { return String(t.HoVaTen).toLowerCase() === ten.toLowerCase(); })[0];
-    if (tv) { var lg = kpiLogCuaNguoi_(tv, docSuKienLog_(), mocGiaiDoanNay_()); kq.logCuaToi = { tiLe: lg.tiLe, thamGia: lg.thamGia, giaoCuoi: lg.giaoCuoi }; }
+    if (tv) {
+      var mocGd = mocGiaiDoanNay_(), lg = kpiLogCuaNguoi_(tv, docSuKienLog_(), mocGd);
+      kq.logCuaToi = { tiLe: lg.tiLe, thamGia: lg.thamGia, giaoCuoi: lg.giaoCuoi };
+      kq.kpiTaskCuaToi = tongKpiTask_(taskTinhKpi_(tatCaTask, tv, mocGd)).tiLe;
+    }
     if (vaiTro === 'HR') {
       var pv = phamViHrCua_(tk);
       if (pv.co) kq.taskThanhVien = dem(dsTask.filter(function (t) { return t.nguoi !== ten && pv.thuoc(t.nguoi); }));
     }
   } else {
     kq.taskBod = { choDanhGia: tatCaTask.filter(function (t) { return t.ketQua === KET_QUA.CHO; }).length, tre: dsTask.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.TRE; }).length };
+    kq.taskTre = gap(dsTask.filter(function (t) { return t.trangThai === TRANG_THAI_TASK.TRE || t.trangThai === TRANG_THAI_TASK.SAP; }));
     kq.logMo = docSuKienLog_().filter(function (x) { return String(x.TrangThai || '') !== SU_KIEN_CHOT && String(x.TrangThai || '') !== SU_KIEN_HUY; }).length;
   }
   if (vaiTro === 'BOD') {

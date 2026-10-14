@@ -1,25 +1,8 @@
 <style>
-/* =================== Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt, áp dụng cho cả app) ===================
-   Màu được tính sẵn trong đoạn script bên dưới. Ở đây chỉ có hình trang trí và hiệu ứng. */
-html[data-chude] .av{background:var(--soft-2);color:var(--accent)}
-html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--accent);color:var(--on-accent)}
+/* =================== Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt) ===================
+   Theo design system màu giấy: giao diện theo mùa không đổi màu app, chỉ đổi dải trang trí mỏng ở đầu trang chủ. */
 
-/* Hạt rơi khắp màn hình: hoa, lá, tuyết, sao, đèn trời, dơi. Không chặn bấm chuột. */
-#trangtri{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
-#trangtri .ht{position:absolute;top:0;width:var(--co);height:var(--co);opacity:var(--do,.85);will-change:transform}
-#trangtri .ht>i{display:block;width:100%;height:100%}
-#trangtri svg,.tt-chao svg,.chude-the svg{display:block;width:100%;height:100%;overflow:visible}
-#trangtri .roi{animation:tt-roi var(--t) linear var(--tre) infinite}
-#trangtri .roi>i{animation:tt-lac calc(var(--t) / 3) ease-in-out var(--tre) infinite alternate}
-#trangtri .len{top:auto;bottom:0;animation:tt-len var(--t) linear var(--tre) infinite}
-#trangtri .len>i{filter:drop-shadow(0 0 6px rgb(255 170 60 / .8));animation:tt-lac calc(var(--t) / 4) ease-in-out var(--tre) infinite alternate}
-#trangtri .ngang{left:0;animation:tt-ngang var(--t) linear var(--tre) infinite}
-#trangtri .ngang.vo>i{animation:tt-vo .32s ease-in-out infinite alternate}
 .tt-tuyet{color:var(--tt-tuyet,#a9c9e8)}
-@keyframes tt-roi{from{transform:translate3d(0,-60px,0)}to{transform:translate3d(var(--lech),calc(100vh + 60px),0)}}
-@keyframes tt-lac{from{transform:translateX(-14px) rotate(-35deg)}to{transform:translateX(14px) rotate(35deg)}}
-@keyframes tt-len{0%{transform:translate3d(0,60px,0);opacity:0}10%{opacity:var(--do,.85)}80%{opacity:var(--do,.85)}100%{transform:translate3d(var(--lech),-100vh,0);opacity:0}}
-@keyframes tt-ngang{from{transform:translate3d(-70px,0,0)}to{transform:translate3d(calc(100vw + 70px),var(--lech),0)}}
 @keyframes tt-vo{from{transform:scaleY(1)}to{transform:scaleY(.4)}}
 
 /* Trang trí trong khung chào (và đầu trang app CLB ECO). Kích thước tính theo em để thu nhỏ trên điện thoại. */
@@ -45,15 +28,6 @@ html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--a
 .tt-daydien i{display:block;width:.9em;height:1.4em;margin-top:calc(var(--y) * 1em);border-radius:45% 45% 50% 50%;background:var(--m);box-shadow:0 0 .8em .2em var(--m);animation:tt-nhap 1.3s ease-in-out var(--tre) infinite alternate}
 .tt-duoi{bottom:0}
 .tt-xoay{animation:tt-xoay 16s linear infinite}
-.chao.chao.tt-trungthu{background:linear-gradient(180deg,#141a46 0%,#26306e 60%,#3a2f5e 100%)}
-.chao.chao.tt-halloween{background:linear-gradient(180deg,#140a24 0%,#2e1248 55%,#7a3412 100%)}
-.chao.chao.tt-dong{background:linear-gradient(180deg,#b9d4ee 0%,#dce9f5 70%,#f3f8fc 100%)}
-.chao.chao.tt-dong.toi,.chao.chao.tt-dong.khuya{background:linear-gradient(180deg,#14213d 0%,#24365e 65%,#3a4f78 100%)}
-.chao.tt-trungthu .troi .mt,.chao.tt-halloween .troi .mt,.chao.tt-traidat .troi .mt{display:none}
-.chao.tt-trungthu .troi .may,.chao.tt-halloween .troi .may{display:none}
-.chao.tt-trungthu .troi .sao,.chao.tt-halloween .troi .sao{animation:sao-nhay 2.6s ease-in-out infinite}
-.chao.tt-trungthu .troi .chim,.chao.tt-halloween .troi .chim{display:none}
-.chao.tt-dong .chao-chu{text-shadow:0 1px 6px rgb(0 0 0 / .4)}
 @keyframes tt-dua{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
 @keyframes tt-gio{from{transform:rotate(-1.5deg)}to{transform:rotate(2deg)}}
 @keyframes tt-rc{from{transform:translate(0,0) rotate(0)}to{transform:translate(var(--lech),22em) rotate(320deg)}}
@@ -68,85 +42,42 @@ html[data-chude][data-theme="dark"] .nav[aria-current="page"]{background:var(--a
   .tt-canh{width:17em;height:7.6em}
   .tt-chao .tt-duoi{display:none}
 }
-/* Đầu trang app CLB ECO: thu nhỏ, chỉ giữ đồ treo phía trên. */
-header.co-tt{position:relative;overflow:hidden;isolation:isolate}
-.tt-chao.tt-dau{font-size:6.5px}
-@media (prefers-reduced-motion:reduce){#trangtri{display:none}.tt-chao,.tt-chao *{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.tt-chao,.tt-chao *{animation:none!important}}
 
 /* Thẻ chọn giao diện trong Cài đặt */
 .chude-luoi{display:grid;gap:10px;--o:150px}
 .chude-the{display:grid;gap:0;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer;text-align:left;overflow:hidden;color:inherit;font:inherit;position:relative}
-.chude-the:hover{border-color:var(--accent)}
-.chude-the[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.chude-the:hover{border-color:var(--ink)}
+.chude-the[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--ring)}
 .chude-the .dai{height:64px;position:relative;display:grid;place-items:center;overflow:hidden}
 .chude-the .dai>span{width:40px;height:40px;filter:drop-shadow(0 2px 4px rgb(0 0 0 / .25))}
 .chude-the .chu{padding:8px 11px 10px;display:grid;gap:1px}
 .chude-the b{font-size:13.5px}
 .chude-the small{font-size:12px;color:var(--muted)}
-.chude-the .dang{position:absolute;top:6px;right:6px;background:#fff;color:#1a1a1a;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.chude-the .dang{position:absolute;top:6px;right:6px;background:#fff;color:#1a1a1a;border-radius:999px;font-size:11px;font-weight:500;padding:1px 8px}
 @media (max-width:860px){.chude-luoi{--toida:1}.chude-the{grid-template-columns:76px minmax(0,1fr);align-items:center}.chude-the .dai{height:100%;min-height:60px}.chude-the .dai>span{width:34px;height:34px}.chude-the .dang{top:50%;right:10px;transform:translateY(-50%);background:var(--accent);color:var(--on-accent)}}
 </style>
 <script>
 /* =================== Giao diện theo mùa và ngày lễ ===================
-   Mỗi giao diện: màu chính (c1 đậm, c2 sáng hơn, c3 đậm nhất), màu nền (nen), màu nhấn khi app ở chế độ tối (da).
-   "toi": luôn dùng giao diện tối. Danh sách mã phải khớp CHU_DE trong Logic.gs. */
+   Mỗi giao diện: tên, dịp dùng và màu nền của dải trang trí (dai). Danh sách mã phải khớp CHU_DE trong Logic.gs. */
 var DS_CHU_DE = [
-  { ma: 'xuan', nhom: 'mua', ten: 'Mùa xuân', khi: 'Tháng 2 đến tháng 4', c1: '#3b7a1e', c2: '#53992c', c3: '#295713', nen: '#fbf6f7', da: '#a8dc86', dai: 'linear-gradient(135deg,#fde2ea,#bfe3a5)' },
-  { ma: 'ha', nhom: 'mua', ten: 'Mùa hè', khi: 'Tháng 5 đến tháng 7', c1: '#0b6b6b', c2: '#13898a', c3: '#064d4d', nen: '#f1f8f7', da: '#7fd6cf', dai: 'linear-gradient(135deg,#7fd3f0,#ffe08a)' },
-  { ma: 'thu', nhom: 'mua', ten: 'Mùa thu', khi: 'Tháng 8 đến tháng 10', c1: '#8f4a10', c2: '#ad6118', c3: '#6a350a', nen: '#faf5ee', da: '#f0b46a', dai: 'linear-gradient(135deg,#f7c873,#c8642a)' },
-  { ma: 'dong', nhom: 'mua', ten: 'Mùa đông', khi: 'Tháng 11 đến tháng 1', c1: '#2d5677', c2: '#3c6d94', c3: '#1f3e57', nen: '#f2f6f9', da: '#a7cbea', dai: 'linear-gradient(135deg,#dbe9f6,#7aa3c8)' },
-  { ma: 'tet', nhom: 'le', ten: 'Tết Nguyên Đán', khi: 'Mùng 1 tháng Giêng', c1: '#b01c1c', c2: '#cc3326', c3: '#861212', nen: '#fff8ee', da: '#ffb4a8', dai: 'linear-gradient(135deg,#d8231c,#f5b400)' },
-  { ma: 'phunu', nhom: 'le', ten: 'Ngày Phụ nữ', khi: '8/3 và 20/10', c1: '#a4306a', c2: '#c0457f', c3: '#7b1f4e', nen: '#fcf5f8', da: '#f4a6cb', dai: 'linear-gradient(135deg,#f8b7d0,#c0457f)' },
-  { ma: 'traidat', nhom: 'le', ten: 'Trái Đất và Môi trường', khi: 'Giờ Trái Đất, 22/4, 5/6', c1: '#136b4f', c2: '#1b8a63', c3: '#0c4e39', nen: '#f0f7f4', da: '#7fd9b2', dai: 'linear-gradient(135deg,#2f86d6,#4caf50)' },
-  { ma: 'quockhanh', nhom: 'le', ten: 'Lễ 30/4 và Quốc khánh', khi: '30/4, 1/5 và 2/9', c1: '#c4161c', c2: '#da2a22', c3: '#93100f', nen: '#fff9f0', da: '#ffb3a6', dai: 'linear-gradient(135deg,#da251d,#e8501c)' },
-  { ma: 'trungthu', nhom: 'le', ten: 'Tết Trung thu', khi: 'Rằm tháng 8 âm lịch', c1: '#3a3f8f', c2: '#4a52a8', c3: '#282c6a', nen: '#f6f5fb', da: '#b7bdf5', dai: 'linear-gradient(160deg,#141a46,#3a2f5e)' },
-  { ma: 'halloween', nhom: 'le', ten: 'Halloween', khi: '31/10, luôn tối', c1: '#5a2d82', c2: '#6e3a9c', c3: '#3e1d5c', nen: '#f7f3fa', da: '#ff9f43', dam: .34, toi: true, dai: 'linear-gradient(160deg,#140a24,#2e1248 55%,#7a3412)' },
-  { ma: 'nhagiao', nhom: 'le', ten: 'Ngày Nhà giáo', khi: '20/11', c1: '#1f56a8', c2: '#2d6cc4', c3: '#163f7c', nen: '#f3f6fb', da: '#a3c4f3', dai: 'linear-gradient(135deg,#a3c4f3,#f8c8dc)' },
-  { ma: 'giangsinh', nhom: 'le', ten: 'Giáng sinh', khi: '24 và 25/12', c1: '#16603f', c2: '#1f7a50', c3: '#0e452c', nen: '#f5f8f5', da: '#9fdcb4', dai: 'linear-gradient(135deg,#16603f,#c62828)' }
+  { ma: 'xuan', nhom: 'mua', ten: 'Mùa xuân', khi: 'Tháng 2 đến tháng 4', dai: 'linear-gradient(135deg,#fde2ea,#bfe3a5)' },
+  { ma: 'ha', nhom: 'mua', ten: 'Mùa hè', khi: 'Tháng 5 đến tháng 7', dai: 'linear-gradient(135deg,#7fd3f0,#ffe08a)' },
+  { ma: 'thu', nhom: 'mua', ten: 'Mùa thu', khi: 'Tháng 8 đến tháng 10', dai: 'linear-gradient(135deg,#f7c873,#c8642a)' },
+  { ma: 'dong', nhom: 'mua', ten: 'Mùa đông', khi: 'Tháng 11 đến tháng 1', dai: 'linear-gradient(135deg,#dbe9f6,#7aa3c8)' },
+  { ma: 'tet', nhom: 'le', ten: 'Tết Nguyên Đán', khi: 'Mùng 1 tháng Giêng', dai: 'linear-gradient(135deg,#d8231c,#f5b400)' },
+  { ma: 'phunu', nhom: 'le', ten: 'Ngày Phụ nữ', khi: '8/3 và 20/10', dai: 'linear-gradient(135deg,#f8b7d0,#c0457f)' },
+  { ma: 'traidat', nhom: 'le', ten: 'Trái Đất và Môi trường', khi: 'Giờ Trái Đất, 22/4, 5/6', dai: 'linear-gradient(135deg,#2f86d6,#4caf50)' },
+  { ma: 'quockhanh', nhom: 'le', ten: 'Lễ 30/4 và Quốc khánh', khi: '30/4, 1/5 và 2/9', dai: 'linear-gradient(135deg,#da251d,#e8501c)' },
+  { ma: 'trungthu', nhom: 'le', ten: 'Tết Trung thu', khi: 'Rằm tháng 8 âm lịch', dai: 'linear-gradient(160deg,#141a46,#3a2f5e)' },
+  { ma: 'halloween', nhom: 'le', ten: 'Halloween', khi: '31/10, luôn tối', dai: 'linear-gradient(160deg,#140a24,#2e1248 55%,#7a3412)' },
+  { ma: 'nhagiao', nhom: 'le', ten: 'Ngày Nhà giáo', khi: '20/11', dai: 'linear-gradient(135deg,#a3c4f3,#f8c8dc)' },
+  { ma: 'giangsinh', nhom: 'le', ten: 'Giáng sinh', khi: '24 và 25/12', dai: 'linear-gradient(135deg,#16603f,#c62828)' }
 ];
 var CHU_DE = document.documentElement.getAttribute('data-chude') || '';
 function timChuDe(ma) { for (var i = 0; i < DS_CHU_DE.length; i++) if (DS_CHU_DE[i].ma === ma) return DS_CHU_DE[i]; return null; }
-function chuDeToi() { var p = timChuDe(CHU_DE); return !!(p && p.toi); }
-
-/* ---------- Màu: tính sẵn thành mã hex (không phụ thuộc tính năng mới của trình duyệt) ---------- */
-function hexRgb_(h) { h = h.replace('#', ''); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
-/** Trộn hai màu: t là phần của màu a (0 đến 1). */
-function tronMau(a, b, t) { var x = hexRgb_(a), y = hexRgb_(b); return '#' + x.map(function (v, i) { return ('0' + Math.round(v * t + y[i] * (1 - t)).toString(16)).slice(-2); }).join(''); }
-function rgbaMau(h, a) { return 'rgb(' + hexRgb_(h).join(' ') + ' / ' + a + ')'; }
-function bienSang(p) {
-  return {
-    '--brand': p.c1, '--brand-2': p.c2, '--brand-3': p.c3, '--brand-ink': '#ffffff', '--accent': p.c1, '--on-accent': '#ffffff',
-    '--side-bg': 'linear-gradient(170deg,' + p.c2 + ' 0%,' + p.c1 + ' 55%,' + p.c3 + ' 100%)',
-    '--soft': tronMau(p.c1, '#ffffff', .09), '--soft-2': tronMau(p.c1, '#ffffff', .16), '--brand-soft': tronMau(p.c1, '#ffffff', .1), '--ring': rgbaMau(p.c1, .16),
-    '--bg': p.nen, '--surface': '#ffffff', '--surface-2': tronMau(p.nen, '#ffffff', .5),
-    '--fg': tronMau(p.c3, '#141414', .22), '--muted': tronMau(p.c3, '#62645f', .18), '--line': tronMau(p.c1, '#e4e5e0', .1), '--line-2': tronMau(p.c1, '#d3d5ce', .16),
-    '--tt-tuyet': '#9fc2e4', 'color-scheme': 'light'
-  };
-}
-function bienToi(p) {
-  var d = p.da, k = p.dam || .16;
-  return {
-    '--brand': tronMau(p.c3, '#000000', .62), '--brand-2': tronMau(p.c2, '#000000', .5), '--brand-3': tronMau(p.c3, '#000000', .42), '--brand-ink': '#f3f3ee',
-    '--side-bg': 'linear-gradient(170deg,' + tronMau(p.c2, '#000000', .5) + ' 0%,' + tronMau(p.c3, '#000000', .6) + ' 55%,' + tronMau(p.c3, '#000000', .42) + ' 100%)',
-    '--accent': d, '--on-accent': '#111111', '--soft': tronMau(d, '#16181b', .13), '--soft-2': tronMau(d, '#16181b', .2), '--brand-soft': tronMau(d, '#16181b', .14), '--ring': rgbaMau(d, .22),
-    '--bg': tronMau(p.c3, '#0c0d0f', k), '--surface': tronMau(p.c3, '#15171a', k), '--surface-2': tronMau(p.c3, '#191b1f', k + .02),
-    '--fg': '#ecede8', '--muted': '#a7aaa3', '--line': tronMau(d, '#25282c', .1), '--line-2': tronMau(d, '#2f3337', .16), '--bad': '#f2968d',
-    '--tt-tuyet': '#ffffff', 'color-scheme': 'dark'
-  };
-}
-function cssChuDe(ma) {
-  var p = timChuDe(ma);
-  if (!p) return '';
-  var khoi = function (sel, o) { return sel + '{' + Object.keys(o).map(function (k) { return k + ':' + o[k]; }).join(';') + '}'; };
-  var sel = 'html[data-chude="' + ma + '"]';
-  return p.toi ? khoi(sel + ',' + sel + '[data-theme]', bienToi(p)) : khoi(sel, bienSang(p)) + khoi(sel + '[data-theme="dark"]', bienToi(p));
-}
-function vietMauChuDe() {
-  var s = document.getElementById('chude-mau');
-  if (!s) { s = document.createElement('style'); s.id = 'chude-mau'; document.head.appendChild(s); }
-  s.textContent = cssChuDe(CHU_DE);
-}
-vietMauChuDe();
+/** Giao diện theo mùa không còn ép app sang màu tối; mỗi người tự chọn sáng, tối. */
+function chuDeToi() { return false; }
 
 /* ---------- Hình vẽ ---------- */
 var demHinh = 0;
@@ -254,42 +185,8 @@ var HINH = {
   }
 };
 
-/* ---------- Hạt rơi khắp màn hình ---------- */
-var HAT = {
-  xuan: { kieu: 'roi', hinh: [['hoa', '#f7a8c4', '#d6336c'], ['canh', '#f9c0d3'], ['canh', '#f4a3bf']] },
-  ha: { kieu: 'roi', hinh: [['canh', '#e8352a'], ['canh', '#f05a3a'], ['hoa', '#e8352a', '#ffd23f']] },
-  thu: { kieu: 'roi', hinh: [['phong', '#d9822b'], ['phong', '#c0392b'], ['la', '#e0a526'], ['phong', '#b5651d']] },
-  dong: { kieu: 'roi', hinh: [['tuyet']], cham: true },
-  tet: { kieu: 'roi', hinh: [['hoa', '#ffcc1f', '#e07b00'], ['hoa', '#f7a8c4', '#d6336c'], ['canh', '#ffd84a']] },
-  phunu: { kieu: 'roi', hinh: [['canh', '#e0457b'], ['canh', '#f28cb1'], ['tim', '#e0457b']] },
-  traidat: { kieu: 'roi', hinh: [['la', '#4caf50'], ['la', '#7cc35a'], ['la', '#2e8b57']] },
-  quockhanh: { kieu: 'roi', hinh: [['sao', '#ffd400'], ['sao', '#ffc400']], cham: true },
-  trungthu: { kieu: 'len', hinh: [['denTroi']] },
-  halloween: { kieu: 'ngang', hinh: [['doi', '#0d0614']], it: true },
-  nhagiao: { kieu: 'roi', hinh: [['hoa', '#f48fb1', '#ffd23f'], ['hoa', '#ffd54f', '#ff8f00'], ['canh', '#ce93d8']] },
-  giangsinh: { kieu: 'roi', hinh: [['tuyet']], cham: true }
-};
 function ngauNhien(a, b) { return a + Math.random() * (b - a); }
-function hieuUngBat() { try { return localStorage.getItem('eco_hieu_ung') !== 'tat'; } catch (e) { return true; } }
-function veHatRoi() {
-  var cu = document.getElementById('trangtri');
-  if (cu) cu.parentNode.removeChild(cu);
-  var c = HAT[CHU_DE];
-  if (!c || !hieuUngBat() || !document.body) return;
-  var hep = window.innerWidth < 700, so = c.it ? (hep ? 3 : 5) : (hep ? 7 : 13), o = '';
-  for (var i = 0; i < so; i++) {
-    var h = c.hinh[i % c.hinh.length], t = c.kieu === 'ngang' ? ngauNhien(9, 16) : c.kieu === 'len' ? ngauNhien(14, 22) : ngauNhien(c.cham ? 13 : 10, c.cham ? 22 : 17);
-    var co = c.kieu === 'ngang' ? ngauNhien(30, 46) : c.kieu === 'len' ? ngauNhien(14, 22) : ngauNhien(12, 22);
-    var st = '--co:' + co.toFixed(0) + 'px;--t:' + t.toFixed(1) + 's;--tre:' + (-ngauNhien(0, t)).toFixed(1) + 's;--lech:' + ngauNhien(-80, 80).toFixed(0) + 'px;--do:' + ngauNhien(.55, .9).toFixed(2) + ';';
-    st += c.kieu === 'ngang' ? 'top:' + ngauNhien(8, 70).toFixed(0) + '%' : 'left:' + ((i + Math.random()) * 100 / so).toFixed(1) + '%';
-    o += '<span class="ht ' + c.kieu + (h[0] === 'doi' ? ' vo' : '') + '" style="' + st + '"><i>' + HINH[h[0]](h[1], h[2]) + '</i></span>';
-  }
-  var d = document.createElement('div');
-  d.id = 'trangtri'; d.setAttribute('aria-hidden', 'true'); d.innerHTML = o;
-  document.body.appendChild(d);
-}
-
-/* ---------- Trang trí trong khung chào ---------- */
+/* ---------- Trang trí trong dải đầu trang chủ ---------- */
 function phaoHoa(phai, tren, mau, tre) {
   var o = '';
   for (var i = 0; i < 12; i++) o += '<i style="--g:' + (i * 30) + 'deg"></i>';
@@ -365,21 +262,7 @@ function trangTriChao() {
   var f = TRANG_TRI[CHU_DE];
   return f ? '<div class="tt-chao" aria-hidden="true">' + f().map(function (x) { return x.h; }).join('') + '</div>' : '';
 }
-/* ---------- Lời chúc trong khung chào và màu lá ở màn chờ ---------- */
-var LOI_CHUC = {
-  xuan: ['Xuân về rồi, cây đâm chồi, mình cũng nạp năng lượng mới nha.', 'Mùa xuân là mùa trồng cây. Năm nay bạn trồng được cây nào chưa?'],
-  ha: ['Hè nóng lắm, nhớ mang bình nước riêng nha.', 'Phượng nở rồi, mùa hè của CLB bắt đầu!', 'Đi biển nhớ mang rác về, đừng để lại cho sóng nha.'],
-  thu: ['Thu sang, lá vàng rơi, deadline cũng nhẹ dần nha.', 'Trời thu mát, đi nhặt rác dạo một vòng không?'],
-  dong: ['Trời lạnh rồi, nhớ mặc ấm nha.', 'Một ly trà nóng cho ngày đông của bạn.'],
-  tet: ['Chúc mừng năm mới! An khang thịnh vượng, vạn sự như ý.', 'Năm mới nhiều sức khoẻ, deadline nhẹ nhàng, điểm cao vút.', 'Đi chợ Tết nhớ mang túi vải, bớt túi ni lông nha.'],
-  phunu: ['Chúc các bạn nữ luôn xinh đẹp, vui vẻ và rạng rỡ!', 'Hôm nay bạn đã nói lời cảm ơn với người phụ nữ nào chưa?'],
-  traidat: ['Mỗi ngày đều là Ngày Trái Đất.', 'Tắt đèn một giờ, Trái Đất thêm một chút bình yên.', 'Hôm nay mình làm một việc nhỏ cho môi trường nha.'],
-  quockhanh: ['Chúc mừng ngày lễ lớn của đất nước! Nghỉ lễ vui vẻ nha.', 'Đi chơi lễ nhớ bỏ rác đúng chỗ nha.'],
-  trungthu: ['Trung thu vui vẻ! Rước đèn phá cỗ thôi.', 'Bánh nướng hay bánh dẻo, bạn chọn phe nào?'],
-  halloween: ['Boo! Deadline hay ma đáng sợ hơn?', 'Trick or treat? Làm xong task rồi mới có kẹo nha.'],
-  nhagiao: ['Tri ân thầy cô nhân ngày 20/11.', 'Hôm nay nhắn một lời cảm ơn tới thầy cô nhé.'],
-  giangsinh: ['Giáng sinh an lành! Merry Christmas!', 'Ông già Noel năm nay đi xe đạp cho đỡ khói nè.']
-};
+/* ---------- Màu lá ở màn chờ ---------- */
 var LA_CHU_DE = {
   xuan: ['#f7a8c4', '#8cc152', '#f48fb1', '#a7d36b', '#e8749b'], ha: ['#e8352a', '#4f9a2a', '#f05a3a', '#8cc152', '#e8352a'],
   thu: ['#d9822b', '#c0392b', '#e0a526', '#b5651d', '#d9822b'], dong: ['#9fc2e4', '#7aa3c8', '#c5dbef', '#5f88ad', '#9fc2e4'],
@@ -408,15 +291,7 @@ function hinhThe(ma) { return HINH_THE[ma] ? HINH_THE[ma]() : HINH.la('#ffffff')
 function apChuDe(ma) {
   CHU_DE = timChuDe(ma) ? ma : '';
   if (CHU_DE) document.documentElement.setAttribute('data-chude', CHU_DE); else document.documentElement.removeAttribute('data-chude');
-  vietMauChuDe();
   apMauLa();
-  veHatRoi();
-  if (typeof apGiaoDien === 'function') apGiaoDien();
-  else if (chuDeToi()) document.documentElement.setAttribute('data-theme', 'dark');
-  else document.documentElement.removeAttribute('data-theme');
 }
-document.addEventListener('DOMContentLoaded', function () { apMauLa(); veHatRoi(); });
-/* Xoay ngang điện thoại hoặc kéo cửa sổ qua lại cỡ điện thoại thì vẽ lại cho đúng số hạt. */
-var hepCu = window.innerWidth < 700;
-window.addEventListener('resize', function () { var hep = window.innerWidth < 700; if (hep !== hepCu) { hepCu = hep; veHatRoi(); } });
+document.addEventListener('DOMContentLoaded', apMauLa);
 </script>

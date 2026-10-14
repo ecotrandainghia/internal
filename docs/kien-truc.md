@@ -132,7 +132,7 @@ Tên cột viết tiếng Việt không dấu, không cách. Danh sách đầy �
 
 ## Menu
 
-- Mỗi mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy mục con (`THU_MUC` trong `DeskChung.html`; các nhóm của Cài đặt cũng vậy, `SET` trong `DeskViec.html`). Trang con có nút quay lại thư mục cha ở đầu trang. Thanh tab dưới trên điện thoại mở thẳng 4 mục vào nhanh.
+- Mỗi mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy mục con (`THU_MUC` trong `DeskChung.html`; các nhóm của Cài đặt cũng vậy, `SET` trong `DeskViec.html`). Trang con có nút quay lại thư mục cha ở đầu trang. Trên điện thoại không có thanh tab dưới: nút ☰ ở thanh trên (hoặc vuốt từ cạnh trái) mở cùng menu này trượt ra từ bên trái.
 - **BOD** (`NAV_BOD`): Trang chủ, Quản lý task, Quản lý log, Cộng điểm, Hộp thư, Góp ý, Thành viên (KPI gồm KPI task và KPI log; Bảng điểm; Chứng nhận), Cài đặt.
 - **Cài đặt của BOD**:
   - Quy tắc CLB: Cơ cấu ban, Thang điểm, Khen thưởng, hạn task và buổi log.
@@ -247,7 +247,8 @@ Tên cột viết tiếng Việt không dấu, không cách. Danh sách đầy �
 - Lưới ô chia đều bằng `chiaDeu` trong `DeskChung.html`: ít hàng nhất, số ô mỗi hàng chênh tối đa 1.
 - Thẻ người dùng: BOD hiện chức vụ lấy từ danh sách thành viên, vai trò khác hiện BOD/HR/UCV.
 - Cài đặt nhớ vị trí cuộn và nội dung ô tìm khi mở một mục rồi quay lại (`CUON_CAI_DAT`).
-- **Giao diện theo mùa và ngày lễ:** BOD chọn ở Cài đặt (CaiDat `ChuDe`). Danh sách mã ở `CHU_DE` (Logic.gs) và `DS_CHU_DE` (ChuDe.html); test `tests/chude.test.js` bắt hai bên phải khớp. `doGet` gắn `data-chude` vào thẻ html ngay khi tạo trang nên không bị nháy màu. Mỗi người tắt được hiệu ứng rơi trên máy mình.
+- **Design system màu giấy** (`src/DeskGiaoDien.html`): nền giấy ấm, chữ màu mực, nét mảnh, một font Be Vietnam Pro với hai độ đậm 400 và 500. Xanh ECO #274E13 chỉ tô mục menu đang mở và nút chọn đang bật, không dùng cho chữ hay nút. Mỗi trang một nút đặc màu mực cho việc chính, còn lại là nút viền. Danh sách là các dòng phân cách bằng nét mảnh; nhãn trạng thái có chấm màu (`.pill.p-info`, `p-warn`, `p-bad`, `p-ok`, `p-mute`). Màu khai báo một lần ở `:root` (sáng) và hai khối tối; các tên cũ (`--bg`, `--fg`, `--muted`…) trỏ về màu mới để mọi trang dùng chung một bộ.
+- **Giao diện theo mùa và ngày lễ:** BOD chọn ở Cài đặt (CaiDat `ChuDe`). Chỉ thêm một dải trang trí mỏng ở đầu trang chủ, không đổi màu app. Danh sách mã ở `CHU_DE` (Logic.gs) và `DS_CHU_DE` (ChuDe.html); test `tests/chude.test.js` bắt hai bên phải khớp.
 
 ## Các cài đặt khác lưu ở đâu
 

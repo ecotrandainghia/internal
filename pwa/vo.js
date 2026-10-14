@@ -78,7 +78,7 @@
     if (d.eco === 'trang') { datDuong(d.duong, !!d.thay); return; }
     if (d.eco === 'mau') {
       var mau3 = function (x, mac) { return /^#[0-9a-f]{6}$/i.test(x) ? x : mac; };
-      var mau = mau3(d.mau, '#274e13'), nen = mau3(d.nen, '#f4f6f1'), chan = mau3(d.chan, mau);
+      var mau = mau3(d.mau, '#faf8f5'), nen = mau3(d.nen, '#faf8f5'), chan = mau3(d.chan, mau);
       var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', mau);
       // Trên cùng (tai thỏ) cùng màu thanh tiêu đề, dưới cùng (thanh vuốt) cùng màu thanh tab của app.
       document.documentElement.style.background = 'linear-gradient(' + mau + ' 50%, ' + chan + ' 50%)';

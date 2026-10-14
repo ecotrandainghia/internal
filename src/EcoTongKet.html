@@ -1,10 +1,10 @@
 <style>
 /* Tổng kết: xét chứng nhận, khen thưởng top từng giai đoạn, xem lại nhiệm kỳ cũ (BOD). */
 .tk-the{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.tk-the button{background:var(--soft);border:0;border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font:inherit}
-.tk-the button[aria-pressed="true"]{outline:2px solid var(--accent)}
-.tk-the b{display:block;font:700 24px var(--f-num);color:var(--accent)}
-.tk-the span{font-size:12px;color:var(--muted)}
+.tk-the button{background:none;border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;cursor:pointer;color:inherit;font:inherit}
+.tk-the button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tk-the b{display:block;font:500 22px var(--f-ui);font-variant-numeric:tabular-nums;color:var(--ink)}
+.tk-the span{font-size:14px;color:var(--muted)}
 .tk-kt{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;align-items:start}
 </style>
 <script>

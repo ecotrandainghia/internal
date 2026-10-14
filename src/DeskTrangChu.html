@@ -12,9 +12,9 @@ function luuAnhNenMay(a) {
   try { if (ANH_NEN) localStorage.setItem('eco_anh_nen', JSON.stringify(ANH_NEN)); else localStorage.removeItem('eco_anh_nen'); } catch (e) {}
 }
 function apAnhNen() {
-  var w = $('.login-wrap.dn');
+  var w = $('.login-wrap.dn .dn-anh');
   if (!w) return;
-  if (ANH_NEN && ANH_NEN.data) { w.style.backgroundImage = 'linear-gradient(rgb(12 28 6 / .25), rgb(12 28 6 / .6)), url("' + ANH_NEN.data + '")'; w.classList.add('coanh'); }
+  if (ANH_NEN && ANH_NEN.data) { w.style.backgroundImage = 'url("' + ANH_NEN.data + '")'; w.classList.add('coanh'); }
   else { w.style.backgroundImage = ''; w.classList.remove('coanh'); }
 }
 function napAnhNen() {
@@ -64,68 +64,66 @@ function thuNhoAnh(tep, canhMax) {
   });
 }
 
-/* ---------- Trang chào ---------- */
+/* ---------- Trang chủ: trả lời một câu "hôm nay tôi cần làm gì" ---------- */
 function tenGoi(ten) { return String(ten || '').trim().split(/\s+/).pop(); }
-function oTom(so, chu, phu, trang, lop) {
-  return '<button class="tom ' + (lop || '') + '" data-p="' + trang + '"><b>' + so + '</b><span>' + chu + '</span>' + (phu ? '<small>' + phu + '</small>' : '') + '</button>';
+var THU_NGAY = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+function homNayChu() { var d = new Date(); return THU_NGAY[d.getDay()] + ', ' + p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
+/** Dải trang trí mỏng theo mùa, ngày lễ (BOD chọn trong Cài đặt). Không chọn giao diện nào thì không có dải. */
+function daiMua() {
+  var p = typeof timChuDe === 'function' && timChuDe(CHU_DE);
+  return p ? '<div class="dai-mua" aria-hidden="true" style="background:' + p.dai + '">' + trangTriChao() + '</div>' : '';
 }
-/**
- * Trang chủ chỉ là lối tắt tới 4 việc dùng nhiều nhất (task, log, điểm, góp ý). Mỗi ô có một con số để biết có gì cần làm
- * mà không phải mở trang. Thành viên xem thêm link ghim và quy chế ở dưới.
- */
-function oNhanh(k, d) {
-  var bod = NGUOI.vaiTro === 'BOD', so = '', phu = '', lop = '';
-  var phuTask = function (t) { return [t.sap ? t.sap + ' sắp đến hạn' : '', t.tre ? t.tre + ' trễ hạn' : ''].filter(String).join(' · ') || 'Không có gì gấp'; };
-  if (d && k === 'task') {
-    if (bod && d.taskBod) { so = d.taskBod.choDanhGia; phu = 'chờ đánh giá' + (d.taskBod.tre ? ' · ' + d.taskBod.tre + ' trễ hạn' : ''); lop = d.taskBod.tre ? 'do' : d.taskBod.choDanhGia ? 'vang' : ''; }
-    else if (d.taskCuaToi) { so = d.taskCuaToi.dangLam; phu = 'đang làm · ' + phuTask(d.taskCuaToi); lop = d.taskCuaToi.tre ? 'do' : d.taskCuaToi.sap ? 'vang' : ''; }
-  }
-  if (d && k === 'log') {
-    if (bod && d.logMo !== undefined) { so = d.logMo; phu = 'đợt log đang mở'; }
-    else if (d.logCuaToi) { so = d.logCuaToi.tiLe === null ? '–' : d.logCuaToi.tiLe + '%'; phu = d.logCuaToi.tiLe === null ? 'Chưa có chỉ tiêu' : 'Đi ' + d.logCuaToi.thamGia + '/' + String(d.logCuaToi.giaoCuoi).replace('.', ',') + ' buổi'; }
-  }
-  if (d && k === 'xephang' && d.diemCuaToi) { so = d.diemCuaToi.diem; phu = 'điểm · hạng ' + d.diemCuaToi.hang + '/' + d.diemCuaToi.tong; }
-  if (d && k === 'diem') phu = 'Cộng điểm hoạt động';
-  if (d && k === 'gopy') {
-    if (bod && d.gopYMoi !== undefined) { so = d.gopYMoi; phu = d.gopYMoi ? 'góp ý chưa đọc' : 'Đã đọc hết'; lop = d.gopYMoi ? 'vang' : ''; }
-    else phu = 'Gửi ý kiến cho BOD';
-  }
-  var x = flat().filter(function (y) { return y[0] === k; })[0];
-  if (!x) return '';
-  return '<button class="tom nhanh ' + lop + '" data-p="' + k + '"><span class="nh-ic">' + ic(x[2], 22) + '</span><span class="nh-t">' + x[1] + huyHieu(k) + '</span>' +
-    (so !== '' ? '<b>' + so + '</b>' : '') + '<small>' + (phu || (d ? '' : '&nbsp;')) + '</small></button>';
+/** Một con số trong hàng ba số đầu trang; bấm vào mở trang tương ứng. */
+function oSo(so, chu, trang, s2) {
+  return '<button data-p="' + trang + '"' + (s2 ? ' data-s2="' + s2 + '"' : '') + '><b>' + so + '</b><span>' + chu + '</span></button>';
 }
-var NHANH = { BOD: ['task', 'log', 'diem', 'gopy'], khac: ['task', 'log', 'xephang', 'gopy'] };
-function veNhanh(d) {
-  var o = $('#nhanh');
-  if (o) o.innerHTML = (NHANH[NGUOI.vaiTro] || NHANH.khac).map(function (k) { return oNhanh(k, d); }).join('');
+/** Một dòng trong danh sách cần làm. */
+function dongViec(tieuDe, meta, pill, trang, s2) {
+  return '<button class="lrow" data-p="' + trang + '"' + (s2 ? ' data-s2="' + s2 + '"' : '') + '><span class="tt">' + tieuDe + '</span>' + (pill || '') + (meta ? '<span class="meta">' + meta + '</span>' : '') + '</button>';
+}
+var PILL_TASK = { 'Đã giao': 'p-info', 'Sắp đến hạn': 'p-warn', 'Trễ hạn': 'p-bad' };
+function dongTask(t, coNguoi) {
+  return dongViec(esc(t.ten), (coNguoi ? esc(t.nguoi) + ' · ' : '') + 'Hạn ' + hienNgay(t.han), '<span class="pill ' + (PILL_TASK[t.trangThai] || 'p-mute') + '">' + esc(t.trangThai) + '</span>', 'task');
 }
 VIEWS.home = function () {
-  $('#main').innerHTML = khungChao(tenGoi(NGUOI.ten)) +
-    '<div class="toms" id="nhanh"></div><div id="tomtat"></div>' +
-    '<div id="tc-them" style="display:grid;gap:14px"></div>';
-  veNhanh(null);
+  $('#main').innerHTML = '<div class="head"><div><h2>Chào ' + buoiTrongNgay().ten + ', ' + esc(tenGoi(NGUOI.ten)) + '</h2><p class="lead">' + homNayChu() + '</p></div></div>' +
+    daiMua() + '<div id="tc-so"></div><div id="tomtat" style="display:grid;gap:12px">' + cho() + '</div><div id="tc-them" style="display:grid;gap:16px"></div>';
   goiPhien('layTrangChu').then(function (d) { if (page === 'home') veTomTat(d); })
     .catch(function (err) { if ($('#tomtat')) $('#tomtat').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
 };
 function veTomTat(d) {
   if (!$('#tomtat')) return;
   capNhatTuTrangChu(d);
-  veNhanh(d);
-  var o = [];
-  if (d.thu) {
-    o.push(oTom(d.thu.cho, 'Thư chờ duyệt', 'BOD đang xem', 'mail'));
-    o.push(oTom(d.thu.sua, 'Cần sửa lại', d.thu.sua ? 'Mở để sửa' : 'Không có', 'mail', d.thu.sua ? 'vang' : ''));
+  var bod = NGUOI.vaiTro === 'BOD', so = '', ds = [];
+  if (bod) {
+    var tb = d.taskBod || {};
+    so = oSo(tb.choDanhGia || 0, 'Task chờ đánh giá', 'task') + oSo(tb.tre || 0, 'Task trễ hạn', 'task') + oSo(d.logMo || 0, 'Đợt log đang mở', 'log');
+    if (d.choDuyet) ds.push(dongViec(d.choDuyet + ' thư UCV chờ duyệt', 'Hộp thư', '<span class="pill p-warn">Chờ duyệt</span>', 'mail'));
+    if (d.gopYMoi) ds.push(dongViec(d.gopYMoi + ' góp ý chưa đọc', 'Góp ý', '<span class="pill p-info">Mới</span>', 'gopy'));
+    if (tb.choDanhGia) ds.push(dongViec(tb.choDanhGia + ' task đã xong, chờ bạn đánh giá', 'Quản lý task', '<span class="pill p-info">Chờ đánh giá</span>', 'task'));
+    (d.taskTre || []).forEach(function (t) { ds.push(dongTask(t, true)); });
+  } else {
+    var dc = d.diemCuaToi, lg = d.logCuaToi;
+    so = oSo(dc ? dc.diem : '–', dc ? 'Điểm · hạng ' + dc.hang + '/' + dc.tong : 'Điểm', 'xephang') +
+      oSo(d.kpiTaskCuaToi === null || d.kpiTaskCuaToi === undefined ? '–' : d.kpiTaskCuaToi + '%', 'KPI task', 'task') +
+      oSo(!lg || lg.tiLe === null ? '–' : lg.tiLe + '%', 'KPI log', 'log');
+    var tv = d.taskThanhVien;
+    if (tv && (tv.tre || tv.sap)) ds.push(dongViec('Ban phụ trách: ' + [tv.tre ? tv.tre + ' task trễ hạn' : '', tv.sap ? tv.sap + ' task sắp đến hạn' : ''].filter(String).join(', '), 'Nhắc thêm các bạn trong ban', '', 'pttask'));
+    if (d.thu && d.thu.sua) ds.push(dongViec(d.thu.sua + ' thư cần sửa lại', 'BOD đã trả lại', '<span class="pill p-bad">Cần sửa</span>', 'mail'));
+    if (d.thu && d.thu.cho) ds.push(dongViec(d.thu.cho + ' thư đang chờ BOD duyệt', 'Hộp thư', '<span class="pill p-warn">Chờ duyệt</span>', 'mail'));
+    (d.viecCuaToi || []).forEach(function (t) { ds.push(dongTask(t, false)); });
   }
-  if (d.choDuyet) o.push(oTom(d.choDuyet, 'Thư chờ duyệt', 'UCV đang chờ bạn', 'mail', 'vang'));
-  var tb = d.thongBao, nhac = '';
+  if ($('#tc-so')) $('#tc-so').innerHTML = '<div class="so3">' + so + '</div>';
+  var t = d.thongBao, nhac = '';
   // Chỉ nhắc cài thông báo cho người có việc được nhắc (BOD, HR phụ trách, phụ trách seeding, người tự bật nhắc task).
-  var coNhac = NGUOI.vaiTro === 'BOD' || NGUOI.phuTrach || coNhomHr('SUP-SEED') || (tb && tb.tuNhac);
-  if (coNhac && tb && ((tb.cach.indexOf('app') >= 0 && !tb.soMay) || (tb.cach.indexOf('zalo') >= 0 && !tb.daKetNoiZalo))) {
-    nhac = '<div class="note info" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">' + ic('bell', 15) + ' Bạn chưa cài xong cách nhận thông báo, nên có thể bỏ lỡ nhắc hạn task.</span><button class="btn sm" data-p="thongbao">Cài thông báo</button></div>';
+  var coNhac = bod || NGUOI.phuTrach || coNhomHr('SUP-SEED') || (t && t.tuNhac);
+  if (coNhac && t && ((t.cach.indexOf('app') >= 0 && !t.soMay) || (t.cach.indexOf('zalo') >= 0 && !t.daKetNoiZalo))) {
+    nhac = '<div class="note info" style="align-items:center;flex-wrap:wrap"><span style="flex:1 1 200px">Bạn chưa cài xong cách nhận thông báo, nên có thể bỏ lỡ nhắc hạn task.</span><button class="btn ghost sm" data-p="thongbao">Cài thông báo</button></div>';
   }
-  $('#tomtat').innerHTML = nhac + (o.length ? '<div class="toms">' + o.join('') + '</div>' : '');
-  if (NGUOI.vaiTro !== 'BOD') veTrangChuThem(d);
+  $('#tomtat').innerHTML = '<div class="sec-h"><h3>Cần làm hôm nay</h3>' + (ds.length ? '<span class="hint">' + ds.length + ' việc</span>' : '') + '</div>' +
+    (ds.length ? '<div class="canlam">' + ds.join('') + '</div>' : rong('<b>Hôm nay không có việc gấp</b><span>Task sắp đến hạn, thư chờ duyệt và góp ý mới sẽ hiện ở đây.</span>')) + nhac +
+    (bod ? '<div class="loi-tat"><button class="btn ghost sm" data-p="diem">' + ic('star', 14) + 'Cộng điểm</button><button class="btn ghost sm" data-p="log">' + ic('file', 14) + 'Quản lý log</button><button class="btn ghost sm" data-p="hoatdong">' + ic('target', 14) + 'Thành viên</button></div>' : '');
+  if (!bod) veTrangChuThem(d);
 }
 
 /* ---------- Trang Thông báo ---------- */
