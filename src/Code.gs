@@ -1,6 +1,6 @@
 /**
- * Máy chủ của hệ thống quản lý CLB (Google Apps Script).
- * Script này gắn với file Google Sheet chứa dữ liệu; mỗi tab là một bảng.
+ * Máy chủ của app CLB (Google Apps Script): trang web, tải danh sách thành viên, lịch sinh nhật, bảng điểm, góp ý.
+ * Tầng dữ liệu ở DuLieu.gs, cài đặt lần đầu ở CaiDatLanDau.gs.
  */
 
 var GIOI_HAN_GOP_Y_MOI_PHUT = 20;
@@ -10,9 +10,9 @@ var GIOI_HAN_GOP_Y_MOI_PHUT = 20;
 function doGet(e) {
   if (e && e.parameter && e.parameter.tb) {
     // App trên điện thoại hỏi nội dung thông báo mới.
-    return ContentService.createTextOutput(JSON.stringify(layThongBaoChoMay_(e.parameter.tb))).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify(daCaiDat_() ? layThongBaoChoMay_(e.parameter.tb) : [])).setMimeType(ContentService.MimeType.JSON);
   }
-  // Một app duy nhất. Link cũ (?app=desk) vẫn mở app này.
+  if (!daCaiDat_()) return trangCaiDatLanDau_();
   var trang = HtmlService.createTemplateFromFile('Eco');
   trang.googleClientId = String(layCaiDat_('GoogleClientId') || '');
   trang.thuocTinhChuDe = thuocTinhChuDe_(layCaiDat_('ChuDe'));
@@ -23,160 +23,229 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/* ===================== Menu hậu kỳ trong Google Sheet ===================== */
-
-function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('ECO hậu kỳ')
-    .addItem('Tải danh sách lên hệ thống', 'moHopThoaiTaiDanhSach')
-    .addToUi();
+function include(ten) {
+  return HtmlService.createHtmlOutputFromFile(ten).getContent();
 }
 
-function moHopThoaiTaiDanhSach() {
-  khoiTaoCoSoDuLieu_();
-  var t = HtmlService.createTemplateFromFile('HauKy');
-  t.linkNguon = layCaiDat_('LinkSheetThanhVien') || '';
-  t.coMatKhauMacDinh = !!layCaiDat_('MatKhauMacDinh');
-  t.tinhTrang = tinhTrangCacDot_(new Date());
-  t.idLich = idLichGanNhat_();
-  // Vé dùng một lần: chỉ người mở được menu trong file Sheet mới tải danh sách lên được.
-  t.ve = Utilities.getUuid();
-  CacheService.getScriptCache().put('ve_tai_danh_sach', t.ve, 3600);
-  var html = t.evaluate().setWidth(520).setHeight(640);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Tải danh sách lên hệ thống');
-}
+/* ===================== Tải danh sách thành viên (Cài đặt, Tài khoản) ===================== */
 
-/** Các lần tải trước (tab LanTai) và các giai đoạn đã mở (tab KyHoatDong, cho dữ liệu từ trước khi có LanTai). */
+/** Các lần tải trước (bảng LanTai). */
 function cacLanTai_() {
-  return docBang_('KyHoatDong').concat(docBang_('LanTai'));
+  return docBang_('LanTai');
 }
 
-/** Mỗi kiểu tải (Oday, đợt 1, đợt 2) đã làm trong nhiệm kỳ tương ứng chưa, để hộp thoại hiện cho người tải. */
-function tinhTrangCacDot_(bayGio) {
-  var lanTai = cacLanTai_();
-  return [KIEU_TAI.ODAY, KIEU_TAI.DOT1, KIEU_TAI.DOT2].map(function (k) {
-    var kt = kieuTaiThucTe_(k, bayGio, lanTai);
-    return { kieu: k, nhiemKy: kt.nhiemKy, daLam: kt.doiThanhCapNhat };
-  });
-}
-
-function kiemTraVeTai_(yeuCau) {
-  var ve = CacheService.getScriptCache().get('ve_tai_danh_sach');
-  if (!ve || String((yeuCau || {}).ve || '') !== ve) throw new Error('Hộp thoại đã cũ. Đóng lại rồi mở menu ECO hậu kỳ → Tải danh sách lên hệ thống lần nữa.');
-}
-
-/** Đọc sheet nguồn và tính mọi thứ sẽ thay đổi, chưa ghi gì. */
-function chuanBiTai_(yeuCau, bayGio) {
-  if ([KIEU_TAI.ODAY, KIEU_TAI.DOT1, KIEU_TAI.DOT2, KIEU_TAI.CAP_NHAT].indexOf(yeuCau.kieu) < 0) throw new Error('Kiểu tải không hợp lệ.');
-  var nguon;
-  try {
-    nguon = SpreadsheetApp.openByUrl(String(yeuCau.link || '').trim());
-  } catch (err) {
-    throw new Error('Không mở được sheet nguồn. Kiểm tra lại link và quyền truy cập của tài khoản CLB.');
-  }
-  var tab = yeuCau.tenTab ? nguon.getSheetByName(yeuCau.tenTab) : nguon.getSheets()[0];
-  if (!tab) throw new Error('Không thấy tab "' + yeuCau.tenTab + '" trong sheet nguồn.');
-  var doc = docDanhSachThanhVien_(tab.getDataRange().getValues());
-  if (doc.loi.length) throw new Error(doc.loi.join('\n'));
-
-  var kt = kieuTaiThucTe_(yeuCau.kieu, bayGio, cacLanTai_());
-  var cu = docBang_('ThanhVien');
-  var ds = ganLoaiThanhVien_(doc.thanhVien, cu, kt.kieu, kt.dauNhiemKy);
+/** Thông tin cho trang Tải danh sách: kiểu tải, mỗi kiểu đã làm trong nhiệm kỳ gợi ý chưa, link nguồn lần trước. */
+function layThongTinTaiDanhSach(phien) {
+  canDangNhap_(phien, 'caidat');
+  var lanTai = cacLanTai_(), bayGio = new Date(), ky = layKyHienTai_();
   return {
-    kt: kt, ds: ds, cu: cu,
-    soSanh: soSanhDanhSach_(cu, ds),
-    soTkMoi: dongBoTaiKhoan_(docBang_('TaiKhoan'), ds).moi.length,
-    kyHienTai: layKyHienTai_()
+    link: String(layCaiDat_('LinkSheetThanhVien') || ''),
+    ky: ky ? { nhiemKy: String(ky.NhiemKy), giaiDoan: Number(ky.GiaiDoan) } : null,
+    soGiaiDoan: QUY_TAC.soGiaiDoan,
+    coMatKhauChung: !!layBiMat_('MatKhauMacDinh'),
+    kieu: cacKieuTai_(QUY_TAC.soGiaiDoan).map(function (k) {
+      var nk = k === KIEU_TAI.CAP_NHAT ? (ky ? String(ky.NhiemKy) : goiYNhiemKy_(k, bayGio, lanTai)) : goiYNhiemKy_(k, bayGio, lanTai);
+      var kt = kieuTaiThucTe_(k, nk, lanTai, QUY_TAC.soGiaiDoan);
+      return { kieu: k, dot: soDotCua_(k), nhiemKy: nk, daLam: kt.doiThanhCapNhat, loi: kt.loi };
+    }),
+    lanTai: lanTai.slice(-10).reverse().map(function (l) {
+      return { luc: new Date(l.ThoiGian).getTime(), nhiemKy: String(l.NhiemKy || ''), kieu: String(l.Kieu || ''), them: Number(l.SoThem) || 0, sua: Number(l.SoSua) || 0, roi: Number(l.SoAn) || 0, tong: Number(l.TongSo) || 0, nguoi: String(l.NguoiTai || '') };
+    }),
+    idLich: idLichCua_(ky ? String(ky.NhiemKy) : '') || idLichGanNhat_()
   };
 }
 
-/** Xem trước một lần tải: kiểu tải thực sự, số người thêm, sửa, ẩn. Gọi từ hộp thoại hậu kỳ, không ghi gì. */
-function xemTruocTaiDanhSach(yeuCau) {
-  kiemTraVeTai_(yeuCau);
-  var c = chuanBiTai_(yeuCau || {}, new Date());
-  var ky = tinhKyMoi_(c.kyHienTai, c.kt.kieu, new Date());
+/** Mở tab nguồn của danh sách thành viên. */
+function moTabNguon_(link, tenTab) {
+  var nguon;
+  try { nguon = SpreadsheetApp.openByUrl(String(link || '').trim()); }
+  catch (err) { throw new Error('Không mở được sheet nguồn. Kiểm tra lại link và chia sẻ sheet cho tài khoản CLB.'); }
+  var tab = tenTab ? nguon.getSheetByName(tenTab) : nguon.getSheets()[0];
+  if (!tab) throw new Error('Không thấy tab "' + tenTab + '" trong sheet nguồn.');
+  return tab;
+}
+
+/** Đọc sheet nguồn và tính mọi thứ sẽ thay đổi, chưa ghi gì. */
+function chuanBiTai_(yeuCau, bayGio, tk) {
+  var lanTai = cacLanTai_();
+  var nhiemKy = String(yeuCau.nhiemKy || '').trim() || goiYNhiemKy_(yeuCau.kieu, bayGio, lanTai);
+  var kt = kieuTaiThucTe_(yeuCau.kieu, nhiemKy, lanTai, QUY_TAC.soGiaiDoan);
+  if (kt.loi) throw new Error(kt.loi);
+  var kyNay = layKyHienTai_();
+  if (kt.kieu === KIEU_TAI.CAP_NHAT && kyNay && String(kyNay.NhiemKy) !== nhiemKy && kt.daLam.length === 0) {
+    throw new Error('Nhiệm kỳ ' + nhiemKy + ' chưa bắt đầu. Cập nhật chỉ dùng cho nhiệm kỳ đang chạy (' + kyNay.NhiemKy + ').');
+  }
+  var tab = moTabNguon_(yeuCau.link, yeuCau.tenTab);
+  var doc = docDanhSachThanhVien_(tab.getDataRange().getValues());
+  if (doc.loi.length) throw new Error(doc.loi.join('\n'));
+  var kyMoi = tinhKyMoi_(kt.kieu, nhiemKy);
+  var giaiDoan = kyMoi ? kyMoi.GiaiDoan : (kyNay && String(kyNay.NhiemKy) === nhiemKy ? Number(kyNay.GiaiDoan) : 0);
+  var tatCa = docBang_('ThanhVien');
+  var kh = keHoachTaiDanhSach_(doc.thanhVien, tatCa, { kieu: kt.kieu, nhiemKy: nhiemKy, dauNhiemKy: kt.dauNhiemKy, giaiDoan: giaiDoan, bayGio: bayGio });
+  if (kh.banLa.length && yeuCau.themBanMoi) {
+    // BOD chọn thêm luôn các ban mới vào cơ cấu rồi tính lại.
+    var moi = CO_CAU.ban.concat(kh.banLa.map(function (b) { return { ma: b, ten: b, nhom: b.split(' ')[0], vietTat: b.replace(/[^A-Z0-9]/g, '').slice(0, 6), laBod: false, phuTrach: true, dangDung: true }; }));
+    var cc = chuanHoaCoCau_(moi);
+    if (cc.loi) throw new Error(cc.loi);
+    apCauHinh_(cc.ds, QUY_TAC);
+    kh = keHoachTaiDanhSach_(doc.thanhVien, tatCa, { kieu: kt.kieu, nhiemKy: nhiemKy, dauNhiemKy: kt.dauNhiemKy, giaiDoan: giaiDoan, bayGio: bayGio });
+    kh.coCauMoi = cc.ds;
+  }
+  var dangHd = kh.ds.filter(function (t) { return t.TrangThai !== TRANG_THAI_TV.ROI; });
+  var dbtk = dongBoTaiKhoan_(docBang_('TaiKhoan'), dangHd);
+  // Không để người đang tải tự mất quyền BOD (lỡ quên mình trong danh sách thì không ai vào được Cài đặt nữa).
+  if (tk) {
+    var toi = dbtk.ds.concat(dbtk.moi).filter(function (x) { return String(x.Email).toLowerCase() === String(tk.Email).toLowerCase(); })[0];
+    if (!toi || toi.VaiTro !== 'BOD') kh.loi.push('Danh sách mới không có bạn (' + tk.Email + ') trong ban điều hành, nên sau khi tải bạn sẽ mất quyền vào Cài đặt. Kiểm tra lại email và ban của bạn trên sheet nguồn.');
+  }
+  return { kt: kt, nhiemKy: nhiemKy, kyMoi: kyMoi, kh: kh, doc: doc, tab: tab, dangHd: dangHd, soTkMoi: dbtk.moi.length };
+}
+
+/** Xem trước một lần tải: kiểu tải thực sự, số người thêm, sửa, rời. Không ghi gì. */
+function xemTruocTaiDanhSach(phien, yeuCau) {
+  var tk = canDangNhap_(phien, 'caidat');
+  yeuCau = yeuCau || {};
+  var c = chuanBiTai_(yeuCau, new Date(), tk);
+  var ky = layKyHienTai_();
+  var ten = function (ds) { return ds.map(function (t) { return String(t.HoVaTen); }); };
   return {
-    kieu: c.kt.kieu, kieuChon: yeuCau.kieu, doiThanhCapNhat: c.kt.doiThanhCapNhat, nhiemKy: c.kt.nhiemKy,
-    giaiDoan: ky ? 'Bắt đầu nhiệm kỳ ' + ky.NhiemKy + ', giai đoạn ' + ky.HocKy + '. Điểm của giai đoạn mới bắt đầu từ 0.'
-      : c.kyHienTai ? 'Giữ nguyên nhiệm kỳ ' + c.kyHienTai.NhiemKy + ', giai đoạn ' + c.kyHienTai.HocKy + '.' : 'Chưa có giai đoạn nào (giai đoạn 1 bắt đầu khi tải đợt 1).',
-    tong: c.ds.length,
-    them: c.soSanh.them, sua: c.soSanh.sua, an: c.soSanh.an, doiBan: c.soSanh.doiBan,
-    boSung: c.ds.filter(function (t) { return t.LoaiThanhVien === LOAI_TV.BO_SUNG; }).length,
-    soTkMoi: c.soTkMoi, canMatKhau: c.soTkMoi > 0 && !layCaiDat_('MatKhauMacDinh'),
-    canIdLich: c.kt.kieu === KIEU_TAI.ODAY,
-    sinhNhat: !!(String(yeuCau.idLich || '').trim() || idLichCua_(nhiemKySinhNhat_(c.kt, ky || c.kyHienTai)))
+    kieu: c.kt.kieu, kieuChon: yeuCau.kieu, doiThanhCapNhat: c.kt.doiThanhCapNhat, nhiemKy: c.nhiemKy,
+    giaiDoan: c.kyMoi ? 'Mở giai đoạn ' + c.kyMoi.GiaiDoan + ' của nhiệm kỳ ' + c.nhiemKy + (QUY_TAC.diemVe0 ? '. Bảng điểm giai đoạn mới bắt đầu từ 0.' : '.')
+      : ky ? 'Giữ nguyên giai đoạn ' + ky.GiaiDoan + ' của nhiệm kỳ ' + ky.NhiemKy + '.' : 'Chưa mở giai đoạn nào (giai đoạn 1 mở khi tải "' + kieuDot_(1) + '").',
+    tong: c.dangHd.length,
+    them: c.kh.them.map(function (t) { return t.HoVaTen + ' (' + t.MaTV + ')'; }), sua: ten(c.kh.sua), roi: ten(c.kh.roi), quayLai: ten(c.kh.quayLai), doiBan: c.kh.doiBan,
+    boSung: c.dangHd.filter(function (t) { return t.LoaiThanhVien === LOAI_TV.BO_SUNG; }).length,
+    banLa: c.kh.coCauMoi ? [] : c.kh.banLa, banMoi: c.kh.coCauMoi ? c.kh.banLa : [],
+    loi: c.kh.loi,
+    soTkMoi: c.soTkMoi, canMatKhau: c.soTkMoi > 0 && !layBiMat_('MatKhauMacDinh'),
+    coCotMa: c.doc.viTri.MaTV !== undefined
   };
 }
 
 /**
- * Tải danh sách thành viên từ sheet nguồn vào hệ thống. Gọi từ hộp thoại hậu kỳ.
- * Không xoá dữ liệu cũ: người rời CLB được ẩn (giữ hồ sơ ở tab ThanhVienCu), điểm và task cũ giữ nguyên.
- * @param {{link:string, tenTab:string, kieu:string, matKhauMacDinh:string}} yeuCau
+ * Tải danh sách thành viên từ sheet nguồn vào app. Không xoá dữ liệu cũ: người rời CLB được đánh dấu Đã rời
+ * (hồ sơ, điểm, task cũ giữ nguyên), người quay lại dùng lại mã cũ.
+ * @param {{link:string, tenTab:string, kieu:string, nhiemKy:string, idLich:string, themBanMoi:boolean, ghiMa:boolean}} yeuCau
  */
-function taiDanhSachThanhVien(yeuCau) {
+function taiDanhSachThanhVien(phien, yeuCau) {
+  var tk = canDangNhap_(phien, 'caidat');
   yeuCau = yeuCau || {};
-  kiemTraVeTai_(yeuCau);
-  var matKhau = String(yeuCau.matKhauMacDinh || '');
-  if (matKhau) { var loiMk = kiemTraMatKhauMoi_(matKhau); if (loiMk) throw new Error('Mật khẩu chung: ' + loiMk); }
-
   var bayGio = new Date();
   var idLich = String(yeuCau.idLich || '').trim();
-  var c, ky, cu;
+  if (idLich) kiemTraLich_(idLich);
+  var c, ky;
   var khoa = layKhoa_();
   try {
-    c = chuanBiTai_(yeuCau, bayGio); // đọc lại trong khoá: có thể ai đó vừa sửa
-    if (c.kt.kieu === KIEU_TAI.ODAY && !idLich) throw new Error('Tải "Sau Oday" cần nhập ID lịch Google để app thêm sinh nhật thành viên vào lịch.');
-    if (idLich) kiemTraLich_(idLich);
-    if (c.soTkMoi && !matKhau && !layCaiDat_('MatKhauMacDinh')) {
-      throw new Error('Có ' + c.soTkMoi + ' thành viên chưa có tài khoản app CLB ECO. Nhập mật khẩu chung của CLB (ít nhất 6 ký tự).');
-    }
-    var kyMoi = tinhKyMoi_(c.kyHienTai, c.kt.kieu, bayGio);
+    c = chuanBiTai_(yeuCau, bayGio, tk); // đọc lại trong khoá: có thể ai đó vừa sửa
+    if (c.kh.banLa.length) throw new Error('Có ban chưa có trong cơ cấu CLB: ' + c.kh.banLa.join(', ') + '. Chọn "Thêm các ban này vào cơ cấu" hoặc sửa cột Ban trên sheet nguồn.');
+    if (c.kh.loi.length) throw new Error(c.kh.loi.join('\n'));
+    if (c.soTkMoi && !layBiMat_('MatKhauMacDinh')) throw new Error('Có ' + c.soTkMoi + ' người chưa có tài khoản. Đặt mật khẩu chung của CLB ở Cài đặt, Tài khoản trước nhé.');
+    if (c.kh.coCauMoi) ghiCoCau_(c.kh.coCauMoi);
 
-    // Người không còn trong danh sách mới: ẩn khỏi app, giữ hồ sơ đầy đủ ở tab ThanhVienCu để sau này còn tra cứu.
-    cu = capNhatThanhVienCu_(c.cu, c.ds, docBang_('ThanhVienCu'), bayGio);
-    ghiDeBang_('ThanhVienCu', cu.ds);
-    ghiDeBang_('ThanhVien', xepThanhVienTheoBan_(c.ds));
-    if (c.soSanh.doiBan.length) {
-      themDong_('DoiBan', c.soSanh.doiBan.map(function (d) { return { ThoiGian: bayGio, HoVaTen: d.HoVaTen, BanCu: d.BanCu, BanMoi: d.BanMoi }; }));
+    ghiDeBang_('ThanhVien', c.kh.ds);
+    if (c.kh.doiBan.length) themDong_('DoiBan', c.kh.doiBan.map(function (d) { return { ThoiGian: bayGio, MaTV: d.MaTV, HoVaTen: d.HoVaTen, BanCu: d.BanCu, BanMoi: d.BanMoi }; }));
+    if (!docBang_('NhiemKy').some(function (n) { return String(n.NhiemKy) === c.nhiemKy; })) {
+      // Nhiệm kỳ mới: giữ một bản quy tắc riêng, để sau này đổi quy tắc không làm sai kết quả nhiệm kỳ này.
+      themDong_('NhiemKy', [{ NhiemKy: c.nhiemKy, BatDau: bayGio, QuyTac: JSON.stringify(chuanHoaQuyTac_(layCaiDat_('QuyTac'))) }]);
     }
-    if (kyMoi) {
-      themDong_('KyHoatDong', [{ NhiemKy: kyMoi.NhiemKy, HocKy: kyMoi.HocKy, BatDau: bayGio, KieuTaiLen: c.kt.kieu }]);
-      themDong_('LuuTruThanhVien', c.ds.map(function (tv) {
-        return { NhiemKy: kyMoi.NhiemKy, HocKy: kyMoi.HocKy, HoVaTen: tv.HoVaTen, Ban: tv.Ban };
+    if (c.kyMoi) {
+      themDong_('GiaiDoan', [{ NhiemKy: c.kyMoi.NhiemKy, GiaiDoan: c.kyMoi.GiaiDoan, BatDau: bayGio, KieuTai: c.kt.kieu }]);
+      themDong_('ThanhVienGiaiDoan', c.dangHd.map(function (t) {
+        return { NhiemKy: c.kyMoi.NhiemKy, GiaiDoan: c.kyMoi.GiaiDoan, MaTV: t.MaTV, HoVaTen: t.HoVaTen, Ban: t.Ban, ChucVu: t.ChucVu, LoaiThanhVien: t.LoaiThanhVien };
       }));
     }
-    themDong_('LanTai', [{ ThoiGian: bayGio, NhiemKy: c.kt.nhiemKy || (c.kyHienTai ? String(c.kyHienTai.NhiemKy) : ''), KieuChon: yeuCau.kieu, Kieu: c.kt.kieu,
-      SoThem: c.soSanh.them.length, SoSua: c.soSanh.sua.length, SoAn: c.soSanh.an.length, TongSo: c.ds.length }]);
-
-    if (matKhau) datMatKhauMacDinh_(matKhau);
-    var soTaoMoi = dongBoTaiKhoanThanhVien_(c.ds, bayGio);
-    datCaiDat_('LinkSheetThanhVien', yeuCau.link);
+    themDong_('LanTai', [{ ThoiGian: bayGio, NhiemKy: c.nhiemKy, KieuChon: yeuCau.kieu, Kieu: c.kt.kieu,
+      SoThem: c.kh.them.length, SoSua: c.kh.sua.length + c.kh.quayLai.length, SoAn: c.kh.roi.length, TongSo: c.dangHd.length, NguoiTai: String(tk.HoVaTen) }]);
+    dongBoTaiKhoanThanhVien_(c.dangHd, bayGio);
+    datCaiDat_('LinkSheetThanhVien', String(yeuCau.link || '').trim());
     xoaBoNhoTam_();
-    ky = kyMoi || c.kyHienTai;
-    var nkLich = nhiemKySinhNhat_(c.kt, ky);
-    if (idLich && nkLich) datIdLich_(nkLich, idLich);
+    DA_NAP_CAU_HINH_ = false;
+    ky = layKyHienTai_();
+    if (idLich) datIdLich_(c.nhiemKy, idLich);
   } finally {
     traKhoa_(khoa);
   }
 
   var dong = [];
-  if (c.kt.doiThanhCapNhat) dong.push('"' + yeuCau.kieu + '" đã làm trong nhiệm kỳ ' + c.kt.nhiemKy + ' nên lần này được tính là Cập nhật.');
-  dong.push('Đã tải ' + c.ds.length + ' thành viên (' + c.kt.kieu + '): thêm ' + c.soSanh.them.length + ', sửa thông tin ' + c.soSanh.sua.length + ', ẩn ' + c.soSanh.an.length + ' người đã rời.');
-  dong.push(ky ? 'Hiện tại: nhiệm kỳ ' + ky.NhiemKy + ', giai đoạn ' + ky.HocKy + '.' : 'Chưa có giai đoạn nào; giai đoạn 1 bắt đầu khi tải "Sau tuyển đợt 1".');
-  if (soTaoMoi) dong.push('Đã tạo ' + soTaoMoi + ' tài khoản mới (đăng nhập bằng mật khẩu chung hoặc Google).');
-  if (c.soSanh.doiBan.length) dong.push(c.soSanh.doiBan.length + ' người đổi ban, đã ghi lại ngày đổi.');
-  if (cu.soMoiRoi) dong.push('Hồ sơ người đã rời vẫn được giữ ở tab ThanhVienCu.');
-  // Lịch sinh nhật: mỗi lần tải đều đồng bộ, nếu đã có ID lịch của nhiệm kỳ. Lỗi ở đây không làm hỏng việc tải danh sách.
-  var nk = nhiemKySinhNhat_(c.kt, ky);
-  if (nk && idLichCua_(nk)) {
+  if (c.kt.doiThanhCapNhat) dong.push('"' + yeuCau.kieu + '" đã làm trong nhiệm kỳ ' + c.nhiemKy + ' nên lần này được tính là Cập nhật.');
+  dong.push('Đã tải ' + c.dangHd.length + ' thành viên (' + c.kt.kieu + ', nhiệm kỳ ' + c.nhiemKy + '): thêm ' + c.kh.them.length + ', sửa thông tin ' + c.kh.sua.length +
+    (c.kh.quayLai.length ? ', quay lại ' + c.kh.quayLai.length : '') + ', ' + c.kh.roi.length + ' người đã rời.');
+  dong.push(ky ? 'Hiện tại: nhiệm kỳ ' + ky.NhiemKy + ', giai đoạn ' + ky.GiaiDoan + '.' : 'Chưa mở giai đoạn nào; giai đoạn 1 mở khi tải "' + kieuDot_(1) + '".');
+  if (c.soTkMoi) dong.push('Đã tạo ' + c.soTkMoi + ' tài khoản mới (đăng nhập bằng mật khẩu chung của CLB hoặc Google).');
+  if (c.kh.doiBan.length) dong.push(c.kh.doiBan.length + ' người đổi ban, đã ghi lại ngày đổi.');
+  if (c.kh.roi.length) dong.push('Hồ sơ và điểm của người đã rời vẫn được giữ, xem ở Cài đặt, Tài khoản, Thành viên qua các năm.');
+  ghiNhatKy_('taiDanhSach', 'OK', String(tk.HoVaTen) + ': ' + dong[c.kt.doiThanhCapNhat ? 1 : 0]);
+  // Ghi mã thành viên vào sheet nguồn để các lần tải sau nhận ra đúng người dù đổi tên, đổi email.
+  if (yeuCau.ghiMa) {
+    try { dong.push(ghiMaVaoNguon_(c)); } catch (e) { dong.push('Chưa ghi được mã thành viên vào sheet nguồn: ' + e.message); }
+  }
+  // Lịch sinh nhật: mỗi lần tải đều đồng bộ, nếu nhiệm kỳ đã có ID lịch. Lỗi ở đây không làm hỏng việc tải danh sách.
+  if (idLichCua_(c.nhiemKy)) {
     try {
-      var sn = dongBoSinhNhat_(c.ds, nk);
-      dong.push('Lịch "' + sn.ten + '": thêm ' + sn.soTao + ', bỏ ' + sn.soXoa + ', giữ ' + sn.soGiu + ' sinh nhật.' + (sn.conLai ? ' Còn ' + sn.conLai + ' người chưa kịp thêm: tải lại kiểu Cập nhật để thêm nốt.' : '') + (sn.thieuNgay.length ? ' ' + sn.thieuNgay.length + ' người chưa có ngày sinh hợp lệ.' : ''));
+      var sn = dongBoSinhNhat_(c.dangHd, c.nhiemKy);
+      dong.push('Lịch "' + sn.ten + '": thêm ' + sn.soTao + ', bỏ ' + sn.soXoa + ', giữ ' + sn.soGiu + ' sinh nhật.' + (sn.conLai ? ' Còn ' + sn.conLai + ' người chưa kịp thêm: bấm Đồng bộ lịch sinh nhật để thêm nốt.' : '') + (sn.thieuNgay.length ? ' ' + sn.thieuNgay.length + ' người chưa có ngày sinh hợp lệ.' : ''));
     } catch (e) {
-      dong.push('Chưa đồng bộ được lịch sinh nhật: ' + e.message + ' Có thể tài khoản CLB chưa cấp quyền Google Calendar: mở Apps Script, chạy hàm khoiTaoCoSoDuLieu một lần rồi tải lại kiểu Cập nhật.');
+      dong.push('Chưa đồng bộ được lịch sinh nhật: ' + e.message);
     }
-  } else dong.push('Chưa có ID lịch sinh nhật nên chưa thêm sinh nhật vào lịch.');
+  } else dong.push('Nhiệm kỳ này chưa có lịch sinh nhật nên chưa thêm sinh nhật vào lịch.');
   return dong.join('\n');
+}
+
+/** Ghi mã thành viên vào cột "Mã thành viên" của sheet nguồn (thêm cột nếu chưa có). */
+function ghiMaVaoNguon_(c) {
+  var tab = c.tab, viTri = c.doc.viTri, dongTd = c.doc.dongTieuDe + 1;
+  var cot = viTri.MaTV;
+  if (cot === undefined) {
+    cot = tab.getLastColumn();
+    tab.getRange(dongTd, cot + 1).setValue('Mã thành viên').setFontWeight('bold');
+  }
+  var theoTen = {};
+  c.dangHd.forEach(function (t) { theoTen[String(t.HoVaTen).toLowerCase()] = t.MaTV; });
+  var so = 0;
+  c.doc.thanhVien.forEach(function (t) {
+    var ma = theoTen[String(t.HoVaTen).toLowerCase()];
+    if (ma && ma !== t.MaTV) { tab.getRange(t.dong, cot + 1).setValue(ma); so++; }
+  });
+  return so ? 'Đã ghi mã thành viên của ' + so + ' người vào sheet nguồn.' : 'Mã thành viên trên sheet nguồn đã đủ.';
+}
+
+/* ===================== Danh sách thành viên qua các năm (BOD) ===================== */
+
+/** Mọi thành viên từng có trong CLB, cả người đã rời. Chỉ BOD xem. */
+function layDanhSachThanhVien(phien) {
+  canDangNhap_(phien, 'caidat');
+  var ngay = function (v) { var t = v ? new Date(v).getTime() : 0; return isNaN(t) ? 0 : t; };
+  return xepThanhVienTheoBan_(docBang_('ThanhVien').filter(function (t) { return String(t.HoVaTen || '').trim(); })).map(function (t) {
+    var m = docMaThanhVien_(t.MaTV);
+    return {
+      ma: String(t.MaTV || ''), ten: String(t.HoVaTen), ban: String(t.Ban || ''), lop: String(t.Lop || ''), chucVu: String(t.ChucVu || ''),
+      roi: String(t.TrangThai || '') === TRANG_THAI_TV.ROI, gdVao: gdVao_(t), nhiemKyVao: m ? m.nhiemKy : '', dotVao: m ? m.dot : null,
+      ngayVao: ngay(t.NgayVao), ngayRoi: ngay(t.NgayRoi)
+    };
+  });
+}
+
+/** Hồ sơ một thành viên theo mã: thông tin liên lạc, các giai đoạn đã tham gia, đổi ban, kết quả từng nhiệm kỳ. */
+function layHoSoThanhVien(phien, ma) {
+  canDangNhap_(phien, 'caidat');
+  ma = String(ma || '').trim().toUpperCase();
+  var tv = docBang_('ThanhVien').filter(function (t) { return String(t.MaTV).toUpperCase() === ma; })[0];
+  if (!tv) throw new Error('Không tìm thấy thành viên có mã ' + ma + '.');
+  var cua = function (d) { return String(d.MaTV || '').toUpperCase() === ma; };
+  var ngay = function (v) { return v instanceof Date ? Utilities.formatDate(v, muiGio_(), 'dd/MM/yyyy') : String(v || ''); };
+  return {
+    ma: ma, ten: String(tv.HoVaTen), ban: String(tv.Ban || ''), lop: String(tv.Lop || ''), chucVu: String(tv.ChucVu || ''),
+    email: String(tv.Email || ''), sdt: String(tv.SoDienThoai || ''), ngaySinh: ngay(tv.NgaySinh), facebook: String(tv.LinkFacebook || ''),
+    roi: String(tv.TrangThai || '') === TRANG_THAI_TV.ROI, ngayVao: ngay(tv.NgayVao), ngayRoi: ngay(tv.NgayRoi),
+    giaiDoan: docBang_('ThanhVienGiaiDoan').filter(cua).map(function (d) {
+      return { nhiemKy: String(d.NhiemKy), giaiDoan: Number(d.GiaiDoan), ban: String(d.Ban || ''), chucVu: String(d.ChucVu || ''), loai: String(d.LoaiThanhVien || '') };
+    }),
+    doiBan: docBang_('DoiBan').filter(cua).map(function (d) { return { luc: new Date(d.ThoiGian).getTime(), cu: String(d.BanCu), moi: String(d.BanMoi) }; }),
+    ketQua: docBang_('KetQuaNhiemKy').filter(cua).map(function (d) {
+      return { nhiemKy: String(d.NhiemKy), ban: String(d.Ban || ''), diemGd: String(d.DiemTheoGiaiDoan || ''), top: String(d.Top || ''),
+        task: d.KpiTask === '' ? null : Number(d.KpiTask), log: d.KpiLog === '' ? null : Number(d.KpiLog), chungNhan: String(d.ChungNhan || '') };
+    })
+  };
 }
 
 /* ===================== Lịch sinh nhật (Google Calendar của tài khoản CLB) ===================== */
@@ -187,22 +256,10 @@ function cacIdLich_() {
 }
 function idLichCua_(nhiemKy) { return nhiemKy ? String(cacIdLich_()[nhiemKy] || '') : ''; }
 
-/** ID lịch của nhiệm kỳ gần nhất (để điền sẵn trong hộp thoại tải danh sách). */
+/** ID lịch của nhiệm kỳ gần nhất (để điền sẵn). */
 function idLichGanNhat_() {
   var luu = cacIdLich_(), ds = Object.keys(luu).sort();
   return ds.length ? String(luu[ds[ds.length - 1]]) : '';
-}
-
-/**
- * Nhiệm kỳ dùng cho lịch sinh nhật của một lần tải: nhiệm kỳ của kiểu tải; Cập nhật thì nhiệm kỳ của lần tải gần nhất
- * (sau Oday mà chưa tuyển đợt 1 thì đã là nhiệm kỳ mới), không có thì nhiệm kỳ đang chạy.
- */
-function nhiemKySinhNhat_(kt, ky) {
-  if (kt.nhiemKy) return String(kt.nhiemKy);
-  var lan = docBang_('LanTai').filter(function (l) { return String(l.NhiemKy || ''); })
-    .sort(function (a, b) { return new Date(a.ThoiGian).getTime() - new Date(b.ThoiGian).getTime(); });
-  if (lan.length) return String(lan[lan.length - 1].NhiemKy);
-  return ky ? String(ky.NhiemKy) : '';
 }
 
 /** Lịch phải có thật và tài khoản CLB sửa được (lịch của CLB, hoặc được chia sẻ quyền Thay đổi sự kiện). */
@@ -213,7 +270,7 @@ function kiemTraLich_(id) {
   return cal;
 }
 
-/** Lưu ID lịch cho nhiệm kỳ. Đổi sang lịch khác thì quên các sự kiện đã tạo ở lịch cũ để lần đồng bộ này thêm lại đủ vào lịch mới. */
+/** Lưu ID lịch cho nhiệm kỳ. Đổi sang lịch khác thì quên các sự kiện đã tạo ở lịch cũ để lần đồng bộ sau thêm lại đủ vào lịch mới. */
 function datIdLich_(nhiemKy, id) {
   var luu = cacIdLich_();
   if (luu[nhiemKy] === id) return;
@@ -222,7 +279,6 @@ function datIdLich_(nhiemKy, id) {
   ghiDeBang_('SinhNhat', docBang_('SinhNhat').filter(function (r) { return String(r.NhiemKy) !== nhiemKy; }));
 }
 
-/** Lịch sinh nhật của nhiệm kỳ (theo ID BOD nhập khi tải danh sách). */
 function layLichSinhNhat_(nhiemKy) {
   var id = idLichCua_(nhiemKy);
   if (!id) throw new Error('Chưa có ID lịch sinh nhật của nhiệm kỳ ' + nhiemKy + '.');
@@ -245,34 +301,47 @@ function dongBoSinhNhat_(thanhVien, nhiemKy) {
       if (Date.now() - batDau > 240000) { conLai = kh.tao.length - i; break; }
       var x = kh.tao[i], ngay = x.thang === 2 && x.ngay === 29 ? 28 : x.ngay;
       var se2 = cal.createAllDayEventSeries(x.TieuDe, new Date(nam, x.thang - 1, ngay), CalendarApp.newRecurrence().addYearlyRule(), { description: x.moTa });
-      moi.push({ HoVaTen: x.HoVaTen, NgaySinh: x.NgaySinh, TieuDe: x.TieuDe, MaSuKien: se2.getId(), NhiemKy: nhiemKy });
+      moi.push({ MaTV: x.MaTV, HoVaTen: x.HoVaTen, NgaySinh: x.NgaySinh, TieuDe: x.TieuDe, MaSuKien: se2.getId(), NhiemKy: nhiemKy });
       Utilities.sleep(80);
     }
   } finally {
     var thay = {};
-    moi.forEach(function (m) { thay[String(m.HoVaTen).toLowerCase()] = true; });
+    moi.forEach(function (m) { thay[String(m.MaTV || m.HoVaTen).toLowerCase()] = true; });
     ghiDeBang_('SinhNhat', tatCa.filter(function (r) {
-      return !boMa[String(r.MaSuKien)] && !(String(r.NhiemKy) === nhiemKy && thay[String(r.HoVaTen).toLowerCase()]);
+      return !boMa[String(r.MaSuKien)] && !(String(r.NhiemKy) === nhiemKy && thay[String(r.MaTV || r.HoVaTen).toLowerCase()]);
     }).concat(moi));
   }
   return { ten: cal.getName(), id: cal.getId(), soTao: moi.length, soXoa: kh.xoa.length, soGiu: kh.soGiu, conLai: conLai, thieuNgay: kh.thieuNgay };
 }
 
-/** Giữ tài khoản khớp với danh sách: thêm người mới, cập nhật BOD theo cột Ban, bỏ người đã rời CLB. Trả về số tài khoản mới. */
+/** Cài đặt, Tài khoản, Lịch sinh nhật: lưu ID lịch của nhiệm kỳ đang chạy và đồng bộ ngay. */
+function luuLichSinhNhat(phien, id) {
+  canDangNhap_(phien, 'caidat');
+  var ky = layKyHienTai_();
+  var nk = ky ? String(ky.NhiemKy) : (docBang_('LanTai').map(function (l) { return String(l.NhiemKy); }).sort().pop() || '');
+  if (!nk) throw new Error('Chưa có nhiệm kỳ nào. Tải danh sách thành viên trước.');
+  id = String(id || '').trim();
+  if (!id) { var l = cacIdLich_(); delete l[nk]; datCaiDat_('LichSinhNhat', JSON.stringify(l)); return 'Đã bỏ lịch sinh nhật của nhiệm kỳ ' + nk + '.'; }
+  kiemTraLich_(id);
+  datIdLich_(nk, id);
+  var sn = dongBoSinhNhat_(docThanhVien_(), nk);
+  return 'Lịch "' + sn.ten + '": thêm ' + sn.soTao + ', bỏ ' + sn.soXoa + ', giữ ' + sn.soGiu + ' sinh nhật.' + (sn.conLai ? ' Còn ' + sn.conLai + ' người: bấm lại để thêm nốt.' : '') + (sn.thieuNgay.length ? ' ' + sn.thieuNgay.length + ' người chưa có ngày sinh hợp lệ.' : '');
+}
+
+/** Giữ tài khoản khớp với danh sách: thêm người mới, cập nhật BOD theo ban, bỏ người đã rời CLB. Trả về số tài khoản mới. */
 function dongBoTaiKhoanThanhVien_(thanhVien, bayGio) {
-  bangDuLieu_('TaiKhoan'); // thêm cột còn thiếu nếu sheet còn bản cũ
   var kq = dongBoTaiKhoan_(docBang_('TaiKhoan'), thanhVien);
   ghiDeBang_('TaiKhoan', kq.ds.concat(kq.moi.map(function (m) {
-    return { Email: m.Email, HoVaTen: m.HoVaTen, VaiTro: m.VaiTro, MatKhau: '', Muoi: '', NgayTao: bayGio };
+    return { Email: m.Email, MaTV: m.MaTV, HoVaTen: m.HoVaTen, VaiTro: m.VaiTro, MatKhau: '', Muoi: '', NgayTao: bayGio };
   })));
   return kq.moi.length;
 }
 
-/** Mật khẩu mặc định chung của CLB: tài khoản chưa đổi mật khẩu thì đăng nhập bằng mật khẩu này. Chỉ lưu bản băm. */
+/** Mật khẩu chung của CLB: tài khoản chưa đổi mật khẩu thì đăng nhập bằng mật khẩu này. Chỉ lưu bản băm, ở chỗ bí mật. */
 function datMatKhauMacDinh_(matKhau) {
   var muoi = Utilities.getUuid();
-  datCaiDat_('MuoiMacDinh', muoi);
-  datCaiDat_('MatKhauMacDinh', bamMatKhau_(matKhau, muoi));
+  datBiMat_('MuoiMacDinh', muoi);
+  datBiMat_('MatKhauMacDinh', bamMatKhau_(matKhau, muoi));
 }
 
 function bamMatKhau_(matKhau, muoi) {
@@ -282,6 +351,15 @@ function bamMatKhau_(matKhau, muoi) {
     bam = Utilities.base64Encode(b);
   }
   return bam;
+}
+
+/** Cài đặt, Tài khoản, Mật khẩu chung. */
+function luuMatKhauChung(phien, matKhau) {
+  canDangNhap_(phien, 'caidat');
+  var loi = kiemTraMatKhauMoi_(matKhau);
+  if (loi) throw new Error(loi);
+  datMatKhauMacDinh_(String(matKhau));
+  return true;
 }
 
 /* ===================== Xếp hạng điểm và góp ý ===================== */
@@ -298,31 +376,26 @@ function duLieuBoard_() {
   if (daLuu) return JSON.parse(daLuu);
 
   var ky = layKyHienTai_();
-  var thanhVien = docThanhVien_();
-  var lichSu = ky ? docBang_('LichSuDiem') : [];
-  var luuTru = ky && Number(ky.HocKy) === 2 ? docBang_('LuuTruThanhVien') : [];
   var duLieu = {
-    ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
-    thanhVien: tongHopBangDiem_(thanhVien.filter(khongPhaiBod_), lichSu, ky, luuTru) // BOD không tham gia cộng điểm
+    ky: ky ? { nhiemKy: String(ky.NhiemKy), giaiDoan: Number(ky.GiaiDoan) } : null,
+    quyTac: { tiLeTop: QUY_TAC.tiLeTop, diemVe0: QUY_TAC.diemVe0 },
+    thanhVien: ky ? tongHopBangDiem_(docThanhVien_().filter(khongPhaiBod_), docBang_('LichSuDiem'), ky) : [] // BOD không tham gia cộng điểm
   };
   cache.put('xephang', JSON.stringify(duLieu), 60);
   return duLieu;
 }
 
-/** Lịch sử cộng điểm: thành viên xem của mình, BOD xem của mọi người. */
-function layLichSuDiem(phien, ten, hocKy) {
+/** Lịch sử cộng điểm (giaiDoan 0 là cả nhiệm kỳ): thành viên xem của mình, BOD xem của mọi người. */
+function layLichSuDiem(phien, ten, giaiDoan) {
   var tk = canDangNhap_(phien);
   if (!coQuyen_(String(tk.VaiTro), 'lichsudiem') && String(ten).toLowerCase() !== String(tk.HoVaTen).toLowerCase()) {
     throw new Error('Bạn chỉ xem được lịch sử điểm của mình.');
   }
   var ky = layKyHienTai_();
   if (!ky) return [];
-  var hk = Number(hocKy) === 1 ? 1 : Number(ky.HocKy);
-  var laThanhVien = docBang_('ThanhVien').some(function (tv) {
-    return String(tv.HoVaTen).toLowerCase() === String(ten).toLowerCase();
-  });
+  var laThanhVien = docThanhVien_().some(function (tv) { return String(tv.HoVaTen).toLowerCase() === String(ten).toLowerCase(); });
   if (!laThanhVien) return [];
-  return lichSuCongKhai_(docBang_('LichSuDiem'), ten, ky.NhiemKy, hk);
+  return lichSuCongKhai_(docBang_('LichSuDiem'), ten, ky.NhiemKy, giaiDoan === undefined ? ky.GiaiDoan : Number(giaiDoan));
 }
 
 /**
@@ -340,226 +413,4 @@ function guiGopY(phien, noiDung, ghiTen) {
   themDong_('GopY', [{ ThoiGian: new Date(), NoiDung: String(noiDung).trim(), DaDoc: false, HoVaTen: ghiTen ? String(tk.HoVaTen) : '' }]);
   try { thongBaoGopYMoi_(String(noiDung).trim()); } catch (e) { /* không gửi được mail báo thì góp ý vẫn được lưu */ }
   return true;
-}
-
-/* ===================== Cơ sở dữ liệu ===================== */
-
-/** Chọn hàm này rồi bấm Chạy trong Apps Script để cấp quyền lần đầu (hoặc khi bản mới cần thêm quyền). */
-function khoiTaoCoSoDuLieu() {
-  khoiTaoCoSoDuLieu_();
-}
-
-/** Tạo các tab còn thiếu, thêm cột còn thiếu, và dữ liệu mặc định. Chạy lại nhiều lần không sao. */
-function khoiTaoCoSoDuLieu_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  Object.keys(BANG).forEach(function (ten) {
-    var sh = ss.getSheetByName(ten) || ss.insertSheet(ten);
-    var cot = BANG[ten];
-    var hienCo = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0] : [];
-    var thieu = cot.filter(function (c) { return hienCo.indexOf(c) < 0; });
-    if (thieu.length) {
-      var batDau = hienCo.filter(String).length + 1;
-      sh.getRange(1, batDau, 1, thieu.length).setValues([thieu]);
-      sh.getRange(1, 1, 1, batDau + thieu.length - 1).setFontWeight('bold').setBackground('#274e13').setFontColor('#ffffff');
-      sh.setFrozenRows(1);
-    }
-  });
-  BANG_NHO_TAM.forEach(boNhoTamBang_); // có thể vừa thêm cột: đọc lại cho đủ cột
-  BO_NHO_BANG_ = {};
-  if (!docBang_('LoaiHoatDong').length) {
-    themDong_('LoaiHoatDong', chuanHoaLoaiHoatDong_(MUC_DIEM_QUY_CHE).ds);
-  }
-  var macDinh = ss.getSheetByName('Sheet1') || ss.getSheetByName('Trang tính1');
-  if (macDinh && macDinh.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(macDinh);
-}
-
-/** Bản cập nhật thêm tab hoặc cột mới thì tự thêm vào sheet ở lần dùng đầu tiên, không cần ai mở menu. */
-var DA_KIEM_TRA_BANG_ = false;
-function damBaoCauTrucBang_() {
-  if (DA_KIEM_TRA_BANG_) return;
-  DA_KIEM_TRA_BANG_ = true;
-  var mau = JSON.stringify(BANG), kho = PropertiesService.getScriptProperties();
-  if (kho.getProperty('CauTrucBang') === mau) return;
-  khoiTaoCoSoDuLieu_();
-  kho.setProperty('CauTrucBang', mau);
-}
-
-/** Lấy tab để ghi. Bảng này sắp đổi nên bản nhớ tạm của nó bị bỏ. */
-function bangDuLieu_(ten) {
-  damBaoCauTrucBang_();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(ten);
-  if (!sh && BANG[ten]) { khoiTaoCoSoDuLieu_(); sh = ss.getSheetByName(ten); } // tab mới thêm ở bản cập nhật
-  if (!sh) throw new Error('Thiếu tab ' + ten + '. Mở menu ECO hậu kỳ để khởi tạo.');
-  delete BO_NHO_BANG_[ten];
-  BANG_DA_GHI_[ten] = true;
-  boNhoTamBang_(ten);
-  return sh;
-}
-
-/**
- * Đọc cả bảng thành danh sách đối tượng.
- * Trong một lần chạy, mỗi bảng chỉ đọc từ sheet một lần. Vài bảng ít đổi (BANG_NHO_TAM) còn được nhớ tạm
- * giữa các lần chạy, để mở app nhanh hơn; ghi vào bảng nào thì bản nhớ tạm của bảng đó bị bỏ ngay.
- */
-var BANG_NHO_TAM = ['CaiDat', 'TaiKhoan', 'ThanhVien', 'LoaiHoatDong'];
-var GIAY_NHO_TAM = 600;
-var BO_NHO_BANG_ = {};
-var BANG_DA_GHI_ = {};
-function docBang_(ten) {
-  var chuoi = BO_NHO_BANG_[ten];
-  if (chuoi === undefined) {
-    var nhoTam = BANG_NHO_TAM.indexOf(ten) >= 0 && !DO_SAU_KHOA_; // đang giữ khoá để ghi thì luôn đọc thẳng từ sheet
-    var bo = nhoTam ? CacheService.getScriptCache() : null, phienBan = '';
-    if (nhoTam) {
-      try {
-        var co = bo.getAll(['bang_' + ten, 'phienban_' + ten]);
-        phienBan = co['phienban_' + ten] || '0';
-        var luu = co['bang_' + ten];
-        if (luu && luu.indexOf(phienBan + '|') === 0) chuoi = luu.slice(phienBan.length + 1);
-      } catch (e) { nhoTam = false; }
-    }
-    if (chuoi === undefined) {
-      var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ten);
-      chuoi = maHoaBang_(!sh || sh.getLastRow() < 2 ? [] : dongThanhDoiTuong_(sh.getDataRange().getValues()));
-      // Ghi kèm phiên bản đã thấy trước khi đọc: nếu có người ghi chen vào giữa thì bản này tự hết hiệu lực.
-      if (nhoTam) { try { bo.put('bang_' + ten, phienBan + '|' + chuoi, GIAY_NHO_TAM); } catch (e) { /* bảng lớn quá thì thôi không nhớ tạm */ } }
-    }
-    BO_NHO_BANG_[ten] = chuoi;
-  }
-  return giaiMaBang_(chuoi);
-}
-
-/** Bỏ bản nhớ tạm của một bảng (sau khi ghi, hoặc khi có người sửa tay trên sheet). */
-function boNhoTamBang_(ten) {
-  if (BANG_NHO_TAM.indexOf(ten) < 0) return;
-  try {
-    var bo = CacheService.getScriptCache();
-    bo.put('phienban_' + ten, String(Date.now()) + Math.random().toString(36).slice(2, 6), 21600);
-    bo.remove('bang_' + ten);
-  } catch (e) { /* bản nhớ tạm tự hết hạn sau GIAY_NHO_TAM giây */ }
-}
-
-/** Có người sửa tay trên sheet: bỏ bản nhớ tạm của tab đó để app thấy ngay. */
-function onEdit(e) {
-  try { boNhoTamBang_(e.range.getSheet().getName()); } catch (x) { /* bỏ qua */ }
-}
-
-/** Đúng là lịch chạy tự động của dự án gọi (không phải ai đó gọi thẳng từ trang web). */
-function laLichChay_(e) {
-  if (!e || !e.triggerUid) return false;
-  var ma = String(e.triggerUid);
-  return ScriptApp.getProjectTriggers().some(function (t) { return t.getUniqueId() === ma; });
-}
-
-/* ===================== Khoá ghi ===================== */
-
-/**
- * Hai người bấm lưu cùng lúc thì lần lượt từng người ghi, không ai ghi đè hay chen vào dòng của người kia.
- * Cách dùng: var khoa = layKhoa_(); try { ... } finally { traKhoa_(khoa); }   hoặc   voiKhoa_(function () { ... }).
- * Gọi lồng nhau trong cùng một lần chạy vẫn được: chỉ lần ngoài cùng mới thật sự khoá.
- * khongChoDuoc = true: đang bận thì trả về false thay vì báo lỗi (dùng cho việc chạy tự động).
- */
-var DO_SAU_KHOA_ = 0;
-function layKhoa_(choMs, khongChoDuoc) {
-  if (DO_SAU_KHOA_) { DO_SAU_KHOA_++; return null; }
-  var khoa = LockService.getScriptLock();
-  if (!khoa.tryLock(choMs || 30000)) {
-    if (khongChoDuoc) return false;
-    throw new Error('Đang có nhiều người lưu cùng lúc. Bạn đợi vài giây rồi thử lại nhé.');
-  }
-  DO_SAU_KHOA_ = 1;
-  BO_NHO_BANG_ = {}; // đọc lại từ sheet: có thể người khác vừa ghi trước mình
-  BANG_DA_GHI_ = {};
-  return khoa;
-}
-function traKhoa_(khoa) {
-  if (khoa === false) return;
-  DO_SAU_KHOA_ = Math.max(0, DO_SAU_KHOA_ - 1);
-  if (!khoa) return;
-  try { SpreadsheetApp.flush(); } catch (e) { /* bỏ qua */ }
-  Object.keys(BANG_DA_GHI_).forEach(boNhoTamBang_); // bỏ lần nữa sau khi ghi xong hẳn
-  BANG_DA_GHI_ = {};
-  khoa.releaseLock();
-}
-function voiKhoa_(viec) {
-  var khoa = layKhoa_();
-  try { return viec(); } finally { traKhoa_(khoa); }
-}
-
-function tieuDe_(sh) {
-  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-}
-
-function themDong_(ten, doiTuong) {
-  if (!doiTuong.length) return;
-  voiKhoa_(function () {
-    var sh = bangDuLieu_(ten);
-    var td = tieuDe_(sh);
-    var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
-    sh.getRange(sh.getLastRow() + 1, 1, dong.length, td.length).setValues(dong);
-  });
-}
-
-/** Ghi đè cả bảng. Nếu danh sách mới lấy từ chính bảng đó thì phải đọc và ghi trong cùng một khoá (voiKhoa_). */
-function ghiDeBang_(ten, doiTuong) {
-  voiKhoa_(function () {
-    var sh = bangDuLieu_(ten);
-    var td = tieuDe_(sh);
-    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, td.length).clearContent();
-    if (!doiTuong.length) return;
-    var dong = doiTuong.map(function (o) { return td.map(function (c) { return o[c] === undefined ? '' : o[c]; }); });
-    sh.getRange(2, 1, dong.length, td.length).setValues(dong);
-  });
-}
-
-/** Danh sách thành viên theo thứ tự ban chuẩn, dùng cho mọi chỗ hiện danh sách. */
-function docThanhVien_() {
-  return xepThanhVienTheoBan_(docBang_('ThanhVien'));
-}
-
-/**
- * Lúc bắt đầu nhiệm kỳ hiện tại, tính bằng ms: lần tải "Sau tuyển đợt 1" ĐẦU TIÊN của nhiệm kỳ này
- * (lỡ tải đợt 1 lại lần nữa trong cùng nhiệm kỳ thì không ẩn mất dữ liệu đã có). 0 = chưa có nhiệm kỳ nào.
- */
-function batDauNhiemKy_() {
-  return batDauNhiemKyTu_(docBang_('KyHoatDong'));
-}
-
-/** Đọc một tab, bỏ các dòng của nhiệm kỳ cũ (vẫn còn trong sheet, chỉ không hiện). */
-function docBangNhiemKy_(ten, cotThoiGian) {
-  return locNhiemKy_(docBang_(ten), function (d) { return d[cotThoiGian]; }, batDauNhiemKy_());
-}
-
-function layKyHienTai_() {
-  var ds = docBang_('KyHoatDong');
-  return ds.length ? ds[ds.length - 1] : null;
-}
-
-function layCaiDat_(khoa) {
-  var ds = docBang_('CaiDat');
-  for (var i = 0; i < ds.length; i++) if (ds[i].Khoa === khoa) return ds[i].GiaTri;
-  return null;
-}
-
-function datCaiDat_(khoa, giaTri) {
-  voiKhoa_(function () {
-    var sh = bangDuLieu_('CaiDat');
-    var v = sh.getDataRange().getValues();
-    var dong = v.length + 1;
-    for (var r = 1; r < v.length; r++) if (v[r][0] === khoa) { dong = r + 1; break; }
-    if (dong > v.length) sh.getRange(dong, 1).setValue(khoa);
-    var o = sh.getRange(dong, 2);
-    // Chữ thì giữ nguyên là chữ, để sheet không tự đổi thành ngày giờ hay số.
-    o.setNumberFormat(typeof giaTri === 'string' ? '@' : 'General');
-    o.setValue(giaTri);
-  });
-}
-
-function xoaBoNhoTam_() {
-  CacheService.getScriptCache().remove('xephang');
-}
-
-function include(ten) {
-  return HtmlService.createHtmlOutputFromFile(ten).getContent();
 }

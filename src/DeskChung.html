@@ -89,15 +89,9 @@ function apGiaoDien() {
   var toi = chuDeToi() || GIAO_DIEN === 'dark' || (GIAO_DIEN === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.setAttribute('data-theme', toi ? 'dark' : 'light');
   var bien = function (t) { try { return getComputedStyle(document.documentElement).getPropertyValue(t).trim(); } catch (e) { return ''; } };
-  // Màu thanh trạng thái (trên) và màu thanh tab (dưới) để trang vỏ tô phần tai thỏ, thanh vuốt cho liền với app.
-  // Màn đăng nhập và màn chờ nền xanh đậm thì phần dưới cũng xanh đậm, không để lộ vệt trắng.
-  var nenXanh = !$('.app');
-  var coThanhDuoi = !nenXanh && $('.bottom') && getComputedStyle($('.bottom')).display !== 'none';
-  var xanh = bien('--brand-3') || (toi ? '#142a0b' : '#1d3a0e');
-  var nen = bien('--bg') || (toi ? '#11160e' : '#f4f6f1');
-  var dau = bien('--brand'); if (!/^#[0-9a-f]{6}$/i.test(dau)) dau = toi ? '#1b3410' : '#274e13';
-  guiVo({ eco: 'mau', mau: dau, nen: nenXanh ? xanh : nen, chan: nenXanh ? xanh : coThanhDuoi ? (bien('--surface') || (toi ? '#192114' : '#ffffff')) : nen });
-  document.documentElement.classList.toggle('nen-xanh', nenXanh);
+  // Màu thanh trạng thái (trên) và phần dưới cùng để trang vỏ tô phần tai thỏ, thanh vuốt cho liền với app: cùng màu nền giấy.
+  var nen = bien('--paper'); if (!/^#[0-9a-f]{6}$/i.test(nen)) nen = toi ? '#161613' : '#faf8f5';
+  guiVo({ eco: 'mau', mau: nen, nen: nen, chan: nen });
 }
 /** Đổi giao diện; nhớ trên máy và theo tài khoản (mở ở máy khác vẫn đúng giao diện đã chọn). */
 function datGiaoDien(k, khongLuu) {
@@ -264,11 +258,11 @@ function goiPhien(ten) {
 }
 function thongBao(el, loai, chu) { if (el) el.innerHTML = '<span class="' + (loai === 'ok' ? 'toast' : loai === 'cho' ? 'hint' : 'err') + '">' + esc(chu) + '</span>'; }
 
-/* ---------- Hộp thoại: giữa màn hình trên máy tính, trượt từ dưới lên trên điện thoại ---------- */
+/* ---------- Hộp thoại: giữa màn hình trên máy tính, trượt từ dưới lên trên điện thoại. lop 'ngan': ngăn bên phải (máy tính), trang riêng (điện thoại). ---------- */
 function moHop(o) {
   dongHop();
   var ov = document.createElement('div');
-  ov.className = 'ov'; ov.id = 'hop';
+  ov.className = 'ov' + (/(^| )ngan( |$)/.test(o.lop || '') ? ' ov-ngan' : ''); ov.id = 'hop';
   ov.innerHTML = '<div class="dlg ' + (o.lop || '') + '" role="dialog" aria-modal="true" aria-label="' + esc(o.tieuDe || '') + '">' +
     (o.tieuDe !== undefined ? '<div class="dlg-h"><h3>' + esc(o.tieuDe) + '</h3>' + (o.nutDau || '') + '<button class="ibtn" data-dong aria-label="Đóng">' + ic('x') + '</button></div>' : '') +
     '<div class="dlg-b">' + (o.than || '') + '</div>' + (o.chan ? '<div class="dlg-f">' + o.chan + '</div>' : '') + '</div>';
@@ -298,14 +292,14 @@ var TRANG_CHU = ['home', 'Trang chủ', 'home'];
  * Mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy các mục con (giống Cài đặt).
  */
 var NAV_BOD = [
-  ['', [TRANG_CHU, ['task', 'Quản lý task', 'check'], ['log', 'Sự kiện log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Hộp góp ý', 'chat'],
-    ['hoatdong', 'Hoạt động thành viên', 'target'], ['caidat', 'Cài đặt', 'gear']]]];
+  ['', [TRANG_CHU, ['task', 'Quản lý task', 'check'], ['log', 'Quản lý log', 'file'], ['diem', 'Cộng điểm', 'star'], ['mail', 'Hộp thư', 'mail'], ['gopy', 'Góp ý', 'chat'],
+    ['hoatdong', 'Thành viên', 'target'], ['caidat', 'Cài đặt', 'gear']]]];
 /*
  * Thư mục: THU_MUC[mã] = [tên, mô tả, mục con]. Mục con: [trang, tên, biểu tượng, mô tả, tab trong trang].
- * Mục con có thể là một thư mục khác (Hoạt động thành viên > KPI > Task, Log).
+ * Mục con có thể là một thư mục khác (Thành viên > KPI > Task, Log).
  */
 var THU_MUC = {
-  hoatdong: ['Hoạt động thành viên', 'Theo dõi mọi thành viên trừ BOD.', [
+  hoatdong: ['Thành viên', 'Theo dõi mọi thành viên trừ BOD.', [
     ['kpibod', 'KPI', 'target', 'KPI task và KPI log'],
     ['xephang', 'Bảng điểm', 'chart', 'Xếp hạng và lịch sử điểm'],
     ['tongket', 'Chứng nhận', 'award', 'Tình hình cấp chứng nhận']]],
@@ -323,9 +317,6 @@ var THU_MUC = {
     ['seeding', 'Báo cáo', 'chat', 'Điền báo cáo seeding, xem lịch sử']]]
 };
 var TRANG_AN = { BOD: [['baocao', 'Báo cáo điểm', 'chart'], ['seeding', 'Báo cáo seeding', 'chat']], khac: [['anh', 'Ảnh thành tích', 'image']] };
-var BOTTOM = { BOD: ['home', 'task', 'log', 'diem'], UCV: ['home', 'task', 'xephang', 'mail'], khac: ['home', 'task', 'log', 'xephang'] };
-/** Tên ngắn trên thanh tab dưới (điện thoại), để không xuống dòng. */
-var TEN_NGAN = { task: 'Task', log: 'Log', xephang: 'Điểm', mail: 'Hộp thư', diem: 'Cộng điểm' };
 var VAI_TRO = { BOD: 'BOD', HR: 'HR', UCV: 'UCV', TV: 'Thành viên' };
 function vaiTro() { return NGUOI && VAI_TRO[NGUOI.vaiTro] ? NGUOI.vaiTro : 'TV'; }
 /** Được BOD cấp quyền phụ trách seeding (mã SUP-SEED trong sheet). */
@@ -360,9 +351,8 @@ var VE_TU_AN = { baocao: ['xephang'], anh: ['xephang'], seeding: ['caidat', 'clb
 /** Tên trang ở đầu trang và thanh trên điện thoại, khi tên trên menu chỉ rõ nghĩa nhờ nhóm cha. */
 var TEN_DAY_DU = { BOD: {}, khac: { task: 'Task của tôi', log: 'Log của tôi', pttask: 'Task ban phụ trách', ptlog: 'Log ban phụ trách', seeding: 'Báo cáo seeding' } };
 function trangAn() { return NGUOI ? (TRANG_AN[vaiTro()] || TRANG_AN.khac).filter(function (x) { return !flat().some(function (y) { return y[0] === x[0]; }); }) : []; }
-function thanhDuoi() { return BOTTOM[vaiTro()] || BOTTOM.khac; }
 /** Nhãn dưới tên người dùng: BOD hiện chức vụ (nếu danh sách thành viên có ghi), còn lại hiện vai trò. */
-function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : NGUOI.vaiTro === 'HR' && NGUOI.maHr ? VAI_TRO.HR + ' · ' + esc(NGUOI.maHr) : esc(VAI_TRO[NGUOI.vaiTro] || NGUOI.vaiTro); }
+function nhanNguoi() { return NGUOI.vaiTro === 'BOD' && NGUOI.chucVu ? esc(NGUOI.chucVu) : esc(VAI_TRO[NGUOI.vaiTro] || NGUOI.vaiTro); }
 /** Ảnh đại diện tròn (ảnh riêng nếu có, không thì chữ cái cuối tên). */
 function anhTron(lop, kieu, thuocTinh) {
   var anh = NGUOI && NGUOI.anh ? ' style="background-image:url(&quot;' + NGUOI.anh + '&quot;);background-size:cover;background-position:center;color:transparent' + (kieu ? ';' + kieu : '') + '"' : kieu ? ' style="' + kieu + '"' : '';
@@ -389,7 +379,8 @@ function tenTrang(k, s) {
 function soHuyHieu(k) { return k === 'gopy' ? soGopYMoi : k === 'mail' ? soViecCho : 0; }
 function huyHieu(k) { var n = soHuyHieu(k); return n ? '<span class="badge">' + n + '</span>' : ''; }
 /** Số trên nút Menu: cộng các mục không nằm trên thanh tab dưới. */
-function soMenu() { return NGUOI ? flat().reduce(function (a, x) { return a + (thanhDuoi().indexOf(x[0]) < 0 ? soHuyHieu(x[0]) : 0); }, 0) : 0; }
+/** Tổng số việc chờ trên menu, hiện trên nút ☰ của điện thoại. */
+function soMenu() { return NGUOI ? flat().reduce(function (a, x) { return a + soHuyHieu(x[0]); }, 0) : 0; }
 
 function shell(khongBao) {
   if (!page && TRANG_DAU) { var tg = tachDuong(TRANG_DAU); TRANG_DAU = ''; page = tg.k; sub = tg.s; }
@@ -401,20 +392,17 @@ function shell(khongBao) {
   }
   var items = flat();
   if (!page || !trangHopLe(page)) { page = items[0][0]; sub = null; }
-  var bot = thanhDuoi();
-  var coTab = bot.length > 0;
   var nguoiDung = '<button class="sb-me" data-acc title="Tài khoản">' + anhTron('av') + '<span class="who"><b>' + esc(NGUOI.ten) + '</b><span>' + nhanNguoi() + '</span></span><span class="more">' + ic('dots', 18) + '</span></button>';
-  var nutTren = anhTron('av', '', ' data-p="menu" aria-label="Menu và tài khoản"');
-  $('#app').innerHTML = '<div class="app' + (MENU_GON ? ' gon' : '') + (coTab ? '' : ' motab') + '" id="khungapp">' +
-    '<aside class="side"><div class="sb-top"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><b class="sb-name">CLB ECO</b><button class="sb-thu" id="thugon" title="' + (MENU_GON ? 'Mở rộng menu' : 'Thu gọn menu') + '" aria-label="Thu gọn hoặc mở rộng menu">' + ic('dleft', 18) + '</button></div>' +
+  var nutTren = anhTron('av', '', ' data-acc aria-label="Tài khoản"');
+  var soCho = soMenu();
+  $('#app').innerHTML = '<div class="app' + (MENU_GON ? ' gon' : '') + '" id="khungapp">' +
+    '<aside class="side" id="menutrai"><div class="sb-top"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><b class="sb-name">CLB ECO</b><button class="sb-thu" id="thugon" title="' + (MENU_GON ? 'Mở rộng menu' : 'Thu gọn menu') + '" aria-label="Thu gọn hoặc mở rộng menu">' + ic('dleft', 18) + '</button></div>' +
     '<nav class="sb-nav">' + navCuaToi().map(function (g) {
       return '<div class="grp"' + (g[0] ? '' : ' aria-hidden="true"') + '>' + g[0] + '</div>' + g[1].map(function (x) { return '<button class="nav" data-p="' + x[0] + '" title="' + x[1] + '"' + (x[0] === page ? ' aria-current="page"' : '') + '>' + ic(x[2]) + '<span class="t">' + x[1] + '</span>' + huyHieu(x[0]) + '</button>'; }).join('');
     }).join('') + '</nav>' +
-    '<div class="sb-user">' + nguoiDung + '</div></aside>' +
-    '<div class="wrap"><header class="topbar"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><h1 id="tieude">' + esc(tenTrang(page, sub)) + '</h1>' + nutTren + '</header>' +
-    '<div class="vehub" id="vehub" hidden></div><main class="main" id="main"></main></div>' +
-    (coTab ? '<nav class="bottom">' + bot.map(function (k) { var x = items.filter(function (y) { return y[0] === k; })[0]; return '<button data-p="' + k + '"' + (k === page ? ' aria-current="page"' : '') + '><span class="ic">' + ic(x[2], 22) + '</span>' + (TEN_NGAN[k] || x[1]) + huyHieu(k) + '</button>'; }).join('') +
-      '<button data-more' + (bot.indexOf(page) < 0 ? ' aria-current="page"' : '') + '><span class="ic">' + ic('menu', 22) + '</span>Menu' + (soMenu() ? '<span class="badge">' + soMenu() + '</span>' : '') + '</button></nav>' : '') + '</div>';
+    '<div class="sb-user">' + nguoiDung + '</div></aside><div class="man" data-dongmenu></div>' +
+    '<div class="wrap"><header class="topbar"><button class="burger" data-burger aria-label="Mở menu" aria-controls="menutrai" aria-expanded="false">' + ic('menu', 22) + (soCho ? '<span class="badge">' + soCho + '</span>' : '') + '</button><h1 id="tieude">' + esc(tenTrang(page, sub)) + '</h1>' + nutTren + '</header>' +
+    '<div class="vehub" id="vehub" hidden></div><main class="main" id="main"></main></div></div>';
   $('#thugon').onclick = function () { MENU_GON = !MENU_GON; try { localStorage.setItem('eco_menu_gon', MENU_GON ? '1' : '0'); } catch (e) {} $('#khungapp').classList.toggle('gon', MENU_GON); this.title = MENU_GON ? 'Mở rộng menu' : 'Thu gọn menu'; };
   $('#main').className = 'main';
   apGiaoDien();
@@ -452,13 +440,10 @@ function datLichChiaDeu() { if (!henChiaDeu) henChiaDeu = requestAnimationFrame(
 new MutationObserver(datLichChiaDeu).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'style', 'class'] });
 window.addEventListener('resize', datLichChiaDeu);
 
-/** Tô mục đang mở trên menu bên trái (mục cha nếu đang ở trong thư mục) và trên thanh tab dưới. */
+/** Tô mục đang mở trên menu bên trái (mục cha nếu đang ở trong thư mục). */
 function danhDauMenu() {
   var goc = mucGoc(page);
   $$('.sb-nav [data-p]').forEach(function (b) { if (b.getAttribute('data-p') === goc) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-  $$('.bottom [data-p]').forEach(function (b) { if (b.getAttribute('data-p') === page) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-  var them = $('[data-more]');
-  if (them) { if (thanhDuoi().indexOf(page) < 0) them.setAttribute('aria-current', 'page'); else them.removeAttribute('aria-current'); }
 }
 /** Nơi nút quay lại dẫn về: [trang, tab, tên] hoặc null. */
 function veTuDau() {
@@ -488,6 +473,7 @@ function diToi(k, s, khongBao) {
   if (k === 'dangnhap' && NGUOI) k = 'home';
   if (!$('#main') || k === 'dangnhap' || !NGUOI) { page = k; sub = s || null; shell(true); if (!khongBao) baoDuong(false); return; }
   page = k; sub = s || null;
+  dongMenu();
   danhDauMenu(); veNutVe();
   if ($('#tieude')) $('#tieude').textContent = tenTrang(page, sub);
   $('#main').className = 'main';
@@ -497,7 +483,7 @@ function diToi(k, s, khongBao) {
 }
 
 /*
- * Đường dẫn: mỗi trang có địa chỉ riêng (ví dụ ecotdn.github.io/home/#/task) để nút quay lại của trình duyệt
+ * Đường dẫn: mỗi trang có địa chỉ riêng (ví dụ ecotdn.github.io/app/#/task) để nút quay lại của trình duyệt
  * và điện thoại dùng được. Trang vỏ giữ địa chỉ; app báo trang vỏ mỗi khi đổi trang, trang vỏ báo lại khi người dùng bấm quay lại.
  */
 var TRANG_DAU = '', DA_BAO = '';
@@ -557,10 +543,35 @@ function viewMenu() {
     '<button class="mi2 bad" data-out><span class="ic">' + ic('out') + '</span><span class="t">Đăng xuất</span></button></div></div>';
   ganGiaoDien($('#main'));
 }
+/* ---------- Menu trượt từ trái trên điện thoại (nút ☰ hoặc vuốt từ cạnh trái) ---------- */
+function moMenu(mo) {
+  var a = $('#khungapp'); if (!a) return;
+  a.classList.toggle('mo', !!mo);
+  var b = $('[data-burger]'); if (b) b.setAttribute('aria-expanded', mo ? 'true' : 'false');
+}
+function dongMenu() { if ($('#khungapp.mo')) moMenu(false); }
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') dongMenu(); });
+(function () {
+  var x0 = null, y0 = 0, mo = false;
+  document.addEventListener('touchstart', function (e) {
+    var t = e.touches[0], a = $('#khungapp');
+    if (!a || e.touches.length > 1 || window.innerWidth > 860 || $('#hop')) { x0 = null; return; }
+    mo = a.classList.contains('mo');
+    // Đang đóng: chỉ bắt vuốt bắt đầu sát cạnh trái. Đang mở: vuốt sang trái ở đâu cũng đóng.
+    x0 = mo || t.clientX < 24 ? t.clientX : null; y0 = t.clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (x0 === null) return;
+    var t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+    if (dy < Math.abs(dx)) { if (!mo && dx > 50) moMenu(true); else if (mo && dx < -50) moMenu(false); }
+    x0 = null;
+  }, { passive: true });
+})();
 document.addEventListener('click', function (e) {
   if (e.target.closest('[data-out]')) { dongHop(true); goi('dangXuat', PHIEN).catch(function () {}); luuPhien(null); NGUOI = null; page = null; sub = null; shell(); return; }
-  if (e.target.closest('[data-more]')) { if (!dongHop()) return; diToi('menu'); return; }
-  if (e.target.closest('[data-acc]')) { moTaiKhoan(); return; }
+  if (e.target.closest('[data-burger]')) { moMenu(true); return; }
+  if (e.target.closest('[data-dongmenu]')) { dongMenu(); return; }
+  if (e.target.closest('[data-acc]')) { dongMenu(); moTaiKhoan(); return; }
   if (e.target.closest('[data-mk]')) { moDoiMatKhau(); return; }
   if (e.target.closest('[data-caidat]')) { if (!dongHop()) return; diToi('caidat'); return; }
   var p = e.target.closest('[data-p]');
@@ -571,7 +582,8 @@ document.addEventListener('click', function (e) {
 var LOGO_G = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 01-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0012 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 010-4.6V6.6H1.3a12 12 0 000 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 001.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>';
 function loginView() {
   var coGoogle = coVo && GOOGLE_CLIENT_ID;
-  return '<div class="login-wrap dn"><div class="login"><div class="brand"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><div><h2>Đăng nhập CLB ECO</h2><p class="hint" style="margin:4px 0 0">Mọi thành viên CLB đều đăng nhập được, bằng email đã ghi trong danh sách thành viên.</p></div></div>' +
+  return '<div class="login-wrap dn"><div class="dn-anh" aria-hidden="true"><div class="logo">' + logoHtml() + '</div></div><div class="dn-form"><div class="login"><div class="brand"><div class="logo" aria-hidden="true">' + logoHtml() + '</div><b>CLB ECO</b></div>' +
+    '<div><h2>Đăng nhập</h2><p class="hint" style="margin:4px 0 0">Mọi thành viên CLB đều đăng nhập được, bằng email đã ghi trong danh sách thành viên.</p></div>' +
     (coGoogle ? '<button type="button" class="gbtn" id="lg-g">' + LOGO_G + 'Đăng nhập bằng Google</button><div class="or">hoặc dùng mật khẩu</div>' : '') +
     '<form class="form" id="lf"><label class="f">Email<input type="email" id="lg-e" autocomplete="username" required></label>' +
     '<label class="f">Mật khẩu<input type="password" id="lg-p" autocomplete="current-password" required></label>' +
@@ -579,7 +591,7 @@ function loginView() {
     '<span id="lg-m"></span>' +
     '<p class="hint" style="margin:0">Lần đầu đăng nhập, dùng mật khẩu chung của CLB (hỏi ban nhân sự), rồi đổi mật khẩu riêng trong Cài đặt nếu muốn.</p>' +
     '<p class="hint" style="margin:0">App ghi nhớ đăng nhập trên máy này, lần sau mở là vào thẳng. Dùng máy chung thì nhớ bấm Đăng xuất.</p>' +
-    '<p class="hint" style="margin:0">Quên mật khẩu? Nhờ một BOD đặt lại cho bạn.</p></form></div></div>';
+    '<p class="hint" style="margin:0">Quên mật khẩu? Nhờ một BOD đặt lại cho bạn.</p></form></div></div></div>';
 }
 function bindLogin() {
   apGiaoDien(); napAnhNen();
@@ -593,7 +605,7 @@ function bindLogin() {
 }
 function moDoiMatKhau() {
   var h = moHop({ tieuDe: 'Đổi mật khẩu', than: '<form class="form" id="pf"><label class="f">Mật khẩu hiện tại<input type="password" id="p0" autocomplete="current-password"></label><label class="f">Mật khẩu mới <small>Ít nhất 6 ký tự</small><input type="password" id="p1" autocomplete="new-password"></label><label class="f">Nhập lại mật khẩu mới<input type="password" id="p2" autocomplete="new-password"></label>' +
-    (NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Muốn đặt lại mật khẩu cho người khác, vào Cài đặt, Thành viên và phân quyền, Đặt lại mật khẩu.</p>' : '') + '<button hidden></button></form>',
+    (NGUOI.vaiTro === 'BOD' ? '<p class="hint" style="margin:0">Muốn đặt lại mật khẩu cho người khác, vào Cài đặt, Tài khoản, Đặt lại mật khẩu.</p>' : '') + '<button hidden></button></form>',
     chan: '<span class="msg" id="pm"></span><button class="btn ghost" data-dong>Đóng</button><button class="btn" id="pb">Đổi mật khẩu</button>' });
   h.querySelector('.dlg').style.maxWidth = '440px';
   var gui = function (e) {
@@ -613,9 +625,9 @@ function demGopYMoi() {
 function capNhatHuyHieu() {
   ['gopy', 'mail'].forEach(function (k) {
     var n = soHuyHieu(k);
-    $$('[data-p="' + k + '"]').forEach(function (b) { datSo(b, n); });
+    $$('.nav[data-p="' + k + '"], .mi2[data-p="' + k + '"], .sitem[data-p="' + k + '"], .tile[data-p="' + k + '"]').forEach(function (b) { datSo(b, n); });
   });
-  $$('[data-more]').forEach(function (b) { datSo(b, soMenu()); });
+  $$('[data-burger]').forEach(function (b) { datSo(b, soMenu()); });
 }
 function datSo(b, n) {
   var c = b.querySelector('.badge');

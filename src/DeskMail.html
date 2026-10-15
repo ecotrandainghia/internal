@@ -41,7 +41,7 @@ function thanhCongCu(id) {
     if (t === '|') return '<span class="tb-sep"></span>';
     if (t[0] === 'font') return '<select class="tb-sel" data-sel="fontName" title="Phông chữ" aria-label="Phông chữ"><option value="Arial, sans-serif">Sans Serif</option><option value="Georgia, serif">Serif</option><option value="Tahoma, Verdana, sans-serif">Tahoma</option><option value="\'Courier New\', monospace">Monospace</option></select>';
     if (t[0] === 'size') return '<select class="tb-sel" data-sel="fontSize" title="Cỡ chữ" aria-label="Cỡ chữ"><option value="2">Nhỏ</option><option value="3" selected>Bình thường</option><option value="5">Lớn</option><option value="6">Rất lớn</option></select>';
-    if (t[0] === 'mau') return '<label class="tb tb-color" title="Màu chữ"><span style="font-weight:800;border-bottom:3px solid #c0392b;line-height:1">A</span><input type="color" value="#c0392b" data-mau aria-label="Màu chữ"></label>';
+    if (t[0] === 'mau') return '<label class="tb tb-color" title="Màu chữ"><span style="font-weight:500;border-bottom:3px solid #c0392b;line-height:1">A</span><input type="color" value="#c0392b" data-mau aria-label="Màu chữ"></label>';
     return '<button type="button" class="tb" data-cmd="' + t[0] + '"' + (t[3] ? ' data-st="1"' : '') + ' title="' + t[2] + '" aria-label="' + t[2] + '">' + (I[t[1]] ? ic(t[1], 17) : t[1]) + '</button>';
   }).join('') + '</div><div class="linkpop" hidden data-lp><input type="text" placeholder="Chữ hiển thị" data-lt><input type="text" placeholder="Địa chỉ link (https://…)" data-lu><button type="button" class="btn sm" data-lok>Chèn</button><button type="button" class="btn ghost sm" data-lx>Huỷ</button></div>';
 }
@@ -261,7 +261,7 @@ function mailUCV() {
         (coNguoiNhan ? '<div class="cmp-row"><input type="text" id="c-s" class="cmp-subject" placeholder="Tiêu đề" maxlength="250" value="' + esc(v.tieuDe || '') + '"></div>' : '') +
         thanhCongCu('c-tb') +
         '<div class="editor" id="c-ed" contenteditable="true" spellcheck="true" data-ph="Soạn nội dung thư' + (v.thaoTac === 'Chuyển tiếp' ? ' (không bắt buộc, thư gốc được kèm phía dưới)' : '') + '"></div>' +
-        (traLoi && v.goc !== undefined ? '<div class="quote"><label class="row" style="font-size:13px;font-weight:600;color:#555"><input type="checkbox" id="c-q"' + (v.trichDan === false ? '' : ' checked') + '>Kèm trích dẫn thư gốc</label>' + (v.goc ? ' <button type="button" class="qt" id="c-qt" title="Xem thư gốc">•••</button><div id="c-qv" hidden style="margin-top:8px"></div>' : '') + '</div>' : '') +
+        (traLoi && v.goc !== undefined ? '<div class="quote"><label class="row" style="font-size:13px;font-weight:500;color:#555"><input type="checkbox" id="c-q"' + (v.trichDan === false ? '' : ' checked') + '>Kèm trích dẫn thư gốc</label>' + (v.goc ? ' <button type="button" class="qt" id="c-qt" title="Xem thư gốc">•••</button><div id="c-qv" hidden style="margin-top:8px"></div>' : '') + '</div>' : '') +
         (v.thaoTac === 'Chuyển tiếp' ? '<div class="quote hint">Nội dung thư gốc và tệp đính kèm của thư gốc sẽ được kèm phía dưới khi gửi.</div>' : '') +
         (C.chuKy ? '<div class="sig"><div class="lb">Chữ ký CLB tự thêm khi gửi</div>' + locHtml(C.chuKy) + '</div>' : '') +
         '<div class="atts" id="c-at"></div>',
@@ -334,7 +334,7 @@ function mailUCV() {
       var nhom = [];
       C.danhBa.forEach(function (d) { if (nhom.indexOf(d.nhom) < 0) nhom.push(d.nhom); });
       p.innerHTML = '<div class="row sb" style="margin-bottom:8px"><b>Danh bạ</b><input type="search" id="dbq" placeholder="Tìm…" style="max-width:220px"></div>' + (C.danhBa.length ? nhom.map(function (n) {
-        return '<details><summary style="cursor:pointer;font-weight:600;padding:4px 0">' + esc(n) + ' <span class="hint">(' + C.danhBa.filter(function (d) { return d.nhom === n; }).length + ')</span> <button type="button" class="btn ghost sm" data-themnhom="' + esc(n) + '" style="margin-left:6px">Thêm cả nhóm</button></summary>' +
+        return '<details><summary style="cursor:pointer;font-weight:500;padding:4px 0">' + esc(n) + ' <span class="hint">(' + C.danhBa.filter(function (d) { return d.nhom === n; }).length + ')</span> <button type="button" class="btn ghost sm" data-themnhom="' + esc(n) + '" style="margin-left:6px">Thêm cả nhóm</button></summary>' +
           C.danhBa.map(function (d, i) { return d.nhom === n ? '<button type="button" class="mi2" data-db="' + i + '" style="padding:6px 8px;font-weight:500"><span style="flex:1">' + esc(d.ten) + '</span><span class="hint">' + esc(d.email) + '</span></button>' : ''; }).join('') + '</details>';
       }).join('') : '<p class="hint">Danh bạ trống. BOD thêm trong Cài đặt, Danh bạ.</p>');
       p.hidden = false;
@@ -472,7 +472,7 @@ BOD_MAIL.duyet = function () {
       (v.noiDung ? khungThu(v.laHtml ? v.noiDung : chuSangHtmlKhach(v.noiDung)) : '') +
       (guiThu ? '<p class="hint" style="margin:0">' + (v.thaoTac.indexOf('Trả lời') === 0 && v.trichDan ? 'Khi gửi sẽ kèm trích dẫn thư gốc. ' : '') + 'Chữ ký CLB (nếu đang bật) tự thêm vào cuối thư.</p>' : '') +
       (v.dinhKem.length ? '<div class="row">' + v.dinhKem.map(function (f) { return '<span class="pill p-mute">' + ic('attach', 12) + ' ' + esc(f.ten) + '</span>'; }).join('') + '</div>' : '') +
-      (v.maThu ? '<details id="dgoc"><summary style="cursor:pointer;font-weight:600">Xem thư gốc ngay tại đây</summary><div id="dgocb" style="display:grid;gap:10px;margin-top:8px"><p class="muted">Đang tải…</p></div></details>' : '') +
+      (v.maThu ? '<details id="dgoc"><summary style="cursor:pointer;font-weight:500">Xem thư gốc ngay tại đây</summary><div id="dgocb" style="display:grid;gap:10px;margin-top:8px"><p class="muted">Đang tải…</p></div></details>' : '') +
       (v.trangThai === 'Chờ duyệt' ? '<div class="box"><b>Duyệt thư này</b><textarea id="dn" rows="2" placeholder="Ghi chú cho UCV (không bắt buộc, nên ghi khi yêu cầu sửa)"></textarea><div class="row"><button class="btn sm" data-qd="Đã duyệt">' + ic('send', 14) + (guiThu ? 'Duyệt và gửi' : 'Duyệt và thực hiện') + '</button><button class="btn ghost sm" data-qd="Cần sửa lại">Cần sửa lại</button><button class="btn ghost bad sm" data-qd="Từ chối">Từ chối</button><span id="dm"></span></div></div>'
         : '<div class="box"><b>' + esc(v.trangThai) + (v.nguoiDuyet ? ' · ' + esc(v.nguoiDuyet) + ' · ' + ngayDayDu(v.thoiGianDuyet) : '') + '</b>' + (v.ghiChu ? '<span style="white-space:pre-wrap">' + esc(v.ghiChu) + '</span>' : '') + '</div>');
     $('#dve').onclick = function () { $('#dmail').classList.remove('doc'); };
@@ -600,7 +600,7 @@ BOD_MAIL.hangloat = function (maNhap) {
       var tv = nd.thanhVien.map(function (t) { return { ten: t['Họ và tên'], ban: t['Ban'] + (t['Email'] ? '' : ' · chưa có email'), nhom: String(t['Ban']).trim().split(/\s+/)[0].toUpperCase() }; });
       $('#w-src').innerHTML = '<b style="font-size:13px">Thành viên CLB</b>' + picker('wp', tv) +
         (khac.length ? '<b style="font-size:13px">Danh bạ khác</b>' + nhom.map(function (n) {
-          return '<div class="box"><label class="row" style="font-weight:600"><input type="checkbox" data-nhom="' + esc(n) + '">' + esc(n) + '</label>' + khac.map(function (d, i) { return d.Nhom === n ? '<label class="row" style="padding-left:22px"><input type="checkbox" data-db="' + i + '" data-n="' + esc(n) + '">' + esc(d.Ten) + ' <span class="hint">' + esc(d.Email) + '</span></label>' : ''; }).join('') + '</div>';
+          return '<div class="box"><label class="row" style="font-weight:500"><input type="checkbox" data-nhom="' + esc(n) + '">' + esc(n) + '</label>' + khac.map(function (d, i) { return d.Nhom === n ? '<label class="row" style="padding-left:22px"><input type="checkbox" data-db="' + i + '" data-n="' + esc(n) + '">' + esc(d.Ten) + ' <span class="hint">' + esc(d.Email) + '</span></label>' : ''; }).join('') + '</div>';
         }).join('') : '<p class="hint" style="margin:0">Danh bạ khác (CLB khác, đối tác) thêm trong Cài đặt, Danh bạ.</p>') +
         choTrongHint(['Tên', 'Email'], '<br>Riêng thành viên CLB chèn được thêm: ' + phs(nd.cotThanhVien.filter(function (c) { return c !== 'Email'; })));
       var chon = bindPicker('wp');

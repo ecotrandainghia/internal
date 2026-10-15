@@ -1,7 +1,7 @@
 /**
  * Báo cáo seeding trong app CLB ECO, thay cho Google Form seeding.
  * HR phụ trách seeding (BOD cấp quyền trong Cài đặt, Phân quyền HR) dán link bài đăng và tên những người
- * đã react, comment trong 48 giờ. App dò tên với danh sách thành viên và tự cộng điểm theo loại hoạt động
+ * đã react, comment trong số giờ seeding (Cài đặt, Quy tắc). App dò tên với danh sách thành viên và tự cộng điểm theo loại hoạt động
  * đang gắn với react, comment. Mỗi bài chỉ có một báo cáo; BOD huỷ được để điền lại.
  */
 
@@ -18,9 +18,11 @@ function layBaoCaoSeeding(phien) {
   var ky = layKyHienTai_();
   var loai = docBang_('LoaiHoatDong');
   var muc = function (dc) { var l = loaiDungCho_(loai, dc); return l ? { ten: String(l.TenLoai), diem: Number(l.Diem) || 0 } : null; };
-  var tv = docBang_('ThanhVien').filter(khongPhaiBod_);
+  var tv = docThanhVien_().filter(khongPhaiBod_);
+  var qt = quyTac_();
   return {
-    ky: ky ? { nhiemKy: String(ky.NhiemKy), hocKy: Number(ky.HocKy) } : null,
+    ky: ky ? { nhiemKy: String(ky.NhiemKy), giaiDoan: Number(ky.GiaiDoan) } : null,
+    seedingGio: qt.seedingGio,
     react: muc(DUNG_CHO.REACT),
     comment: muc(DUNG_CHO.COMMENT),
     thieuFb: tv.filter(function (t) { return !chuanTenFb_(t.TenFacebook); }).length,
@@ -42,11 +44,12 @@ function tachDanhSach_(s) {
 }
 
 function chuanBiBaoCaoSeeding_(tk, yc, bayGio) {
-  return taoBaoCaoSeeding_(yc, docBang_('ThanhVien').filter(khongPhaiBod_), docBang_('LoaiHoatDong'), layKyHienTai_(),
+  quyTac_();
+  return taoBaoCaoSeeding_(yc, docThanhVien_().filter(khongPhaiBod_), docBang_('LoaiHoatDong'), layKyHienTai_(),
     String(tk.HoVaTen), bayGio, docBangNhiemKy_('BaoCaoSeeding', 'ThoiGian'), docBang_('LichSuDiem'));
 }
 
-/** Xem trước: ai được cộng, tên nào không khớp, cảnh báo 48 giờ. Chưa ghi gì. */
+/** Xem trước: ai được cộng, tên nào không khớp, cảnh báo bài chưa đủ số giờ seeding. Chưa ghi gì. */
 function xemTruocBaoCaoSeeding(phien, yc) {
   var tk = canBaoCaoSeeding_(canDangNhap_(phien));
   var kq = chuanBiBaoCaoSeeding_(tk, yc, new Date());

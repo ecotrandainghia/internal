@@ -14,14 +14,14 @@ test('chỉ nhận mã giao diện có trong danh sách', () => {
   assert.strictEqual(L.chuDeHopLe('"><script>'), '');
 });
 
-test('thuộc tính html: mặc định không gắn gì, Halloween luôn tối', () => {
+test('thuộc tính html: mặc định không gắn gì, giao diện theo mùa không ép sang tối', () => {
   assert.strictEqual(L.thuocTinhChuDe(''), '');
   assert.strictEqual(L.thuocTinhChuDe('linh tinh'), '');
   assert.strictEqual(L.thuocTinhChuDe('xuan'), ' data-chude="xuan"');
-  assert.strictEqual(L.thuocTinhChuDe('halloween'), ' data-chude="halloween" data-theme="dark"');
+  assert.strictEqual(L.thuocTinhChuDe('halloween'), ' data-chude="halloween"');
 });
 
-/** Chạy phần script của ChuDe.html trong một trang giả để lấy danh sách và hàm tính màu. */
+/** Chạy phần script của ChuDe.html trong một trang giả để lấy danh sách giao diện. */
 function napTrang(chuDe) {
   const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'ChuDe.html'), 'utf8');
   const js = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
@@ -39,35 +39,28 @@ test('danh sách giao diện trên trang khớp với máy chủ', () => {
   const { ctx } = napTrang('');
   const ma = vm.runInNewContext('DS_CHU_DE.map(function (p) { return p.ma; })', ctx);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(ma)), L.CHU_DE);
-  const toi = vm.runInNewContext('DS_CHU_DE.filter(function (p) { return p.toi; }).map(function (p) { return p.ma; })', ctx);
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(toi)), ['halloween']);
-  // Mỗi giao diện đều có trang trí, lời chúc, màu lá và hình trên thẻ chọn.
+  // Mỗi giao diện đều có dải trang trí, màu lá và hình trên thẻ chọn.
   L.CHU_DE.forEach((m) => {
-    ['TRANG_TRI', 'LOI_CHUC', 'LA_CHU_DE', 'HINH_THE', 'HAT'].forEach((bang) => {
+    ['TRANG_TRI', 'LA_CHU_DE', 'HINH_THE'].forEach((bang) => {
       assert.ok(vm.runInNewContext(bang + '[' + JSON.stringify(m) + ']', ctx), bang + ' thiếu ' + m);
     });
   });
 });
 
-test('màu tính sẵn là mã hex 6 chữ số (trang vỏ trên điện thoại chỉ nhận dạng này)', () => {
+test('giao diện theo mùa không đổi màu app (màu luôn theo design system màu giấy)', () => {
   L.CHU_DE.forEach((m) => {
-    const { kieu } = napTrang(m);
-    const css = kieu.textContent;
-    assert.match(css, new RegExp('html\\[data-chude="' + m + '"\\]'));
-    ['--brand', '--brand-3', '--bg', '--surface'].forEach((b) => {
-      const ds = [...css.matchAll(new RegExp('(?:^|[;{])' + b + ':([^;}]+)', 'g'))].map((x) => x[1]);
-      assert.ok(ds.length >= 1, m + ' thiếu ' + b);
-      ds.forEach((v) => assert.match(v, /^#[0-9a-f]{6}$/, m + ' ' + b + ' = ' + v));
-    });
+    const { ctx } = napTrang(m);
+    assert.strictEqual(vm.runInNewContext('typeof cssChuDe', ctx), 'undefined');
+    assert.strictEqual(vm.runInNewContext('chuDeToi()', ctx), false);
+    assert.match(vm.runInNewContext('timChuDe(' + JSON.stringify(m) + ').dai', ctx), /gradient/);
   });
-  assert.strictEqual(napTrang('').kieu.textContent, '');
 });
 
-test('đổi giao diện trên trang: gắn và bỏ thuộc tính, Halloween bật tối', () => {
+test('đổi giao diện trên trang: gắn và bỏ thuộc tính, không ép sang tối', () => {
   const { ctx, goc } = napTrang('');
   vm.runInNewContext('apChuDe("halloween")', ctx);
   assert.strictEqual(goc.attrs['data-chude'], 'halloween');
-  assert.strictEqual(goc.attrs['data-theme'], 'dark');
+  assert.strictEqual(goc.attrs['data-theme'], undefined);
   vm.runInNewContext('apChuDe("")', ctx);
   assert.strictEqual(goc.attrs['data-chude'], undefined);
   assert.strictEqual(goc.attrs['data-theme'], undefined);

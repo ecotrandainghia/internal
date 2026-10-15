@@ -1,16 +1,11 @@
 /**
  * KPI task (quy chế 2026-2027, mục II.2 đến II.4).
- * - BOD đánh giá chất lượng task đã xong; app tự ra Đạt / Chưa đạt theo bảng 3 × 3.
- * - BOD ghi gia hạn khi thành viên xin trước hạn ít nhất 24 giờ.
+ * - BOD đánh giá chất lượng task đã xong; app tự ra Đạt / Chưa đạt theo bảng đúng hạn × chất lượng (Cài đặt, Quy tắc).
+ * - BOD ghi gia hạn khi thành viên xin trước hạn đủ số ngày trong Cài đặt, Quy tắc.
  * - Ban HR tính KPI task như mọi ban. App không theo dõi việc HR nhắc deadline nữa.
  * - HR phụ trách ban xem KPI của các ban mình phụ trách.
- * - HR phụ trách seeding đặt nhắc hẹn: 48 giờ sau app nhắc điền báo cáo seeding.
+ * - HR phụ trách seeding đặt nhắc hẹn: hết số giờ seeding (Cài đặt, Quy tắc) thì app nhắc điền báo cáo seeding.
  */
-
-/** Tên những người được miễn task. Không còn nhóm miễn task (mã SUP-RES cũ bị bỏ qua), nên luôn rỗng. */
-function tenSupRes_() {
-  return docBang_('TaiKhoan').filter(function (t) { return nhomHr_(t.NhomHr).indexOf('SUP-RES') >= 0; }).map(function (t) { return String(t.HoVaTen); });
-}
 
 function timDongTheoThoiGian_(v, cot, ms) {
   var c = v[0].indexOf(cot);
@@ -48,7 +43,7 @@ function giaHanTask(phien, thoiGianTao, nguoi, yc) {
     var luu = String(r[td.indexOf('TrangThai')] || TRANG_THAI_TASK.GIAO);
     if (luu === TRANG_THAI_TASK.XONG || luu === TRANG_THAI_TASK.HUY) throw new Error('Task đã ' + (luu === TRANG_THAI_TASK.XONG ? 'xong' : 'huỷ') + ' nên không gia hạn được.');
     var han = ngayChuoi_(r[td.indexOf('HanChot')]);
-    var loi = kiemTraGiaHan_(han, String(yc.hanMoi || ''), String(yc.ngayXin || ''));
+    var loi = kiemTraGiaHan_(han, String(yc.hanMoi || ''), String(yc.ngayXin || ''), quyTac_());
     if (loi) throw new Error(loi);
     if (!ngayChuoi_(r[td.indexOf('HanGoc')])) sh.getRange(dong, td.indexOf('HanGoc') + 1).setValue(han);
     sh.getRange(dong, td.indexOf('HanChot') + 1).setValue(String(yc.hanMoi));
@@ -72,27 +67,22 @@ function phanHoiTask(phien, thoiGianTao, noiDung) {
   });
 }
 
-/** Lúc bắt đầu giai đoạn 2 của nhiệm kỳ hiện tại (ms), 0 nếu chưa có. Thành viên bổ sung chỉ tính việc từ lúc này. */
-function batDauGiaiDoan2_() {
-  var ky = layKyHienTai_();
-  if (!ky) return 0;
-  var d = docBang_('KyHoatDong').filter(function (k) { return String(k.NhiemKy) === String(ky.NhiemKy) && Number(k.HocKy) === 2; })[0];
-  return d && d.BatDau ? new Date(d.BatDau).getTime() : 0;
+/** Task tính KPI của một người: chỉ task giao từ lúc giai đoạn người đó vào CLB bắt đầu. mocGd: { giai đoạn: ms }. */
+function taskTinhKpi_(task, tv, mocGd) {
+  var ten = String(tv.HoVaTen), g = gdVao_(tv);
+  var moc = g >= 2 ? Number((mocGd || {})[g]) || 0 : 0;
+  return task.filter(function (t) { return t.nguoi === ten && t.thoiGianTao >= moc; });
 }
 
-/** Task tính KPI của một người: chính thức cả nhiệm kỳ, bổ sung chỉ task giao từ giai đoạn 2. */
-function taskTinhKpi_(task, tv, moc2) {
-  var ten = String(tv.HoVaTen), boSung = tv.LoaiThanhVien === LOAI_TV.BO_SUNG;
-  return task.filter(function (t) { return t.nguoi === ten && (!boSung || t.thoiGianTao >= moc2); });
-}
-
-/** Thông tin KPI log và KPI task của một người (để hiện). Người được miễn task thì không xét phần task. */
-function kpiCuaNguoi_(tv, task, moc2, supRes, suKienLog) {
-  var ten = String(tv.HoVaTen);
-  var kq = { ten: ten, ban: String(tv.Ban || ''), nhom: nhomBan_(tv.Ban), khoi: khoiLop_(tv.Lop), boSung: tv.LoaiThanhVien === LOAI_TV.BO_SUNG, log: kpiLogCuaNguoi_(tv, suKienLog || [], moc2) };
-  if (supRes.indexOf(ten) >= 0) { kq.mien = true; return kq; }
-  kq.task = tongKpiTask_(taskTinhKpi_(task, tv, moc2));
-  return kq;
+/** Thông tin KPI log và KPI task của một người (để hiện), kèm phần trăm đạt của ban người đó. */
+function kpiCuaNguoi_(tv, task, mocGd, suKienLog) {
+  var g = gdVao_(tv);
+  return {
+    ten: String(tv.HoVaTen), maTV: String(tv.MaTV || ''), ban: String(tv.Ban || ''), nhom: nhomBan_(tv.Ban), khoi: khoiLop_(tv.Lop),
+    boSung: g >= 2, gdVao: g, datTask: mucDatCua_(tv.Ban, 'datTask'), datLog: mucDatCua_(tv.Ban, 'datLog'),
+    log: kpiLogCuaNguoi_(tv, suKienLog || [], mocGd),
+    task: tongKpiTask_(taskTinhKpi_(task, tv, mocGd))
+  };
 }
 
 /** Phạm vi HR phụ trách của tài khoản đang đăng nhập (các ban ở cột BanQuanLy). */
@@ -109,15 +99,17 @@ function phamViHrCua_(tk) {
  */
 function layKpi(phien) {
   var tk = canDangNhap_(phien);
-  var task = docTask_(), moc2 = batDauGiaiDoan2_(), supRes = tenSupRes_(), suKienLog = docSuKienLog_();
+  var qt = quyTac_(), task = docTask_(), mocGd = mocGiaiDoanNay_(), suKienLog = docSuKienLog_();
   var tv = docThanhVien_().filter(khongPhaiBod_);
-  var cua = function (t) { return kpiCuaNguoi_(t, task, moc2, supRes, suKienLog); };
-  if (String(tk.VaiTro) === 'BOD') return { laBod: true, moc2: moc2, thanhVien: tv.map(cua) };
+  var cua = function (t) { return kpiCuaNguoi_(t, task, mocGd, suKienLog); };
+  var quyTac = { datTask: qt.datTask, datLog: qt.datLog, giaHanNgay: qt.giaHanNgay };
+  if (String(tk.VaiTro) === 'BOD') return { laBod: true, quyTac: quyTac, thanhVien: tv.map(cua) };
   var toi = tv.filter(function (t) { return String(t.HoVaTen).toLowerCase() === String(tk.HoVaTen).toLowerCase(); })[0] || { HoVaTen: String(tk.HoVaTen), Ban: '' };
   var cuaToi = task.filter(function (t) { return t.nguoi === String(tk.HoVaTen); }).sort(function (a, b) { return a.hanChot < b.hanChot ? 1 : a.hanChot > b.hanChot ? -1 : 0; });
   var pv = phamViHrCua_(tk);
   return {
     laBod: false,
+    quyTac: quyTac,
     phamVi: { ban: pv.ban },
     thanhVienBan: pv.co ? tv.filter(function (t) { return pv.thuoc(String(t.HoVaTen)); }).map(cua) : [],
     kpi: cua(toi),
@@ -125,7 +117,7 @@ function layKpi(phien) {
   };
 }
 
-/* ---------- Nhắc hẹn 48 giờ cho HR phụ trách seeding ---------- */
+/* ---------- Nhắc hẹn điền báo cáo seeding cho HR phụ trách seeding ---------- */
 
 function cacNhacSeedingCua_(email) {
   return docBang_('NhacSeeding').filter(function (n) { return String(n.Email).toLowerCase() === String(email).toLowerCase() && !n.DaNhac; })
@@ -133,7 +125,7 @@ function cacNhacSeedingCua_(email) {
     .sort(function (a, b) { return a.lucNhac - b.lucNhac; });
 }
 
-/** HR phụ trách seeding đặt nhắc hẹn khi thấy bài mới: 48 giờ sau app nhắc điền báo cáo. Không ghi giờ đăng thì tính từ lúc đặt. */
+/** HR phụ trách seeding đặt nhắc hẹn khi thấy bài mới: hết số giờ seeding thì app nhắc điền báo cáo. Không ghi giờ đăng thì tính từ lúc đặt. */
 function datNhacSeeding(phien, yc) {
   var tk = canBaoCaoSeeding_(canDangNhap_(phien));
   yc = yc || {};
@@ -141,12 +133,10 @@ function datNhacSeeding(phien, yc) {
   if (isNaN(new Date(luc).getTime())) throw new Error('Thời gian bài được đăng chưa đúng.');
   var link = String(yc.link || '').trim();
   if (link && !linkHopLe_(link)) throw new Error('Link bài đăng phải bắt đầu bằng https://');
-  var lucNhac = luc + 48 * 3600000;
-  if (lucNhac < Date.now()) throw new Error('Bài đã đăng hơn 48 giờ rồi, bạn điền báo cáo luôn nhé.');
+  var gio = quyTac_().seedingGio;
+  var lucNhac = luc + gio * 3600000;
+  if (lucNhac < Date.now()) throw new Error('Bài đã đăng hơn ' + gio + ' giờ rồi, bạn điền báo cáo luôn nhé.');
   themDong_('NhacSeeding', [{ ThoiGian: new Date(), Email: String(tk.Email), HoVaTen: String(tk.HoVaTen), LinkBai: link, LucDang: new Date(luc), LucNhac: new Date(lucNhac), DaNhac: '' }]);
-  if (!ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'nhacSeedingTheoGio'; })) {
-    ScriptApp.newTrigger('nhacSeedingTheoGio').timeBased().everyHours(1).create();
-  }
   return cacNhacSeedingCua_(tk.Email);
 }
 
@@ -162,10 +152,14 @@ function xoaNhacSeeding(phien, thoiGianMs) {
   return cacNhacSeedingCua_(tk.Email);
 }
 
-/** Chạy mỗi giờ: nhắc các bài đã đủ 48 giờ (theo cách nhận thông báo của từng người; chưa chọn cách thì gửi mail). */
+/** Chạy mỗi giờ: nhắc các bài đã đủ số giờ seeding (theo cách nhận thông báo của từng người; chưa chọn cách thì gửi mail). */
 function nhacSeedingTheoGio(e) {
   if (!laLichChay_(e)) return;
-  var bayGio = Date.now(), tz = Session.getScriptTimeZone();
+  chayViec_('nhacSeedingTheoGio', nhacSeedingTheoGio_);
+}
+
+function nhacSeedingTheoGio_() {
+  var bayGio = Date.now(), tz = muiGio_(), gio = quyTac_().seedingGio;
   var den = [];
   voiKhoa_(function () {
     var sh = bangDuLieu_('NhacSeeding');
@@ -176,14 +170,15 @@ function nhacSeedingTheoGio(e) {
       den.push({ email: String(v[r][td.indexOf('Email')]), link: String(v[r][td.indexOf('LinkBai')] || ''), lucDang: new Date(v[r][td.indexOf('LucDang')]) });
     }
   });
-  if (!den.length) return;
+  if (!den.length) return '';
   var nguoi = {};
   nguoiNhanThongBao_().forEach(function (n) { nguoi[n.email.toLowerCase()] = n; });
   den.forEach(function (d) {
-    var noiDung = 'Bài đăng lúc ' + Utilities.formatDate(d.lucDang, tz, 'HH:mm dd/MM') + ' đã đủ 48 giờ. Bạn vào app CLB ECO, mục Seeding, Nộp báo cáo, điền những người đã react và comment nhé.' + (d.link ? '\n' + d.link : '');
+    var noiDung = 'Bài đăng lúc ' + Utilities.formatDate(d.lucDang, tz, 'HH:mm dd/MM') + ' đã đủ ' + gio + ' giờ. Bạn vào app CLB ECO, mục Seeding, Nộp báo cáo, điền những người đã react và comment nhé.' + (d.link ? '\n' + d.link : '');
     try {
       var n = nguoi[d.email.toLowerCase()];
       if (!n || !guiThongBao_(n, 'Đến giờ báo cáo seeding', noiDung)) guiMailThongBao_(d.email, 'Đến giờ báo cáo seeding', noiDung);
     } catch (x) { /* một người lỗi không chặn người khác */ }
   });
+  return 'Đã nhắc ' + den.length + ' bài';
 }

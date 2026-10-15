@@ -2,269 +2,278 @@
 
 ## Tổng thể
 
-- Một file **Google Sheet "ECO - Dữ liệu"** trên Drive của tài khoản CLB là cơ sở dữ liệu. Mỗi tab là một bảng.
-- Một **dự án Apps Script gắn với file đó** chứa toàn bộ mã trong thư mục `src/`.
-- Dự án được triển khai thành **ứng dụng web**, chạy dưới quyền tài khoản CLB, ai có link cũng mở được.
-  - `…/exec` mở ECOBoard.
-  - `…/exec?app=desk` mở ECODesk.
-- Trong file Google Sheet có menu **ECO hậu kỳ → Tải danh sách lên hệ thống**. Đây là thao tác duy nhất không làm trên giao diện app.
+- **Mã** nằm ở một dự án Apps Script riêng (thư mục `src/`), không gắn vào file dữ liệu. Dự án được triển khai thành **ứng dụng web**, chạy dưới quyền tài khoản CLB, ai có link cũng mở được (nhưng phải đăng nhập mới xem được gì).
+- **Dữ liệu** nằm trong file Google Sheet **"CLB ECO - Dữ liệu"** trong thư mục Drive **"CLB ECO - App"** của tài khoản CLB. Mỗi tab là một bảng. Cùng thư mục có các thư mục con Sao lưu, Lưu trữ, Đính kèm mail, Ảnh nền. Thư mục hay thư mục con bị xoá thì app tự tạo lại.
+- App mở file dữ liệu theo ID lưu trong thuộc tính của dự án (`IdFileDuLieu`). Chưa có ID thì mở link app sẽ ra trang **Cài đặt lần đầu** (`CaiDatLanDau.gs`, `TrangCaiDatLanDau.html`).
+- Không có menu hay hộp thoại nào trong Google Sheet. Mọi việc, kể cả tải danh sách thành viên, đều làm trong app. Người dùng không cần mở file dữ liệu.
+- Mã bot Zalo và mật khẩu chung của CLB (đã băm) cất trong thuộc tính của dự án (`layBiMat_`, `datBiMat_`), không nằm trong file dữ liệu. Ai được chia sẻ file dữ liệu cũng không đọc được.
 
-## Ghi cùng lúc và tốc độ (`src/Code.gs`)
+## Cài đặt lần đầu (`src/CaiDatLanDau.gs`)
 
-- **Khoá ghi:** mọi chỗ ghi vào sheet chạy trong khoá chung (`voiKhoa_`, hoặc `layKhoa_`/`traKhoa_`). Hai người bấm lưu cùng lúc thì lần lượt từng người ghi, không ai ghi đè hay chen vào dòng của người kia. Việc đọc rồi sửa (tìm dòng rồi ghi, lọc bảng rồi ghi đè) phải nằm trọn trong một khoá. Gọi lồng nhau vẫn được. Chờ quá 30 giây thì báo "Đang có nhiều người lưu cùng lúc". Việc chạy lâu (gửi thư hẹn giờ, nhắc việc) chỉ khoá lúc ghi, không khoá lúc gửi.
-- **Nhớ tạm trên máy chủ:** `docBang_` đọc mỗi bảng một lần trong một lần chạy. Bốn bảng ít đổi (`BANG_NHO_TAM`: CaiDat, TaiKhoan, ThanhVien, LoaiHoatDong) còn được nhớ 10 phút giữa các lần chạy. Ghi vào bảng nào (qua `bangDuLieu_`) thì bản nhớ của bảng đó bị bỏ ngay; sửa tay trên sheet thì `onEdit` bỏ giúp. Trong khoá luôn đọc thẳng từ sheet.
-- **Mở app nhanh:** ECODesk hỏi máy chủ một lần (`moDesk`: người dùng + trang chào). Máy nhớ kết quả lần mở trước (`eco_lan_mo`) nên lần sau hiện ngay rồi mới cập nhật. Sau khi mở, app lấy sẵn dữ liệu các trang trên thanh dưới; dữ liệu đọc của vài trang (`DOC_NHANH`) được giữ 60 giây trên máy, và bị bỏ hết ngay khi người dùng lưu, sửa hay xoá bất cứ gì.
+- Chỉ chủ dự án (tài khoản CLB đã triển khai app) làm được. Ứng dụng web mở cho mọi người không cần đăng nhập nên Google có thể không cho biết ai đang mở trang; khi đó người cài đặt bấm gửi mã 6 số tới email tài khoản CLB (`guiMaCaiDat`, mã dùng 30 phút, sai 5 lần thì phải gửi mã mới) và nhập mã đó.
+- **Tạo mới** (`caiDatTaoMoi`): tạo thư mục "CLB ECO - App", file "CLB ECO - Dữ liệu", mọi bảng với dữ liệu mặc định (thang điểm theo quy chế, cơ cấu ban, quy tắc), tài khoản BOD đầu tiên, mật khẩu chung và mọi lịch chạy tự động.
+- **Dùng file có sẵn** (`caiDatDungFileCo`): dán link một file dữ liệu cũ (bản sao lưu, hoặc khi chuyển app sang tài khoản CLB khác). App kiểm tra file có tab TaiKhoan, ThanhVien, thêm bảng và cột còn thiếu, rồi cài lịch chạy. File chưa có BOD hay mật khẩu chung thì tạo thêm.
 
-## Các tab dữ liệu
+## Tầng dữ liệu (`src/DuLieu.gs`)
 
-Tên cột viết tiếng Việt không dấu, không cách. Không có cột mã (id): thành viên phân biệt bằng họ tên, các bản ghi khác phân biệt bằng thời gian.
+- **Đọc, ghi:** `docBang_` đọc cả bảng thành danh sách đối tượng, `themDong_` thêm dòng, `ghiDeBang_` ghi đè cả bảng, `layCaiDat_`/`datCaiDat_` đọc ghi bảng CaiDat. Các file khác không gọi thẳng Google Sheet.
+- **Khoá ghi:** mọi chỗ ghi chạy trong khoá chung (`voiKhoa_`, hoặc `layKhoa_`/`traKhoa_`). Hai người bấm lưu cùng lúc thì lần lượt từng người ghi, không ai ghi đè hay chen vào dòng của người kia. Việc đọc rồi sửa phải nằm trọn trong một khoá. Gọi lồng nhau vẫn được. Chờ quá 30 giây thì báo "Đang có nhiều người lưu cùng lúc". Việc chạy lâu (gửi thư hẹn giờ, nhắc việc) chỉ khoá lúc ghi.
+- **Nhớ tạm trên máy chủ:** mỗi bảng chỉ đọc một lần trong một lần chạy. Các bảng ít đổi (`BANG_NHO_TAM`: CaiDat, TaiKhoan, ThanhVien, LoaiHoatDong, Ban, NhiemKy, GiaiDoan) còn được nhớ 10 phút giữa các lần chạy. Ghi vào bảng nào thì bản nhớ của bảng đó bị bỏ ngay. Ai sửa tay trên file dữ liệu thì app thấy sau tối đa 10 phút, hoặc ngay khi BOD bấm **Làm mới dữ liệu** ở Cài đặt, Hệ thống.
+- **Tự thêm bảng và cột:** cấu trúc bảng nằm ở `BANG` trong `Logic.gs`. Bản cập nhật thêm bảng hay cột thì `damBaoCauTrucBang_` tự thêm vào file dữ liệu ở lần dùng đầu tiên.
+- **Cấu hình:** `napCauHinh_` nạp cơ cấu ban (bảng Ban) và quy tắc của nhiệm kỳ đang chạy vào `CO_CAU`, `QUY_TAC`. Máy chủ đọc quy tắc qua `quyTac_()`, không đọc thẳng giá trị mặc định.
+- **Mở app nhanh:** app hỏi máy chủ một lần (`moDesk`: người dùng và trang chào). Máy nhớ kết quả lần mở trước (`eco_lan_mo`) nên lần sau hiện ngay rồi mới cập nhật. Dữ liệu đọc của vài trang (`DOC_NHANH`) được giữ 60 giây trên máy, và bị bỏ hết ngay khi người dùng lưu, sửa hay xoá bất cứ gì.
 
-| Tab | Cột | Ghi chú |
+## Các bảng dữ liệu
+
+Tên cột viết tiếng Việt không dấu, không cách. Danh sách đầy đủ các cột nằm ở `BANG` trong `src/Logic.gs`. Dữ liệu chỉ thêm, không xoá: người rời CLB chỉ đổi trạng thái; mỗi dòng điểm, task đều ghi nhiệm kỳ và mã thành viên để nhiều năm sau vẫn tra được.
+
+| Bảng | Dùng để |
+|---|---|
+| ThanhVien | Mọi người từng ở CLB, kể cả người đã rời. Có mã thành viên (MaTV), hồ sơ, LoaiThanhVien (Chính thức, Bổ sung), GiaiDoanVao, TrangThai (Đang hoạt động, Đã rời), NgayVao, NgayRoi. Không giữ số điện thoại phụ huynh và nơi sống. |
+| ThanhVienGiaiDoan | Ai ở CLB trong mỗi giai đoạn, ở ban nào, chức vụ gì. Ghi khi mở giai đoạn. |
+| NhiemKy | Mỗi nhiệm kỳ một dòng: lúc bắt đầu, bản quy tắc riêng của nhiệm kỳ (QuyTac), file lưu trữ (IdLuuTru, NgayLuuTru). |
+| GiaiDoan | Mỗi giai đoạn một dòng: nhiệm kỳ, số giai đoạn, lúc bắt đầu, kiểu tải đã mở nó. Dòng cuối là giai đoạn đang chạy. |
+| KetQuaNhiemKy | Kết quả của từng người mỗi nhiệm kỳ: điểm từng giai đoạn, điểm cả kỳ, top, KPI task, KPI log, chứng nhận. Giữ mãi ở file chính. |
+| Ban | Cơ cấu ban: mã, tên đầy đủ, nhóm, chữ viết tắt, ban điều hành, có HR phụ trách, đang dùng, thứ tự. |
+| LanTai | Mỗi lần tải danh sách thành viên một dòng: nhiệm kỳ, kiểu chọn, kiểu thực tế, số thêm, sửa, rời, người tải. |
+| DoiBan | Ai đổi ban, từ ban nào sang ban nào, lúc nào. |
+| SinhNhat | Sự kiện sinh nhật app đã tạo trong Google Lịch của từng nhiệm kỳ. |
+| LichSuDiem | Mỗi lần cộng điểm một dòng, kèm mã thành viên, nhiệm kỳ, giai đoạn. Điểm ghi tại lúc cộng nên đổi thang điểm không làm đổi lịch sử. |
+| LoaiHoatDong | Thang điểm: tên loại, điểm, cộng tay hay tự cộng, giới hạn mỗi giai đoạn, gắn với chức năng tự cộng nào (DungCho). |
+| BangGhim | Link ghim hiện ở trang chủ thành viên. |
+| GopY | Góp ý. Họ tên trống là ẩn danh. DaDung là lúc BOD xác nhận góp ý được dùng (app cộng điểm). |
+| BaoCaoSeeding | Báo cáo seeding: link bài, tên react, comment, tên không khớp, trạng thái. |
+| TaiKhoan | Tài khoản đăng nhập: email, mã thành viên, vai trò, mật khẩu đã băm, cách nhận thông báo, giao diện, ban HR phụ trách, nhóm HR, tự nhắc. |
+| CaiDat | Các cài đặt dạng khoá và giá trị. |
+| Task | Mỗi người phụ trách một dòng: hạn chót, trạng thái, ngày nộp, gia hạn, chất lượng, người đánh giá, HR phụ trách. |
+| NhacSeeding | Hẹn nhắc điền báo cáo seeding sau 48 giờ. |
+| AnhDaiDien | Ảnh đại diện nhỏ (data URL, khoảng 30 KB). |
+| KetNoiZalo | Ai đã kết nối bot Zalo. |
+| ViecMail | Mỗi thao tác mail của UCV (nháp, chờ duyệt, đã duyệt…). |
+| DanhBa | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
+| LichGui | Thư hàng loạt đã gửi hoặc hẹn giờ. |
+| FileLog | Các file đăng ký log đã tạo. |
+| SuKienLog | Đợt log: tên, số buổi dự kiến, chỉ tiêu chung và riêng, trạng thái, lúc chốt. |
+| BuoiLog | Buổi của một đợt log: ngày, thời lượng, trạng thái, người đăng ký, người có mặt. |
+| ThietBi | Máy đã bật thông báo của app. |
+| ThongBao | Thông báo app đã gửi, để máy lấy nội dung. Tự xoá sau 30 ngày. |
+| NhatKyHeThong | Nhật ký các việc chạy tự động và lỗi. Giữ 3000 dòng gần nhất. |
+
+## Cơ cấu ban và quy tắc (`src/Logic.gs`, `src/CaiDat.gs`)
+
+- Giá trị mặc định nằm ở đầu `Logic.gs`: `CO_CAU_MAC_DINH` (các ban) và `QUY_TAC_MAC_DINH` (quy tắc). Khi app chạy, giá trị BOD đã lưu đè lên. Không ai phải sửa code để đổi quy tắc.
+- **BOD chỉnh được** trong Cài đặt, nhóm Quy tắc CLB:
+  - **Cơ cấu ban** (`luuCoCau`): thêm ban, đổi tên, gộp nhóm (ví dụ PR Caption, PR Design, PR Photo cùng nhóm PR), chữ viết tắt dùng trong mã thành viên, ban giải thể (bỏ chọn Đang dùng, dữ liệu cũ vẫn xem được). Phải có đúng một ban điều hành. Không xoá được ban còn thành viên. Chữ viết tắt đã có trong mã thành viên thì không đổi được.
+  - **Thang điểm** (`luuLoaiHoatDong`): các loại hoạt động và số điểm.
+  - **Khen thưởng, hạn task và buổi log** (`luuQuyTac`, các mục ở `CHINH_DUOC`): top bao nhiêu % được khen thưởng (mặc định 15), còn bao nhiêu ngày thì task "sắp đến hạn" (mặc định 2), trễ quá bao nhiêu ngày thì "không hoàn thành" (mặc định 1), các thời lượng buổi log (mặc định 90 và 180 phút).
+- **Cố định theo quy chế:** KPI task và KPI log đạt từ 80%; bù trừ khi mỗi phần từ 60% và lọt top 40%; 2 giai đoạn mỗi nhiệm kỳ; điểm về 0 mỗi giai đoạn; bảng kết quả task; xin gia hạn trước hạn ít nhất 24 giờ; seeding trong 48 giờ.
+- **Mỗi nhiệm kỳ giữ một bản quy tắc** (bảng NhiemKy, cột QuyTac), chép lúc nhiệm kỳ bắt đầu. Đổi quy tắc chỉ áp cho nhiệm kỳ đang chạy và các nhiệm kỳ sau. Nhiệm kỳ cũ vẫn xem lại đúng như lúc đó.
+- Thứ tự ban ở mọi chỗ liệt kê (nút lọc, danh sách chọn người, báo cáo, danh bạ, file log) theo thứ tự trong cơ cấu (`thuTuBan_`). Nhóm đứng ở chỗ ban đầu tiên của nhóm. Ban lạ cùng nhóm đứng ngay sau nhóm đó, ban lạ hẳn đứng cuối.
+
+## Mã thành viên
+
+- Dạng **YY-G-BAN-SS** (`maThanhVienMoi_`, `docMaThanhVien_`). Ví dụ `26-1-PG-07`: vào nhiệm kỳ 2026-2027, đợt tuyển 1, ban PG, người thứ 7.
+  - YY: hai số cuối năm đầu nhiệm kỳ lúc vào CLB.
+  - G: đợt vào, 0 là Oday, 1 là đợt tuyển 1, 2 là đợt tuyển 2.
+  - BAN: chữ viết tắt của ban lúc vào (theo cơ cấu ban).
+  - SS: số thứ tự trong cùng năm, đợt, ban.
+- Mã do app cấp khi người đó lần đầu có trong danh sách. Mã **không bao giờ đổi** và không cấp lại cho người khác, kể cả khi người đó đổi ban hay rời CLB. Người quay lại dùng lại mã cũ.
+
+## Tải danh sách thành viên (`src/Code.gs`, Cài đặt → Tài khoản → Tải danh sách thành viên)
+
+1. BOD chọn kiểu tải, nhiệm kỳ (app gợi ý), dán link sheet nguồn và tên tab. Sheet nguồn phải chia sẻ cho tài khoản CLB.
+2. App đọc tab nguồn, tìm dòng tiêu đề, nhận cột theo **tên** (bỏ dấu, không phân biệt hoa thường), nên đổi thứ tự cột vẫn chạy. Bắt buộc có "Họ và tên" và "Ban". Cột nào không có thì giữ thông tin cũ.
+3. Nhận ra từng người theo mã thành viên (nếu sheet có cột "Mã thành viên"), rồi theo email, rồi theo họ tên. Trùng tên mà khác email là hai người khác nhau.
+4. Kiểu tải (`KIEU_TAI`). Oday, đợt 1, đợt 2 mỗi nhiệm kỳ chỉ làm một lần, theo thứ tự đó. Chọn lại một kiểu đã làm thì tự tính là Cập nhật.
+   - **Sau Oday**: đầu nhiệm kỳ, mở nhiệm kỳ mới. Chưa mở giai đoạn.
+   - **Sau tuyển đợt 1**: mở giai đoạn 1 (và nhiệm kỳ mới nếu chưa có Oday). Người mới là chính thức.
+   - **Sau tuyển đợt 2**: mở giai đoạn 2. Người mới là thành viên bổ sung.
+   - **Cập nhật**: sửa thông tin, thêm người bị sót, đánh dấu người đã rời; không đổi giai đoạn. Đổi ban giữa nhiệm kỳ dùng kiểu này, app ghi vào bảng DoiBan.
+   - Lần tải đầu của nhiệm kỳ: mọi người ở lại đều thành chính thức của nhiệm kỳ mới.
+5. **Xem trước** (`xemTruocTaiDanhSach`): báo kiểu tải thực sự, giai đoạn sẽ mở, người thêm (kèm mã mới), sửa, đổi ban, quay lại, đã rời, số tài khoản mới. Có ban chưa có trong cơ cấu thì BOD chọn thêm luôn vào cơ cấu hoặc sửa sheet nguồn. Danh sách mới không có chính người đang tải trong ban điều hành thì không cho tải.
+6. **Tải lên** (`taiDanhSachThanhVien`): ghi bảng ThanhVien (người không còn trong danh sách đổi thành "Đã rời", không xoá), ghi NhiemKy, GiaiDoan, ThanhVienGiaiDoan, LanTai, DoiBan, đồng bộ tài khoản (mọi thành viên có email đều có tài khoản; ban điều hành là BOD; HR, UCV giữ nguyên; người rời bị bỏ tài khoản). Tài khoản mới đăng nhập bằng mật khẩu chung.
+7. Nếu bật **Ghi mã thành viên vào sheet nguồn**, app ghi mã vào cột "Mã thành viên" của sheet nguồn (thêm cột nếu chưa có), để lần sau nhận đúng người dù đổi tên hay đổi email.
+8. Lịch sinh nhật: BOD đặt Google Lịch của nhiệm kỳ ở Cài đặt, Tài khoản, Lịch sinh nhật. Mỗi lần tải, app đồng bộ sự kiện sinh nhật cả ngày lặp lại hằng năm.
+
+## Thành viên qua các năm (Cài đặt → Tài khoản)
+
+- `layDanhSachThanhVien`: mọi người từng ở CLB, cả người đã rời, lọc được theo năm vào.
+- `layHoSoThanhVien`: hồ sơ một người theo mã: thông tin liên lạc, các giai đoạn đã tham gia (ban, chức vụ, loại thành viên), các lần đổi ban, kết quả từng nhiệm kỳ (từ KetQuaNhiemKy).
+
+## Việc tự chạy (`src/DuLieu.gs`, `src/HeThong.gs`)
+
+| Lịch chạy | Khi nào | Làm gì |
 |---|---|---|
-| ThanhVien | HoVaTen, Lop, Ban, ChucVu, NgaySinh, SoDienThoaiCaNhan, SoDienThoaiPhuHuynh, Email, LinkFacebook, TenFacebook, NoiSong, LoaiThanhVien, DotGiaNhap | Danh sách hiện tại. Bị ghi đè mỗi lần tải danh sách. LoaiThanhVien: Chính thức hoặc Bổ sung (người vào ở đợt 2); DotGiaNhap: đợt người đó vào trong nhiệm kỳ. |
-| LanTai | ThoiGian, NhiemKy, KieuChon, Kieu, SoThem, SoSua, SoAn, TongSo | Mỗi lần tải danh sách một dòng. Dùng để biết Oday, đợt 1, đợt 2 đã làm trong nhiệm kỳ chưa. |
-| DoiBan | ThoiGian, HoVaTen, BanCu, BanMoi | Ai đổi ban và từ lúc nào (ghi khi tải danh sách thấy cột Ban khác trước). |
-| SinhNhat | HoVaTen, NgaySinh, TieuDe, MaSuKien, NhiemKy | Sự kiện sinh nhật app đã tạo trong lịch Google “Sinh nhật yyyy” của từng nhiệm kỳ (mã lịch của từng nhiệm kỳ lưu ở CaiDat `LichSinhNhat`, BOD nhập ở bước tải danh sách). |
-| ThanhVienCu | các cột của ThanhVien, NgayRoi, LoaiThanhVien, DotGiaNhap | Hồ sơ đầy đủ của người không còn trong danh sách mới (tự thêm khi tải danh sách). Ai quay lại CLB thì tự bỏ khỏi đây. |
-| LichSuDiem | ThoiGian, HoVaTen, LoaiHoatDong, TenHoatDong, Diem, NguoiCong, NhiemKy, HocKy | Mỗi lần cộng điểm là một dòng. Không bao giờ xoá. Điểm được ghi lại tại thời điểm cộng, nên đổi số điểm của loại hoạt động không làm đổi lịch sử. |
-| KyHoatDong | NhiemKy, HocKy, BatDau, KieuTaiLen | Mỗi giai đoạn một dòng (cột HocKy là số giai đoạn, giữ tên cũ). Dòng cuối là giai đoạn hiện tại. |
-| LuuTruThanhVien | NhiemKy, HocKy, HoVaTen, Ban | Danh sách thành viên ở đầu mỗi học kỳ, dùng để biết ai được xem điểm học kỳ 1. |
-| LoaiHoatDong | TenLoai, Diem, CongTay, GioiHan, DungCho | File mới có sẵn 10 mức theo quy chế 2026-2027 (`MUC_DIEM_QUY_CHE`); BOD sửa trong Cài đặt hoặc bấm nạp lại mức theo quy chế. `GioiHan`: số lần tối đa mỗi người mỗi giai đoạn (trống là không giới hạn). `DungCho`: `react`, `comment` (báo cáo seeding), `gopy` (nút Đã đưa vào sử dụng); mỗi giá trị gắn với tối đa một loại. |
-| BangGhim | TieuDe, DuongDan | Link ghim trên ECOBoard. |
-| GopY | ThoiGian, NoiDung, DaDoc, HoVaTen, DaDung, NguoiDanhDau | Góp ý. HoVaTen trống là ẩn danh. DaDung: lúc BOD xác nhận góp ý được đưa vào sử dụng (app cộng điểm cho người gửi). |
-| BaoCaoSeeding | ThoiGian, NguoiNop, LinkBai, LucDang, React, Comment, KhongKhop, TrangThai, NguoiHuy | Báo cáo seeding của HR phụ trách seeding (nhóm `SUP-SEED`). LucDang trống: app lấy giờ gửi. Các dòng điểm của một báo cáo có cùng ThoiGian và NguoiCong bắt đầu bằng "Seeding: "; huỷ báo cáo thì xoá các dòng đó, báo cáo giữ lại với TrangThai Đã huỷ. |
-| TaiKhoan | Email, HoVaTen, VaiTro, MatKhau, Muoi, NgayTao, NhanThongBao, GiaoDien, BanQuanLy, MaHr, NhomHr | Tài khoản ECODesk. Mật khẩu chỉ lưu dạng đã băm. `NhanThongBao`: các cách nhận thông báo (`zalo`, `app`, `mail`, cách nhau bằng dấu phẩy, trống là `zalo`, riêng UCV trống là `mail`). `GiaoDien`: sáng/tối/theo máy của từng người. |
-| CaiDat | Khoa, GiaTri | Các cài đặt dạng khoá và giá trị (ví dụ QuyChe, LinkSheetThanhVien). |
-| Task | ThoiGianTao, TenTask, MoTa, HanChot, NguoiPhuTrach, NguoiTao, KieuTao, TrangThai, ThoiGianXong, NgayNop, HanGoc, NgayXinGiaHan, ChatLuong, DauHieu, NguoiDanhGia, LucDanhGia, PhanHoi, HrPhuTrach | Mỗi người phụ trách một dòng. Nhận diện bằng thời gian tạo và người phụ trách. NgayNop: ngày nộp khi đánh dấu xong. HanGoc, NgayXinGiaHan: gia hạn hợp lệ. ChatLuong, DauHieu: BOD đánh giá. HrPhuTrach: HR phụ trách người làm lúc giao task. |
-| AnhDaiDien | Email, Anh, ThoiGian | Ảnh đại diện (data URL nhỏ, tối đa khoảng 30 KB). Tách khỏi TaiKhoan để bộ nhớ tạm của TaiKhoan không vượt 100 KB. |
-| NhacSeeding | ThoiGian, Email, HoVaTen, LinkBai, LucDang, LucNhac, DaNhac | Nhắc 48 giờ HR phụ trách seeding tự đặt (trang Nhắc hẹn). Lịch `nhacSeedingTheoGio` chạy mỗi giờ (tự cài khi có người đặt nhắc). |
-| KetNoiZalo | HoVaTen, MaKetNoi, ChatId, TenZalo, ThoiGianKetNoi | Ai đã kết nối bot Zalo (mọi tài khoản ECODesk đều có mã kết nối). |
-| ThietBi | Email, DiaChi, Khoa, TenMay, ThoiGian, LayCuoi | Điện thoại/máy đã bật thông báo của app (địa chỉ đẩy tin của trình duyệt và mã riêng của máy). |
-| ThongBao | ThoiGian, Email, TieuDe, NoiDung | Thông báo app đã gửi, để máy lấy nội dung. Tự xoá sau 30 ngày. |
-| ViecMail | ThoiGian, NguoiTao, ThaoTac, MaThu, TieuDeThu, Den, Cc, Bcc, TieuDe, NoiDung, Nhan, DinhKem, TrangThai, GhiChu, NguoiDuyet, ThoiGianDuyet, TuyChon | Mỗi thao tác mail của UCV (nháp, chờ duyệt, đã duyệt…). MaThu là mã luồng thư của Gmail. TuyChon (JSON) ghi thư viết dạng HTML và có trích dẫn thư cũ hay không. |
-| DanhBa | Nhom, Ten, Email, GhiChu | Danh bạ gửi hàng loạt (CLB khác, đối tác). |
-| FileLog | ThoiGian, TenFile, DuongDan, SoNguoi, SoBuoi, NguoiTao | Các file đăng ký log đã tạo. |
-| SuKienLog | ThoiGian, TenSuKien, SoBuoiDuKien, GiaoMacDinh, GiaoRieng, LinkDangKy, NguoiTao, TrangThai, ChotLuc, NguoiChot | Sự kiện log. GiaoRieng là JSON `[{loai: 'ban'|'khoi', gia, so}]`. TrangThai trống (đang diễn ra), Đã chốt hoặc Đã huỷ. |
-| BuoiLog | ThoiGian, SuKien, TenBuoi, Ngay, ThoiLuong, TrangThai, DangKy, CoMat | Buổi của một sự kiện (SuKien = ThoiGian của sự kiện, ms). DangKy, CoMat là họ tên cách nhau bằng dấu phẩy. Buổi xoá chỉ đổi TrangThai thành Đã xoá. |
-| LichGui | ThoiGianTao, ThoiGianGui, TieuDe, NoiDung, NguoiNhan, MoTaNguon, NguoiTao, TrangThai, KetQua, MaNhap | Thư hàng loạt đã hẹn giờ. NguoiNhan là danh sách người nhận dạng JSON. MaNhap là mã thư nháp Gmail; đến giờ gửi mới đọc lại thư nháp nên sửa trong Gmail trước giờ gửi vẫn được. |
+| `chayHangDem` | 2 giờ sáng mỗi ngày | Sao lưu, lưu kết quả nhiệm kỳ, chuyển nhiệm kỳ cũ sang file lưu trữ, dọn phiên đăng nhập hết hạn và nhật ký cũ, kiểm tra dung lượng |
+| `nhacViecHangNgay` | Các giờ BOD chọn ở Lịch nhắc task | Nhắc hạn task |
+| `guiThuDaLenLich` | Mỗi 10 phút | Gửi thư hàng loạt đã hẹn giờ |
+| `nhacSeedingTheoGio` | Mỗi giờ | Nhắc điền báo cáo seeding |
 
-Tab mới thêm ở bản cập nhật sau sẽ tự được tạo ở lần dùng đầu tiên.
+- Mọi lịch được cài lúc cài đặt lần đầu (`caiLichChay_`). Thiếu lịch nào thì BOD bấm **Sửa lịch chạy** ở Cài đặt, Hệ thống.
+- Mỗi việc chạy qua `chayViec_`: ghi nhật ký vào NhatKyHeThong và lúc chạy gần nhất. Lỗi thì mail cho BOD, mỗi việc tối đa một mail mỗi ngày, để không ai phải mở code mới biết app có chạy đều không.
+- Lịch chạy chỉ nhận lời gọi từ chính lịch của dự án (`laLichChay_`), người ngoài không gọi thẳng từ trang web được.
 
-## Tải danh sách thành viên (hậu kỳ)
+## Sao lưu và lưu trữ (`src/HeThong.gs`)
 
-1. Đọc tab nguồn, tìm dòng tiêu đề trong 10 dòng đầu, nhận cột theo **tên** (bỏ dấu, không phân biệt hoa thường), nên đổi thứ tự cột vẫn chạy. Cột "Ghi chú" và các cột lạ bị bỏ qua.
-2. Bắt buộc có cột "Họ và tên" và "Ban". Trùng tên thì dừng và báo dòng bị trùng.
-3. Theo kiểu tải. Nhiệm kỳ đặt theo năm tải: Oday và đợt 1 lấy năm tải làm năm bắt đầu, đợt 2 lấy năm tải làm năm kết thúc. Oday, đợt 1, đợt 2 mỗi nhiệm kỳ chỉ làm một lần, theo thứ tự đó; chọn lại (hoặc chọn đợt trước khi đã làm đợt sau) thì tự tính là Cập nhật.
-   - **Sau Oday**: thêm người mới (chính thức), ẩn người đã rời. Chưa mở giai đoạn. Bắt buộc nhập mã lịch sinh nhật của nhiệm kỳ mới.
-   - **Sau tuyển đợt 1**: mở nhiệm kỳ và giai đoạn 1. Người mới là chính thức.
-   - **Sau tuyển đợt 2**: mở giai đoạn 2. Người mới là thành viên bổ sung (ghi đợt gia nhập).
-   - **Cập nhật**: sửa thông tin, thêm người bị sót (chính thức), ẩn người đã rời; không đổi giai đoạn. Đổi ban giữa nhiệm kỳ dùng kiểu này, app ghi ngày đổi vào tab DoiBan.
-   - Lần tải đầu của nhiệm kỳ (Oday, hoặc đợt 1 nếu không có Oday): mọi người ở lại đều thành chính thức của nhiệm kỳ mới.
-4. Hộp thoại có nút **Xem trước** (`xemTruocTaiDanhSach`): báo kiểu tải thực sự, số người thêm, sửa, đổi ban, ẩn, số tài khoản mới, trước khi ghi.
-5. Chuyển hồ sơ người không còn trong danh sách sang tab ThanhVienCu, rồi ghi đè tab ThanhVien. Điểm "về 0" vì app chỉ cộng các dòng LichSuDiem của giai đoạn hiện tại, lịch sử cũ vẫn còn nguyên.
-6. Đồng bộ tài khoản: mọi thành viên có email đều có tài khoản; Ban = BOD là BOD; HR, UCV giữ nguyên; người rời CLB bị bỏ tài khoản. Tài khoản mới đăng nhập bằng mật khẩu chung của CLB (nhập ở hộp thoại, chỉ lưu bản băm).
-7. Lịch sinh nhật: BOD tạo lịch Google của nhiệm kỳ, dán mã lịch ở bước 4 của hộp thoại tải danh sách (bắt buộc ở Oday, các lần sau không bắt buộc, để trống là dùng mã đang có). App kiểm tra mở được lịch rồi lưu mã cho nhiệm kỳ đó (đổi mã thì quên các sự kiện đã tạo ở lịch cũ), và sau mỗi lần tải đồng bộ sự kiện cả ngày lặp lại hằng năm. Muốn đồng bộ lại thì tải danh sách kiểu Cập nhật. Cần tài khoản CLB cấp quyền Google Calendar một lần (chạy `khoiTaoCoSoDuLieu` trong Apps Script).
+- **Sao lưu:** mỗi đêm app chép file dữ liệu vào thư mục Sao lưu, giữ 30 bản gần nhất. BOD bấm được **Sao lưu ngay**.
+- **Khôi phục** (`khoiPhucSaoLuu`): chép một bản sao lưu thành file dữ liệu mới và dùng file đó. File đang dùng được đổi tên "(trước khôi phục …)" và để lại, không xoá.
+- **Lưu trữ nhiệm kỳ cũ:** nhiệm kỳ đã kết thúc hơn 365 ngày (`LUU_TRU_SAU_NGAY`) thì các dòng của nó trong các bảng ở `BANG_LUU_TRU` (điểm, task, góp ý, seeding, log, mail, thông báo, lần tải, đổi ban, thành viên theo giai đoạn) được chuyển sang file "CLB ECO - Lưu trữ nhiệm kỳ …" riêng trong thư mục Lưu trữ. File chính nhẹ lại.
+- **Kết quả nhiệm kỳ** (`luuKetQuaNhiemKy_`): mỗi đêm app chép kết quả nhiệm kỳ đang chạy vào KetQuaNhiemKy. Khi sang nhiệm kỳ mới, bản cuối của nhiệm kỳ cũ vẫn còn. Bảng này luôn ở file chính, nên nhiều năm sau vẫn xem lại được dù dữ liệu chi tiết đã chuyển sang file lưu trữ.
+- **Dung lượng:** Google Sheet chứa tối đa 10 triệu ô. Dùng quá 70% thì app mail báo BOD (tối đa mỗi tuần một lần).
+- Trang **Cài đặt → Hệ thống**: Tình trạng hệ thống (lịch chạy, lần chạy gần nhất, nhật ký, dung lượng, Sửa lịch chạy, Làm mới dữ liệu) và Lưu trữ và sao lưu (bản sao lưu, khôi phục, file lưu trữ từng nhiệm kỳ, link thư mục app).
 
-## ECOBoard
+## Đăng nhập và phân quyền (`src/MayChuDesk.gs`)
 
-Máy chủ chỉ trả về họ tên, lớp, ban và điểm. Ngày sinh, số điện thoại, email, Facebook, nơi sống không bao giờ được gửi ra trang công khai. Người không còn trong danh sách không hiện trên ECOBoard. Dữ liệu bảng điểm được nhớ tạm 60 giây để trang tải nhanh.
-
-## ECODesk
-
-### Đăng nhập và phân quyền
-
-- Đăng nhập bằng email và mật khẩu. Mật khẩu lưu dạng băm SHA-256 lặp 300 lần kèm chuỗi muối riêng cho từng tài khoản.
+- Ai cũng phải đăng nhập. Đăng nhập bằng email và mật khẩu (mật khẩu chung của CLB hoặc mật khẩu riêng), hoặc bằng Google. Mật khẩu lưu dạng băm SHA-256 lặp 300 lần kèm chuỗi muối riêng cho từng tài khoản.
 - Sai mật khẩu 8 lần liên tiếp thì khoá email đó 15 phút.
-- Đăng nhập thành công tạo một mã phiên ngẫu nhiên, lưu trong Script Properties của dự án Apps Script, hết hạn sau 30 ngày. Trình duyệt giữ mã phiên để lần sau không phải đăng nhập lại.
-- Mỗi lần gọi máy chủ đều kiểm tra lại tài khoản trong tab TaiKhoan, nên gỡ tài khoản là mất quyền ngay.
-- Quyền theo vai trò (xem `QUYEN` trong `Logic.gs`): BOD dùng mọi chức năng; ban nhân sự (HR) chỉ dùng Task; UCV chỉ dùng Mail.
-- Tài khoản BOD đi theo danh sách thành viên (cột Ban = BOD). Tài khoản ban nhân sự do BOD thêm trong Cài đặt.
+- Đăng nhập thành công tạo một mã phiên ngẫu nhiên lưu trong thuộc tính của dự án, hạn 60 ngày và tự gia hạn mỗi lần mở app. Phiên hết hạn được dọn mỗi đêm.
+- Mỗi lần gọi máy chủ đều kiểm tra lại tài khoản trong bảng TaiKhoan, nên gỡ tài khoản là mất quyền ngay.
+- Quyền theo vai trò (`QUYEN` trong `Logic.gs`), bậc thang thành viên < HR < UCV < BOD. Tài khoản BOD đi theo ban điều hành trong danh sách thành viên. HR, UCV do BOD cấp trong Cài đặt, Tài khoản, Phân quyền.
 
-### Cộng điểm
+## Menu
 
-- BOD chọn một loại hoạt động và nhiều người. Mỗi người thành một dòng LichSuDiem với điểm của loại tại lúc cộng, người cộng lấy từ tài khoản đăng nhập, thời gian lấy lúc bấm.
-- Xoá một lần cộng nhầm: nhận diện dòng bằng thời gian cộng và họ tên (không có cột mã).
+- Mỗi mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy mục con (`THU_MUC` trong `DeskChung.html`; các nhóm của Cài đặt cũng vậy, `SET` trong `DeskViec.html`). Trang con có nút quay lại thư mục cha ở đầu trang. Trên điện thoại không có thanh tab dưới: nút ☰ ở thanh trên (hoặc vuốt từ cạnh trái) mở cùng menu này trượt ra từ bên trái.
+- **BOD** (`NAV_BOD`): Trang chủ, Quản lý task, Quản lý log, Cộng điểm, Hộp thư, Góp ý, Thành viên (KPI gồm KPI task và KPI log; Bảng điểm; Chứng nhận), Cài đặt.
+- **Cài đặt của BOD**:
+  - Quy tắc CLB: Cơ cấu ban, Thang điểm, Khen thưởng, hạn task và buổi log.
+  - Thông báo: Thông báo của thành viên (kèm nút Bot Zalo), Lịch nhắc task, Thông báo khác.
+  - Hoạt động CLB: File mẫu log, Báo cáo seeding, Ghim và quy chế.
+  - Hộp thư: Danh bạ, Chữ ký.
+  - Tài khoản: Tải danh sách thành viên, Thành viên qua các năm, Mật khẩu chung, Lịch sinh nhật, Phân quyền, Đặt lại mật khẩu, Ảnh nền đăng nhập, Đăng nhập bằng Google.
+  - Hệ thống: Tình trạng hệ thống, Lưu trữ và sao lưu.
+  - Giao diện theo mùa và sự kiện; Của tôi.
+- **Thành viên** (và UCV, HR không có quyền nào thêm): Trang chủ, KPI của tôi (Task, Log), Điểm và xếp hạng, Góp ý, Cài đặt (thông báo, mật khẩu, ảnh đại diện, giao diện sáng tối). UCV có thêm Hộp thư. KPI chỉ hiện con số; kết quả chứng nhận chỉ có ở trang Chứng nhận của BOD.
+- **HR phụ trách ban**: thêm thư mục Ban phụ trách: Task (nhập, sửa, gia hạn, đổi trạng thái giúp BOD; KPI task) và Log (KPI log), cho thành viên các ban ở cột BanQuanLy.
+- **HR phụ trách seeding** (`SUP-SEED`): thêm thư mục Seeding: Hẹn nhắc 48 giờ và Báo cáo.
+- Bảng dữ liệu nhiều người (KPI, Bảng điểm, Chứng nhận, danh sách task) lọc được theo ban và theo khối (số đầu cột Lớp, `khoiLop_`).
 
-### Task
+## Cộng điểm
 
-- BOD và ban nhân sự đều tạo, sửa, đánh dấu xong, huỷ, mở lại được. Chọn nhiều người thì mỗi người một task.
-- `KieuTao` là "Giao task" nếu BOD tạo, "Nhập task" nếu ban nhân sự tạo.
-- Sheet chỉ lưu trạng thái Đã giao, Đã xong, Đã huỷ. "Sắp đến hạn" và "Trễ hạn" được tính mỗi lần xem, từ hạn chót và cài đặt số ngày.
-- Task đã xong hoặc đã huỷ chỉ hiện trên ECODesk trong 120 ngày, nhưng vẫn nằm trong sheet để làm báo cáo.
+- BOD chọn một loại hoạt động và nhiều người. Mỗi người thành một dòng LichSuDiem với điểm của loại tại lúc cộng, kèm mã thành viên, nhiệm kỳ, giai đoạn. Người cộng lấy từ tài khoản đăng nhập, thời gian lấy lúc bấm.
+- Xoá một lần cộng nhầm: nhận diện dòng bằng thời gian cộng và họ tên.
+- Loại có `CongTay` = `khong` là loại tự cộng, BOD không chọn khi cộng tay. Cột `DungCho` gắn loại với chức năng tự cộng: `react`, `comment` (seeding), `gopy` (góp ý được dùng), `log90`, `log180`… (buổi log dư chỉ tiêu, một loại cho mỗi thời lượng buổi trong quy tắc). Mỗi chức năng gắn với tối đa một loại.
 
-### Thông báo (`src/ThongBao.gs`)
+## Xếp hạng và khen thưởng
 
-- Nhắc deadline gửi theo cách mỗi người chọn (ít nhất một): Zalo, app trên điện thoại, mail. BOD nhận task của mình và task mới được giao; ban nhân sự nhận task của thành viên để nhắc lại. `guiThongBao_` gửi theo từng cách.
-- Các thông báo khác chỉ gửi qua mail (`guiMailThongBao_`): góp ý mới và thư UCV chờ duyệt cho mọi BOD (bật/tắt ở Cài đặt > Báo qua mail cho BOD), kết quả duyệt thư cho UCV.
-- Thông báo tách hai trang (`src/DeskTrangChu.html`, `veTrangThongBao(goc, 'toi'|'khac')`): "Thông báo của tôi" (BOD mở trong Cài đặt > Cá nhân, HR mở từ Menu) để chọn cách nhận, kết nối Zalo, bật app, xem và gỡ thiết bị của mình, gửi thử; "Thông báo của BOD và HR" (chỉ BOD, Cài đặt > Nhắc deadline) để đổi cách nhận, gỡ thiết bị của người khác (`goThietBi`, `maMay_`) và gửi thử (`guiThuThongBao`).
-- App (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu (Script Properties `VapidRieng`), ký JWT ES256 bằng code thuần (`kyP256_` trong `Logic.gs`, k theo RFC 6979) rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ chấp nhận máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 (máy đã gỡ app) thì xoá khỏi ThietBi.
-- Bật app trên máy: ECODesk nhờ trang vỏ (`bat-thong-bao`) xin quyền và đăng ký, trang vỏ trả `dang-ky-thong-bao` để lưu vào ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
+- `tongHopBangDiem_`: mỗi giai đoạn một bảng xếp hạng, điểm tính lại từ 0. Giai đoạn 1 chỉ có thành viên chính thức; giai đoạn 2 có mọi người đã vào từ giai đoạn 2 trở về trước. "Cả nhiệm kỳ" là tổng mọi giai đoạn của người đã có từ giai đoạn 1.
+- Số người trong top = số người được xếp hạng × tỉ lệ top trong quy tắc (mặc định 15%), làm tròn thông thường (`soNguoiTop_`). Người bằng điểm với người cuối top cũng được tính; người 0 điểm không được tính.
+- `danhSachKhenThuong_`: top từng giai đoạn, top cả nhiệm kỳ, và người lọt top ở mọi giai đoạn.
 
-### Nhắc việc qua Zalo (`src/Zalo.gs`)
+## KPI task (`src/Kpi.gs`)
 
-- Gọi Zalo Bot API `https://bot-api.zapps.me/bot<mã bot>/<phương thức>` (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
-- Kết nối: mỗi tài khoản ECODesk có một mã 6 ký tự. Họ nhắn mã đó cho bot; ECODesk đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
-- Giờ nhắc nằm cùng chỗ với số ngày sắp đến hạn (Cài đặt > Lịch nhắc deadline, `luuNhacViec`). Có thể chọn nhiều giờ (tối đa 6, CaiDat `ZaloGioNhac` dạng "8, 20"); mỗi giờ là một lịch chạy hằng ngày (`nhacViecHangNgay`); lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app). BOD nhận task của chính mình; ban nhân sự nhận task của thành viên không phải BOD để nhắc lại qua Messenger; UCV không nhận nhắc việc.
+- Quyền task (`quyenTask_`): BOD xem, giao, sửa task của mọi người trừ BOD. HR phụ trách ban làm giúp BOD với thành viên các ban mình phụ trách (trừ chính mình). Người khác chỉ xem task của mình.
+- Sheet chỉ lưu trạng thái Đã giao, Đã xong, Đã huỷ. "Sắp đến hạn", "Trễ hạn" và "Không hoàn thành" được tính mỗi lần xem, theo số ngày trong quy tắc.
+- Xác nhận xong: BOD hoặc HR chọn Đúng hạn hay Trễ hạn (`ngayNopTheoKieu_`). Task đã bị tính không hoàn thành vẫn xác nhận xong được.
+- Kết quả từng task (`ketQuaTask_`): đúng hạn so ngày nộp với hạn chót (gia hạn chỉ ghi được khi xin trước hạn ít nhất 24 giờ), chất lượng do BOD chấm, theo bảng 3 × 3 của quy chế. Không hoàn thành là Chưa đạt.
+- KPI task (`tongKpiTask_`): số task đạt ÷ số task đã có kết quả, làm tròn. Thành viên vào ở giai đoạn 2 chỉ tính task giao từ lúc giai đoạn 2 bắt đầu.
+- HR quản lý theo ban (`boLocTaskHr_`): HR đã phân ban chỉ thấy, tạo, sửa và được nhắc task của các ban mình quản lý, cộng task của chính mình. Ban chưa có HR nào quản lý thì mọi HR đều thấy. HR chưa phân ban và BOD thấy mọi task.
+
+## Quản lý log (`src/KpiLog.gs`, `src/EcoLog.html`)
+
+- Log là các buổi ở lại trường tô màu, chuẩn bị dụng cụ cho sự kiện của CLB. Mỗi sự kiện cần làm log là một **đợt log** (bảng SuKienLog; tên bảng và hàm vẫn dùng chữ "SuKien").
+- BOD tạo đợt log: số buổi dự kiến, **chỉ tiêu** (số buổi giao) chung, và chỉ tiêu riêng theo khối lớp (ưu tiên, đọc từ cột Lớp) hoặc theo ban, nhóm ban.
+- BOD thêm từng buổi (ngày, thời lượng theo quy tắc), nhập người đăng ký tay hoặc từ file đăng ký log (`nhapDangKyLog`), và **điểm danh** mỗi buổi. Buổi có trạng thái Chưa diễn ra, Đã diễn ra, Huỷ vì hết việc, Huỷ vì lý do khác.
+- Chỉ tiêu cuối = số buổi thực diễn × chỉ tiêu ÷ số buổi dự kiến, không lớn hơn chỉ tiêu (`giaoCuoi_`). Đã tham gia = buổi đã diễn ra có mặt + buổi huỷ vì lý do khác đã đăng ký.
+- Ai đi nhiều hơn chỉ tiêu thì app hiện số buổi dư ngay sau mỗi lần điểm danh.
+- **Chốt đợt log** (`chotSuKienLog`): cộng điểm cho các buổi dư (các buổi có mặt muộn nhất vượt chỉ tiêu cuối, buổi huỷ không tính), theo loại điểm gắn với thời lượng buổi đó ở Thang điểm. **Mở lại** (`moLaiSuKienLog`) gỡ các dòng điểm đó; chốt lại sẽ cộng lại.
+- KPI log = tổng tham gia ÷ tổng chỉ tiêu cuối, làm tròn %, đạt từ 80%. Thành viên vào ở giai đoạn 2 chỉ tính đợt log tạo từ lúc giai đoạn 2 bắt đầu.
+
+## Chứng nhận (`src/TongKet.gs`, `src/EcoTongKet.html`)
+
+- Trang Chứng nhận (BOD): KPI log, KPI task và kết quả chứng nhận của từng thành viên, danh sách khen thưởng theo từng giai đoạn; xuất Excel (tab Chứng nhận, tab Khen thưởng). Mọi phần trăm lấy từ quy tắc của nhiệm kỳ.
+- `xetCertificate_`: log và task đều đạt 80% thì cấp. Mỗi phần từ 60% thì xét bù trừ: người vào ở giai đoạn g được xếp hạng theo điểm từ giai đoạn g trở đi, cùng mọi người đã có mặt từ giai đoạn g trở về trước; lọt top 40% thì cấp. Phần chưa được giao việc gì coi như đạt.
+- Trang báo các task chờ đánh giá và đợt log chưa chốt, vì kết quả lúc đó còn tạm tính. Ở giai đoạn 1, chứng nhận chỉ là tạm tính.
+- Tab **Nhiệm kỳ trước** đọc kết quả đã lưu trong KetQuaNhiemKy (`layKetQuaNhiemKy`).
+
+## Thông báo (`src/ThongBao.gs`)
+
+- Nhắc hạn task và nhắc seeding gửi theo cách mỗi người chọn (ít nhất một): Zalo, app trên điện thoại, mail (`guiThongBao_`). HR phụ trách ban được nhắc task của thành viên các ban đó. Ai muốn tự nhận nhắc task của mình thì bật "Tự nhắc task của tôi" (cột TaiKhoan `TuNhac`).
+- Các thông báo khác chỉ gửi qua mail (`guiMailThongBao_`): góp ý mới, thư UCV chờ duyệt, báo cáo seeding mới (cho BOD, bật tắt ở Cài đặt, Thông báo khác), kết quả duyệt thư (cho UCV).
+- Thông báo trên app (Web Push chuẩn, không qua dịch vụ ngoài): máy chủ tự tạo cặp khoá VAPID P-256 lần đầu, ký JWT ES256 bằng code thuần (`kyP256_` trong `Logic.gs`), rồi gửi một yêu cầu không có nội dung tới địa chỉ đẩy tin của trình duyệt (chỉ máy chủ của Google, Apple, Mozilla, Microsoft). Service worker của trang vỏ nhận tin, hỏi `exec?tb=<mã máy>` để lấy nội dung rồi hiện thông báo. Địa chỉ báo 404/410 thì xoá khỏi ThietBi. iPhone cần iOS 16.4 trở lên và phải mở app từ màn hình chính.
+
+## Nhắc việc qua Zalo (`src/Zalo.gs`)
+
+- Gọi Zalo Bot API (`getMe`, `getUpdates`, `sendMessage`). Tin dài hơn 2000 ký tự được chia nhỏ.
+- Kết nối: mỗi tài khoản có một mã 6 ký tự. Họ nhắn mã đó cho bot; app đọc tin mới bằng `getUpdates` (khi bấm Kiểm tra, và trước mỗi lần nhắc) rồi lưu ID Zalo.
+- Lịch nhắc gồm nhiều mốc, mỗi mốc là một ngày so với hạn chót và một giờ (CaiDat `LichNhac`). Chưa ai chỉnh thì dùng lịch trong tài liệu training HR: 20:00 trước hạn 1 ngày, 07:00 ngày hạn, 07:00 sau hạn 1 ngày. Mỗi giờ là một lịch chạy `nhacViecHangNgay`. Lịch chạy cả khi chưa có bot Zalo (gửi theo mail, app).
 - Đổi sang mã bot mới thì mọi kết nối cũ bị xoá, mọi người nhắn mã lại cho bot mới.
-- Khi BOD được giao task mới, người đó được báo ngay theo các cách đã chọn.
 
-### Mail (`src/Mail.gs`)
+## Mail (`src/Mail.gs`)
 
-- Mọi thư gửi bằng Gmail của tài khoản chủ file dữ liệu (tài khoản CLB). Tên người gửi hiển thị đặt trong Cài đặt.
-- UCV đọc hộp thư tự do (theo thư mục, nhãn, tìm kiếm). BOD chọn cho UCV xem toàn bộ hộp thư hay chỉ các luồng thư do chính UCV đó gửi (CaiDat `UcvXemHopThu`).
-- Mọi thao tác thay đổi hộp thư của UCV (soạn, trả lời, trả lời tất cả, chuyển tiếp, lưu trữ, về hộp thư đến, xoá, báo thư rác, gắn và bỏ nhãn) thành một dòng ViecMail. BOD chọn Đã duyệt (thực hiện ngay trên Gmail), Cần sửa lại, hoặc Từ chối, kèm ghi chú.
-- Tệp UCV đính kèm được lưu ở thư mục Drive "ECO - Đính kèm mail" (tự tạo; mã thư mục ở CaiDat `ThuMucDinhKemId`).
-- Nội dung thư đến hiển thị trong khung riêng không chạy được mã (sandbox), nên thư lạ không ảnh hưởng ECODesk.
-- BOD không viết thư trong app. Thư mẫu là thư nháp trong Gmail của CLB; app liệt kê, xem trước và mở thẳng thư nháp trong Gmail. Có nút mở Gmail CLB.
-- UCV viết thư trong app (khung soạn có định dạng, đính kèm, trích dẫn thư cũ, chữ ký CLB) rồi gửi BOD duyệt. Chữ ký lấy từ chữ ký mặc định trong Gmail của CLB (Gmail API `settings/sendAs` gọi bằng quyền Gmail sẵn có, nên không cần xin thêm quyền; nhớ 6 giờ); Cài đặt chỉ bật hay tắt (CaiDat `DungChuKy`). Tên người gửi là tên tài khoản Google CLB.
-- Gửi hàng loạt: chọn một thư nháp Gmail (giữ nguyên định dạng, ảnh trong thư và tệp đính kèm), người nhận (thành viên, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{TenCot}` được thay bằng thông tin người nhận, so khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi.
-- Thư hẹn giờ: lịch chạy `guiThuDaLenLich` mỗi 10 phút (tự cài lần đầu hẹn giờ) gửi các thư đã đến giờ.
+- Mọi thư gửi bằng Gmail của tài khoản CLB.
+- Mọi thao tác thay đổi hộp thư của UCV (soạn, trả lời, chuyển tiếp, lưu trữ, xoá, báo thư rác, gắn và bỏ nhãn) thành một dòng ViecMail. BOD chọn Đã duyệt (thực hiện ngay trên Gmail), Cần sửa lại, hoặc Từ chối, kèm ghi chú.
+- Tệp UCV đính kèm được lưu ở thư mục con "Đính kèm mail" của thư mục app.
+- Nội dung thư đến hiển thị trong khung riêng không chạy được mã (sandbox).
+- BOD không viết thư trong app. Thư mẫu là thư nháp trong Gmail của CLB; app liệt kê, xem trước và mở thẳng thư nháp trong Gmail.
+- UCV viết thư trong app (khung soạn có định dạng, đính kèm, trích dẫn thư cũ, chữ ký CLB) rồi gửi BOD duyệt. Chữ ký lấy từ chữ ký mặc định trong Gmail của CLB; Cài đặt chỉ bật hay tắt (CaiDat `DungChuKy`).
+- **Gửi hàng loạt:** chọn một thư nháp Gmail, người nhận (thành viên lọc theo ban, danh bạ, nhập tay, hoặc Google Sheet), xem trước rồi gửi ngay hoặc hẹn giờ. `{Tên cột}` hoặc `{{Tên cột}}` được thay bằng thông tin người nhận, so khớp không phân biệt dấu, hoa thường, khoảng trắng; thiếu cột thì không cho gửi. Kiểm tra số thư còn gửi được trong ngày trước khi gửi. Mỗi đợt (gửi ngay hay hẹn giờ) đều ghi vào LichGui.
 
-### Báo cáo (`src/BaoCao.gs`)
+## Báo cáo điểm (`src/BaoCao.gs`)
 
-- Chọn khoảng thời gian: tháng, học kỳ, nhiệm kỳ (lấy từ tab KyHoatDong: một học kỳ kéo dài đến ngày trước học kỳ sau), hoặc tự chọn.
-- Xem theo thành viên, theo ban (PR CAP, PR DES… gộp thành PR), hoặc cả CLB. Chỉ tính người đang có trong danh sách thành viên; người đã rời CLB không còn trong báo cáo nhưng lịch sử vẫn nằm trong sheet.
-- Chỉ tính thành viên, không tính BOD. Chỉ số: điểm; số lần mỗi loại hoạt động; task đã xong (theo ngày xong); task trễ hạn (hạn chót nằm trong khoảng, xong sau hạn hoặc chưa xong mà đã quá hạn).
-- Biểu đồ chia mốc theo ngày (khoảng ≤ 31 ngày), theo tuần (≤ 120 ngày), hoặc theo tháng.
+- Chọn khoảng thời gian: tháng, giai đoạn, nhiệm kỳ (từ bảng GiaiDoan), hoặc tự chọn. Xem theo thành viên, theo ban (gộp theo nhóm), hoặc cả CLB. Chỉ tính thành viên, không tính BOD.
+- Chỉ số: điểm, số lần mỗi loại hoạt động, task đã xong, task trễ hạn. Biểu đồ chia mốc theo ngày, tuần hoặc tháng tuỳ độ dài khoảng.
 - Xuất Excel: tạo Google Sheet tạm, tải về dạng .xlsx rồi chuyển sheet tạm vào thùng rác.
 
-### File đăng ký log
+## File đăng ký log
 
 - Cài đặt có link Google Sheet mẫu (`LinkMauLog`) và thư mục Drive để lưu (`LinkThuMucLog`).
-- File tạo ra được mở cho "bất kỳ ai có link" với quyền chỉnh sửa (tab Đăng ký log đã khoá, chỉ chừa ô tích và Ghi chú).
-- Tạo file từ mẫu của tool cũ (có tab "Đăng ký log"): làm giống hệt tool cũ. Người được chọn xếp theo ban, từ dòng 5 ghi Họ tên, Lớp, Ban, SĐT (cột A–D); mỗi buổi một cột ô tích từ cột E (chép định dạng cột E), tên buổi ở dòng 4 (nền lấy từ ô Ghi chú F4), dòng 3 đếm số người tích; cột Ghi chú ở cuối; cột Ban gộp ô theo ban và xoay chữ; kẻ khung; khoá tab, chỉ chừa ô tích và Ghi chú. Tab "Kế hoạch" (nếu có) thêm cột buổi, dòng 3 lấy số đếm từ tab Đăng ký log. Tên file giữ đúng như người tạo gõ.
-- Tạo file từ mẫu khác: chép mẫu vào thư mục, tìm dòng tiêu đề có cột Họ và tên (và STT, Ban, Số điện thoại nếu có), điền những người được chọn, thêm mỗi buổi một cột ô đánh dấu ngay sau cột tiêu đề cuối. Chưa có file mẫu thì không cho tạo.
+- File tạo ra mở cho "bất kỳ ai có link" với quyền chỉnh sửa; tab Đăng ký log đã khoá, chỉ chừa ô tích và Ghi chú.
+- Mẫu có tab "Đăng ký log": người được chọn xếp theo ban, mỗi buổi một cột ô tích, dòng 3 đếm số người tích. Mẫu khác: app tìm dòng tiêu đề có cột Họ và tên, điền người được chọn, thêm mỗi buổi một cột ô đánh dấu.
 
-### Cài đặt
+## Báo cáo seeding (`src/Seeding.gs`)
 
-| Mục | Lưu ở |
-|---|---|
-| Loại hoạt động và điểm | tab LoaiHoatDong; cột `CongTay` = `khong` nghĩa là chỉ hiện trên ECOBoard (cộng tự động), BOD không chọn được khi cộng điểm |
-| Quy chế cộng điểm (link file Docs) | CaiDat, khoá `QuyChe` |
-| Báo BOD khi có góp ý mới | CaiDat, khoá `BaoGopYQuaMail` (`tat` là tắt) |
-| Báo BOD khi UCV gửi thư chờ duyệt | CaiDat, khoá `BaoThuChoDuyet` (`tat` là tắt) |
-| Ảnh nền trang đăng nhập | CaiDat, khoá `AnhNenId` (file JPEG trong thư mục Drive `ThuMucAnhNenId`), `AnhNenPhienBan` (máy chỉ tải lại ảnh khi số này đổi) |
-| Có thêm chữ ký Gmail vào thư UCV | CaiDat, khoá `DungChuKy` |
-| Client ID đăng nhập Google | CaiDat, khoá `GoogleClientId` |
-| Bảng ghim | tab BangGhim |
-| Số ngày coi là sắp đến hạn | CaiDat, khoá `SapDenHanNgay` (mặc định 2) |
-| Bot Zalo | CaiDat, khoá `ZaloToken`, `ZaloTenBot`, `ZaloGioNhac`, `ZaloNhacSapDenHan`, `ZaloNhacTre`, `ZaloLanNhacCuoi`; người nhận ở tab KetNoiZalo |
-| Ban nhân sự, UCV, mật khẩu | tab TaiKhoan |
-| Quyền xem hộp thư của UCV | CaiDat, khoá `UcvXemHopThu` |
-| Ai nhận thông báo bằng cách nào | tab TaiKhoan, cột `NhanThongBao` (sửa ở trang Thông báo) |
-| Danh bạ gửi hàng loạt | tab DanhBa; thành viên CLB có email luôn có sẵn (`danhBaThanhVien_`), không cần nhập |
-| Sheet mẫu và thư mục file đăng ký log | CaiDat, khoá `LinkMauLog`, `LinkThuMucLog` |
-
-## Trang vỏ (`pwa/`) và đăng nhập Google
-
-- `pwa/home/` là trang có manifest để cài app CLB ECO. Trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`. `pwa/board/`, `pwa/desk/` và trang gốc chỉ chuyển sang `home/` (link cũ vẫn dùng được).
-- Địa chỉ từng trang: app báo trang vỏ mỗi lần đổi trang (`trang`), trang vỏ ghi vào địa chỉ dạng `home/#/task` bằng `history.pushState`; bấm quay lại thì trang vỏ báo app (`vo-trang`) để mở lại trang đó. Đang mở hộp thoại thì quay lại chỉ đóng hộp thoại. Mở app thẳng trên script.google.com thì dùng `google.script.history`.
-- `pwa/sw.js` giữ sẵn file của trang vỏ (cần cho việc cài app); dữ liệu luôn lấy trực tiếp từ Apps Script.
-- Trang vỏ được đưa lên GitHub Pages từ nhánh `gh-pages` (bản sao của thư mục `pwa/`).
-- Đăng nhập Google: ECODesk (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Bấm nút thì trang vỏ hiện nút đăng nhập chính thức của Google, nhận mã xác nhận (ID token) rồi gửi vào ECODesk. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email và tạo phiên như đăng nhập mật khẩu.
-- Ghi nhớ đăng nhập: phiên ECODesk có hạn 60 ngày và tự gia hạn mỗi lần mở. Phiên lưu cả trong khung lẫn ở trang vỏ (`eco_phien_vo`; đọc được cả `eco_desk_phien` của ECODesk cũ), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.
-- Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app (`vien`). App trả lời `ho-tro-vien` thì trang vỏ cho khung tràn toàn màn hình; app cũ không trả lời thì khung vẫn chừa phần trên như trước. App gửi `mau` (màu thanh tiêu đề và thanh tab) để trang vỏ tô phần tai thỏ và thanh vuốt cùng màu. Trên iPhone (app ở màn hình chính) khung được kéo cao bằng màn hình nếu trình duyệt báo thiếu.
-- Icon: `tab-*.png` tách nền cho tab trình duyệt (cả trang Apps Script qua `setFaviconUrl`); `apple-*.png` vuông nền trắng cho iPhone (máy tự bo góc); `*-192/512.png` vuông nền trắng cho Android (máy tự cắt theo hình của máy); `badge-96.png` hình trắng cho thanh trạng thái Android. Trong app, logo hiện trong khung tròn.
-- Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.
-
-## Trang chủ và màn chờ (`src/DungChung.html`, dùng cho cả ECOBoard và ECODesk)
-
-- Mở app là vào Trang chủ: khung chào có bầu trời đổi theo buổi (sáng, trưa, chiều, tối, khuya) và một câu hỏi thăm ngẫu nhiên (danh sách `CAU_HOI`, sửa thoải mái). ECODesk thêm các ô tóm tắt theo vai trò (`layTrangChu`); ECOBoard thêm 5 người dẫn đầu.
-- Màn chờ dùng chung `cho()`: lá bị gió thổi bay kèm câu đùa (`CAU_CHO`).
-- ECOBoard luôn dùng giao diện sáng và không hiện BOD (BOD không tham gia cộng điểm).
-- Màn đăng nhập và màn chờ có nền xanh đậm; `apGiaoDien` báo trang vỏ tô phần dưới màn hình cùng màu để không lộ vệt trắng.
-
-## Giao diện ECODesk
-
-- Lưới ô (thống kê, loại hoạt động, ô tóm tắt, ô điều hướng, hàng ô nhập) chia đều bằng `chiaDeu` trong `DeskChung.html`: ít hàng nhất, số ô mỗi hàng chênh tối đa 1, ô giãn cho đầy hàng. Bề rộng tối thiểu mỗi ô là biến CSS `--o`, số cột tối đa là `--toida` (điện thoại tối đa 2).
-- Thẻ người dùng: BOD hiện chức vụ lấy từ cột ChucVu của danh sách thành viên (`chucVuCua_`), vai trò khác hiện BOD/HR/UCV.
-- Cài đặt nhớ vị trí cuộn và nội dung ô tìm khi mở một mục rồi quay lại (`CUON_CAI_DAT`).
-
-## Thứ tự ban
-
-Mọi chỗ liệt kê theo ban trong hai app (nút lọc ban, danh sách chọn người, báo cáo, danh bạ, file log, tab Thành viên sau khi tải danh sách) dùng thứ tự chuẩn `THU_TU_BAN` trong `src/Logic.gs`: BOD, PG, PR CAP, PR DES, PR PHO, AD, HR. Ban mới cùng nhóm (ví dụ "PR MKT") đứng ngay sau nhóm đó; ban lạ hẳn đứng cuối theo chữ cái. Máy chủ gửi danh sách đã xếp (`docThanhVien_`), giao diện giữ nguyên thứ tự nhận được.
-
-## HR quản lý theo ban
-
-BOD phân ban cho từng HR trong Cài đặt, Tài khoản HR và phân ban (cột `BanQuanLy` của tab TaiKhoan, ví dụ "PG, AD"; PR là cả nhóm PR CAP, PR DES, PR PHO). Luật nằm ở `boLocTaskHr_` trong `src/Logic.gs`:
-
-- HR đã phân ban chỉ thấy, tạo, sửa và được nhắc deadline task của các ban mình quản lý, cộng với task của chính mình. Mọi HR cùng quản lý một ban đều được nhắc.
-- Ban (không phải BOD) chưa có HR nào quản lý thì mọi HR đều thấy, để không task nào bị bỏ sót.
-- HR chưa phân ban và BOD thấy mọi task.
-
-## Gửi hàng loạt
-
-- Chỗ chèn viết `{Tên cột}` hoặc `{{Tên cột}}`, so khớp không phân biệt dấu, hoa thường, khoảng trắng. Thành viên CLB dùng đúng tiêu đề cột của danh sách thành viên (`{Họ và tên}`, `{Ban}`…); mọi người nhận trong Danh bạ có `{Tên}` và `{Email}`.
-- Nguồn người nhận: Danh bạ (thành viên CLB lọc theo ban và danh bạ khác), Nhập tay, Google Sheet. Bảng sheet chỉ hiện các cột ai cũng điền, ô dài bị cắt, rê chuột để xem đủ.
-- Mỗi đợt gửi ngay cũng được ghi vào tab LichGui (trạng thái Đã gửi) để xem ở Mail, Lịch sử gửi.
-
-## Giao diện theo mùa và ngày lễ
-
-- BOD chọn trong Cài đặt, mục "Chủ đề theo mùa và sự kiện". Lưu ở CaiDat, khoá `ChuDe` (trống là giao diện xanh mặc định). Không tự đổi theo ngày.
-- Danh sách mã ở `CHU_DE` (Logic.gs) và `DS_CHU_DE` (ChuDe.html); test `tests/chude.test.js` bắt hai bên phải khớp.
-- `doGet` gắn `data-chude` vào thẻ html ngay khi tạo trang (Halloween gắn thêm `data-theme="dark"`), nên không bị nháy màu.
-- ChuDe.html dùng chung cho ECOBoard và ECODesk: tính màu ra mã hex (sáng và tối), hoa lá rơi khắp màn hình, đồ trang trí trong khung chào và đầu trang ECOBoard, lời chúc, màu lá ở màn chờ.
-- Mỗi người tắt được hiệu ứng rơi trên máy mình (Cài đặt, Chế độ sáng tối). Máy bật "giảm chuyển động" thì không có hiệu ứng.
-
-## Góc nhìn
-
-- Menu giữ đúng cấu trúc cha con trong sheet góc nhìn Van đã chốt (chỉ đổi tên cho rõ nghĩa). Mỗi mục cha là một thư mục: trên menu chỉ có mục cha, bấm vào mới thấy mục con (`THU_MUC` trong `DeskChung.html`; các nhóm của Cài đặt cũng vậy). Trang con có nút quay lại thư mục cha ở đầu trang. Thanh tab dưới trên điện thoại vẫn mở thẳng 4 mục vào nhanh. Ai cũng phải đăng nhập.
-- **BOD**: Trang chủ (4 ô vào nhanh), Quản lý task, Sự kiện log, Cộng điểm (nút Thang điểm mở cài đặt loại hoạt động), Hộp thư, Hộp góp ý. Thư mục Hoạt động thành viên: KPI (KPI task, KPI log), Bảng điểm, Chứng nhận. Thư mục Cài đặt: Thông báo (của thành viên, kèm nút Bot Zalo; lịch nhắc task; thông báo khác), Hoạt động CLB (file mẫu log, báo cáo seeding, ghim và quy chế), Hộp thư (danh bạ, chữ ký), Tài khoản (phân quyền HR và UCV, đặt lại mật khẩu, ảnh nền đăng nhập, Google), Giao diện theo mùa và sự kiện, Của tôi.
-- **Thành viên** (và UCV, HR không có quyền nào): Trang chủ, thư mục KPI của tôi (Task, Log), Điểm và xếp hạng, Góp ý, Cài đặt (thông báo, mật khẩu, ảnh đại diện, giao diện sáng tối). UCV có thêm Hộp thư. KPI chỉ hiện con số; kết quả certificate chỉ có ở trang Chứng nhận của BOD.
-- **HR phụ trách ban**: thêm thư mục Ban phụ trách: Task (tab Danh sách task để nhập, sửa, gia hạn, đổi trạng thái giúp BOD; tab KPI task) và Log (KPI log), cho thành viên các ban ở cột BanQuanLy (`phamViHr_`). Không còn phân HR phụ trách từng người (tab PhuTrachHr cũ không dùng nữa).
-- **HR phụ trách seeding** (`SUP-SEED`): thêm thư mục Seeding: Hẹn nhắc 48 giờ và Báo cáo (không cần ghi giờ đăng). Quyền HR chỉ còn phụ trách ban và phụ trách seeding; mã cũ CRE, SUP-RES trong cột NhomHr bị bỏ qua.
-- Bảng dữ liệu nhiều người (KPI, Bảng điểm, Chứng nhận, danh sách task) lọc được theo ban và theo khối (số đầu cột Lớp, `khoiLop_`).
-- Không thông báo gì khi giao task hoặc khi task xong. Nhắc hạn task: HR phụ trách ban được nhắc task của thành viên các ban đó; Trưởng ban Nhân sự (BOD) được nhắc task của thành viên ban HR. Ai muốn tự nhận nhắc task của mình thì bật "Tự nhắc task của tôi" (cột TaiKhoan `TuNhac` = `bat`, mặc định tắt).
-- Tab HrQuen và PhuTrachHr không còn dùng; dữ liệu cũ giữ nguyên, có thể ẩn tab.
-
-## KPI task
-
-- Quyền task (`quyenTask_`): BOD xem, giao, sửa task của mọi người trừ BOD. HR phụ trách ban làm giúp BOD với thành viên các ban mình phụ trách (trừ chính mình). Người khác chỉ xem task của mình ở trang Task.
-- Xác nhận xong: BOD hoặc HR chọn Đúng hạn hay Trễ hạn, không chọn ngày (`ngayNopTheoKieu_` ghi NgayNop là hôm nay, hạn chót hoặc ngày sau hạn chót cho khớp lựa chọn). Task đã bị tính không hoàn thành vẫn xác nhận xong được.
-- Kết quả từng task (`ketQuaTask_`): đúng hạn so ngày nộp với hạn chót (gia hạn chỉ ghi được khi xin trước hạn ít nhất 24 giờ), chất lượng do BOD chấm; bảng 3 × 3 của quy chế. Không hoàn thành là Không làm, tự Chưa đạt.
-- KPI task (`tongKpiTask_`): số task đạt ÷ số task đã có kết quả, làm tròn. Thành viên bổ sung chỉ tính task giao từ lúc bắt đầu giai đoạn 2. Người miễn task (nhóm `SUP-RES`, ôn thi chuyển cấp) không được giao task. Thành viên ban HR tính KPI task như mọi ban khác.
-- Lịch nhắc mặc định (khi chưa ai chỉnh) theo tài liệu training HR: 20:00 trước hạn 1 ngày, 07:00 ngày hạn, 07:00 sau hạn 1 ngày.
-
-## KPI log (`src/KpiLog.gs`, `src/EcoLog.html`)
-
-- BOD tạo sự kiện ở trang Làm log: số buổi dự kiến, số buổi giao mặc định, số buổi giao riêng theo khối lớp (ưu tiên, đọc từ cột Lớp) hoặc theo ban (khớp tên ban hoặc nhóm ban).
-- Buổi có trạng thái Chưa diễn ra, Đã diễn ra, Huỷ vì hết việc, Huỷ vì lý do khác. Người đăng ký nhập tay hoặc từ file đăng ký log (`nhapDangKyLog`, đọc tab Đăng ký log của tool cũ hoặc tab đầu có cột Họ và tên).
-- Số buổi được giao cuối = thực diễn × giao ÷ dự kiến, không lớn hơn giao, giữ số lẻ. Trước khi chốt, thực diễn = dự kiến trừ số buổi huỷ vì hết việc; sau khi chốt, thực diễn = số buổi đã diễn ra hoặc huỷ vì lý do khác.
-- Đã tham gia = buổi đã diễn ra có mặt + buổi huỷ vì lý do khác đã đăng ký. KPI log = tổng tham gia ÷ tổng giao cuối, làm tròn %, đạt từ 80%. Thành viên bổ sung chỉ tính sự kiện tạo từ đầu giai đoạn 2.
-- Chốt sự kiện (`chotSuKienLog`) cộng điểm log vượt: số buổi vượt = phần nguyên của (tham gia − giao cuối), lấy các buổi có mặt muộn nhất (buổi huỷ không được cộng điểm), theo loại hoạt động gắn với log90 / log180. Dòng điểm có NguoiCong `Log: <người chốt>` và ThoiGian = ChotLuc; Mở lại hoặc Huỷ sự kiện gỡ các dòng đó.
-- Trang KPI hiện KPI log cạnh KPI task.
-
-## Chứng nhận (certificate) và khen thưởng (`src/TongKet.gs`, `src/EcoTongKet.html`)
-
-- Trang Chứng nhận (BOD, quyền `baocao`): KPI log, KPI task và kết quả certificate của từng thành viên, danh sách khen thưởng top 15% giai đoạn 1, giai đoạn 2 và top cả hai giai đoạn; xuất Excel (tab Certificate, tab Khen thưởng).
-- `xetCertificate_`: log ≥ 80% và task ≥ 80% thì cấp. Mỗi phần ≥ 60% thì xét bù trừ: chính thức xếp theo tổng điểm cả nhiệm kỳ trong các thành viên chính thức, bổ sung xếp theo điểm giai đoạn 2 trong tất cả thành viên; lọt top 40% (`xepHangTop_`, tính cả người bằng điểm, 0 điểm không tính) thì cấp. Phần chưa được giao việc (null) coi như đạt; SUP-RES miễn phần task.
-- Trang báo các task chờ đánh giá và sự kiện log chưa chốt, vì kết quả lúc đó còn tạm tính. Ở giai đoạn 1 certificate chỉ là tạm tính.
+- BOD đánh dấu HR "Phụ trách seeding" ở Cài đặt, Phân quyền HR (cột `NhomHr`, mã `SUP-SEED`).
+- Mỗi báo cáo: link bài, danh sách tên react và comment. Tên khớp Tên Facebook trước, không có thì khớp Họ và tên (bỏ dấu, chữ thường). BOD không được cộng.
+- Mỗi bài chỉ một báo cáo. Chưa đủ 48 giờ hoặc quá 7 ngày thì chỉ cảnh báo. Người gửi hoặc BOD huỷ được báo cáo: điểm của báo cáo bị gỡ, rồi điền lại được.
 
 ## Ảnh thành tích (`src/ThanhTich.gs`, `src/EcoAnh.html`)
 
-- Mọi người trừ BOD. `layThanhTich` trả điểm giai đoạn, hạng, top 15%, KPI log, KPI task, số lần được cộng điểm và 3 hoạt động nhiều nhất của chính người đăng nhập. Ảnh 1080 × 1920 vẽ bằng canvas trên trình duyệt (3 màu, bật tắt hạng, KPI, hoạt động), tải về bằng `taiTep` hoặc chia sẻ trực tiếp nếu máy hỗ trợ.
+- Mọi người trừ BOD. `layThanhTich` trả điểm giai đoạn, hạng, top, KPI log, KPI task, số lần được cộng điểm và 3 hoạt động nhiều nhất của chính người đăng nhập. Ảnh 1080 × 1920 vẽ bằng canvas trên trình duyệt, tải về hoặc chia sẻ trực tiếp nếu máy hỗ trợ.
 
-## Xếp hạng và top 15%
+## Trang vỏ (`pwa/`) và đăng nhập Google
 
-- `tongHopBangDiem_` trả về điểm giai đoạn hiện tại, điểm giai đoạn 1 và tổng cả nhiệm kỳ (hai cột sau chỉ có ở giai đoạn 2, cho thành viên chính thức đã ở giai đoạn 1), kèm cờ top 15% của từng bảng.
-- Giai đoạn 1 xếp hạng thành viên chính thức, giai đoạn 2 xếp hạng tất cả. Bảng cả nhiệm kỳ dùng khi xét bù trừ KPI.
-- Số người trong top = số người được xếp hạng × 15%, làm tròn thông thường (`soNguoiTop_`, nhân trước rồi chia để tránh sai số). Người bằng điểm với người cuối trong top cũng được tính; người 0 điểm không được tính.
+- `pwa/app/` là trang có manifest để cài app. Trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`. `pwa/home/`, `pwa/board/`, `pwa/desk/` chỉ chuyển sang `app/`. Trang gốc để dành cho website của CLB sau này, hiện chỉ chuyển sang `app/`.
+- Địa chỉ từng trang: app báo trang vỏ mỗi lần đổi trang, trang vỏ ghi vào địa chỉ dạng `app/#/task`; bấm quay lại thì trang vỏ báo app mở lại trang đó. Mở app thẳng trên script.google.com thì dùng `google.script.history`.
+- `pwa/sw.js` giữ sẵn file của trang vỏ (cần cho việc cài app); dữ liệu luôn lấy trực tiếp từ Apps Script.
+- Đăng nhập Google: app (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Trang vỏ hiện nút đăng nhập chính thức của Google, nhận ID token rồi gửi vào app. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email.
+- Ghi nhớ đăng nhập: phiên lưu cả trong khung lẫn ở trang vỏ (`eco_phien_vo`), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.
+- Khoảng an toàn (tai thỏ, thanh điều hướng): trang vỏ đo bằng `env(safe-area-inset-*)` rồi gửi vào app. App gửi màu thanh tiêu đề để trang vỏ tô phần tai thỏ và thanh vuốt cùng màu.
+- Icon: `tab-eco.png` cho tab trình duyệt; `apple-eco.png` cho iPhone; `eco-192.png`, `eco-512.png` cho Android; `badge-96.png` cho thanh trạng thái Android.
+- Trang vỏ chỉ trao đổi với trang thuộc `script.google.com` hoặc `*.googleusercontent.com`.
 
-## Báo cáo seeding trong app
+## Giao diện
 
-- Thay cho Google Form. BOD đánh dấu HR "Phụ trách seeding" ở Cài đặt, Phân quyền HR (cột `NhomHr`, mã `SUP-SEED`). Người đó thấy nhóm Seeding; BOD mở ở Cài đặt, Hoạt động CLB, Báo cáo seeding. BOD bật được mail báo khi có báo cáo mới ở Cài đặt, Mail báo cho BOD (mặc định tắt).
-- Mỗi báo cáo: link bài, danh sách tên react và comment (mỗi dòng một tên). Tên khớp Tên Facebook trước, không có thì khớp Họ và tên (bỏ dấu, chữ thường). BOD không được cộng.
-- Mỗi bài chỉ một báo cáo (so link sau khi bỏ www/m, tham số và dấu / cuối). Chưa đủ 48 giờ hoặc quá 7 ngày thì chỉ cảnh báo.
-- Người gửi hoặc BOD huỷ được báo cáo: điểm của báo cáo bị gỡ, rồi điền lại được.
+- Mở app là vào Trang chủ: khung chào có bầu trời đổi theo buổi và một câu hỏi thăm ngẫu nhiên (`CAU_HOI` trong `DungChung.html`), thêm các ô tóm tắt theo vai trò (`layTrangChu`). Màn chờ có lá bay kèm câu đùa (`CAU_CHO`).
+- Lưới ô chia đều bằng `chiaDeu` trong `DeskChung.html`: ít hàng nhất, số ô mỗi hàng chênh tối đa 1.
+- Thẻ người dùng: BOD hiện chức vụ lấy từ danh sách thành viên, vai trò khác hiện BOD/HR/UCV.
+- Cài đặt nhớ vị trí cuộn và nội dung ô tìm khi mở một mục rồi quay lại (`CUON_CAI_DAT`).
+- **Design system màu giấy** (`src/DeskGiaoDien.html`): nền giấy ấm, chữ màu mực, nét mảnh, một font Be Vietnam Pro với hai độ đậm 400 và 500. Xanh ECO #274E13 chỉ tô mục menu đang mở và nút chọn đang bật, không dùng cho chữ hay nút. Mỗi trang một nút đặc màu mực cho việc chính, còn lại là nút viền. Danh sách là các dòng phân cách bằng nét mảnh; nhãn trạng thái có chấm màu (`.pill.p-info`, `p-warn`, `p-bad`, `p-ok`, `p-mute`). Màu khai báo một lần ở `:root` (sáng) và hai khối tối; các tên cũ (`--bg`, `--fg`, `--muted`…) trỏ về màu mới để mọi trang dùng chung một bộ.
+- **Giao diện theo mùa và ngày lễ:** BOD chọn ở Cài đặt (CaiDat `ChuDe`). Chỉ thêm một dải trang trí mỏng ở đầu trang chủ, không đổi màu app. Danh sách mã ở `CHU_DE` (Logic.gs) và `DS_CHU_DE` (ChuDe.html); test `tests/chude.test.js` bắt hai bên phải khớp.
 
-## Form cộng điểm seeding (cách cũ)
+## Các cài đặt khác lưu ở đâu
 
-- Trang Cài đặt chỉ còn hiện phần này khi form đang bật, để BOD tắt sau khi HR phụ trách seeding chuyển sang báo cáo trong app.
+| Mục | Lưu ở |
+|---|---|
+| Cơ cấu ban | bảng Ban |
+| Quy tắc chỉnh được | CaiDat `QuyTac` (mặc định cho nhiệm kỳ sau) và bảng NhiemKy cột QuyTac (bản của từng nhiệm kỳ) |
+| Thang điểm | bảng LoaiHoatDong |
+| Quy chế (link file Docs) | CaiDat `QuyChe` |
+| Link ghim | bảng BangGhim |
+| Mail báo BOD | CaiDat `BaoGopYQuaMail`, `BaoThuChoDuyet`, `BaoSeedingMoi` |
+| Ảnh nền trang đăng nhập | CaiDat `AnhNenId` (file trong thư mục con Ảnh nền), `AnhNenPhienBan` |
+| Chữ ký Gmail trong thư UCV | CaiDat `DungChuKy` |
+| Client ID đăng nhập Google | CaiDat `GoogleClientId` |
+| Lịch nhắc task | CaiDat `LichNhac`, `LichNhacTheoMa` |
+| Bot Zalo | mã bot trong thuộc tính dự án; CaiDat `ZaloTenBot`, `ZaloLanNhacCuoi`; người nhận ở bảng KetNoiZalo |
+| Mật khẩu chung | thuộc tính dự án (chỉ bản băm) |
+| Lịch sinh nhật | CaiDat `LichSinhNhat` (ID lịch theo từng nhiệm kỳ) |
+| Link sheet danh sách thành viên lần trước | CaiDat `LinkSheetThanhVien` |
+| HR, UCV, phân ban, cách nhận thông báo | bảng TaiKhoan |
+| Danh bạ gửi hàng loạt | bảng DanhBa; thành viên có email luôn có sẵn |
+| Sheet mẫu và thư mục file đăng ký log | CaiDat `LinkMauLog`, `LinkThuMucLog` |
+| Giao diện theo mùa | CaiDat `ChuDe` |
 
-- Google Form seeding được liên kết câu trả lời về chính file dữ liệu (Van bấm một lần trong Form). Tab câu trả lời có cột Dấu thời gian, Họ và tên người nộp, Reaction, Comment. Tên tab tuỳ ý: app nhận tab theo mã (sheetId), đổi tên không sao.
-- BOD bật trong Cài đặt, trang "Thang điểm hoạt động" (phần dưới bảng loại): chọn tab và loại hoạt động có sẵn cho từng cột. Điểm mỗi lượt lấy từ bảng LoaiHoatDong. Muốn Reaction và Comment khác điểm thì thêm hai loại riêng (ví dụ Seeding Reaction, Seeding Comment). Lưu ở CaiDat `FormSeeding`.
-- Bật thì app cài lịch `khiNopForm` (onFormSubmit của file dữ liệu). Mỗi dòng trong ô là một tên Facebook, khớp nguyên dòng với cột Tên Facebook của tab ThanhVien (bỏ dấu, chữ thường, bỏ ký tự lạ), gồm cả BOD. Trang cài đặt liệt kê thành viên chưa có Tên Facebook.
-- Câu đã xử lý được ghi ở cột "ECO đã cộng" trong tab câu trả lời, nên không cộng hai lần. Lần đầu bật, các câu có sẵn được đánh dấu bỏ qua, trừ khi BOD chọn cộng luôn.
-- 15 lần cộng gần nhất lưu ở CaiDat `FormSeedingNhatKy` (mỗi lần: người nộp, số người được cộng kèm cột đã cộng, tên không khớp; tối đa 50 tên mỗi loại). Trang cài đặt chỉ hiện con số, bấm vào mới xem tên.
-- `baoMail` trong cấu hình `FormSeeding`: bật thì mỗi lần cộng gửi một mail tóm tắt về chính mail CLB (`guiMailSeeding_`).
-- Lịch nhắc việc hằng ngày (`nhacViec_`) cũng chạy `xuLyFormSeeding_` để cộng bù nếu Google lỡ gọi `khiNopForm`.
+## Kiểm thử và triển khai
+
+- `tests/` kiểm thử các hàm thuần trong `Logic.gs` và một phần máy chủ (chạy `npm test`).
+- `.github/workflows/day-len-gas.yml`: khi gộp vào `main`, chạy `npm test`, rồi `clasp push` mã trong `src/` lên dự án có ID ở secret `SCRIPT_ID`, và cập nhật bản triển khai `DEPLOYMENT_ID` (link app giữ nguyên). Cần thêm secret `CLASPRC_JSON`. Xem `docs/huong-dan-cai-dat.md`.

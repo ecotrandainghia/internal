@@ -48,54 +48,52 @@ test('docDanhSachThanhVien bỏ dòng trống, báo trùng tên, thiếu cột',
   assert.match(thieu.loi[0], /Ban/);
 });
 
-test('tinhKyMoi theo ba kiểu tải', () => {
-  const t10 = new Date(2026, 9, 1);
-  const t2 = new Date(2027, 1, 1);
-  assert.deepStrictEqual(L.tinhKyMoi(null, L.KIEU_TAI.DOT1, t10), { NhiemKy: '2026-2027', HocKy: 1 });
-  assert.deepStrictEqual(L.tinhKyMoi({ NhiemKy: '2026-2027', HocKy: 1 }, L.KIEU_TAI.DOT2, t2), { NhiemKy: '2026-2027', HocKy: 2 });
-  assert.strictEqual(L.tinhKyMoi({ NhiemKy: '2026-2027', HocKy: 1 }, L.KIEU_TAI.CAP_NHAT, t2), null);
+test('tinhKyMoi: đợt n mở giai đoạn n, Oday và Cập nhật không mở giai đoạn', () => {
+  const K = L.KIEU_TAI;
+  assert.deepStrictEqual(L.tinhKyMoi(K.DOT1, '2026-2027'), { NhiemKy: '2026-2027', GiaiDoan: 1 });
+  assert.deepStrictEqual(L.tinhKyMoi(K.DOT2, '2026-2027'), { NhiemKy: '2026-2027', GiaiDoan: 2 });
+  assert.strictEqual(L.tinhKyMoi(K.ODAY, '2026-2027'), null);
+  assert.strictEqual(L.tinhKyMoi(K.CAP_NHAT, '2026-2027'), null);
 });
 
-test('tongHopBangDiem chỉ tính học kỳ hiện tại, ẩn thông tin riêng, có điểm HK1 cho người ở lại', () => {
+test('tongHopBangDiem: điểm từng giai đoạn, người vào sau không có điểm giai đoạn trước, ẩn thông tin riêng', () => {
   const tv = [
-    { HoVaTen: 'A', Lop: '10A', Ban: 'PR CAP', Email: 'a@x', SoDienThoaiCaNhan: '090' },
-    { HoVaTen: 'B', Lop: '11B', Ban: 'PG', LoaiThanhVien: 'Bổ sung' }
+    { MaTV: '26-1-CAP-01', HoVaTen: 'A', Lop: '10A', Ban: 'PR CAP', Email: 'a@x', SoDienThoai: '090', GiaiDoanVao: 1 },
+    { MaTV: '26-2-PG-01', HoVaTen: 'B', Lop: '11B', Ban: 'PG', GiaiDoanVao: 2 }
   ];
   const ls = [
-    { HoVaTen: 'A', Diem: 5, NhiemKy: '2026-2027', HocKy: 1 },
-    { HoVaTen: 'A', Diem: 3, NhiemKy: '2026-2027', HocKy: 2 },
-    { HoVaTen: 'B', Diem: 2, NhiemKy: '2026-2027', HocKy: 2 },
-    { HoVaTen: 'A', Diem: 9, NhiemKy: '2025-2026', HocKy: 2 }
+    { HoVaTen: 'A', Diem: 5, NhiemKy: '2026-2027', GiaiDoan: 1 },
+    { HoVaTen: 'A', Diem: 3, NhiemKy: '2026-2027', GiaiDoan: 2 },
+    { HoVaTen: 'B', Diem: 2, NhiemKy: '2026-2027', GiaiDoan: 2 },
+    { HoVaTen: 'A', Diem: 9, NhiemKy: '2025-2026', GiaiDoan: 2 }
   ];
-  const luuTru = [{ NhiemKy: '2026-2027', HocKy: 1, HoVaTen: 'A' }];
-  const kq = L.tongHopBangDiem(tv, ls, { NhiemKy: '2026-2027', HocKy: 2 }, luuTru);
-  assert.deepStrictEqual(kq[0], { ten: 'A', lop: '10A', ban: 'PR CAP', nhom: 'PR', diem: 3, diemHk1: 5, diemCaKy: 8, boSung: false, top: false, topHk1: false, topCaKy: false });
-  assert.strictEqual(kq[1].diem, 2);
-  assert.strictEqual(kq[1].boSung, true);
-  assert.strictEqual(kq[1].diemHk1, null);
+  const kq = L.tongHopBangDiem(tv, ls, { NhiemKy: '2026-2027', GiaiDoan: 2 });
+  assert.deepStrictEqual(kq[0], { ten: 'A', maTV: '26-1-CAP-01', lop: '10A', ban: 'PR CAP', nhom: 'PR', boSung: false, gdVao: 1, diem: 3, gd: [5, 3], caKy: 8, top: false, topGd: [false, false], topCaKy: false }); // 2 người × 15% = 0 người trong top
+  assert.deepStrictEqual([kq[1].diem, kq[1].boSung, kq[1].gd, kq[1].caKy], [2, true, [null, 2], null]);
   assert.strictEqual(JSON.stringify(kq).includes('090'), false);
+  assert.strictEqual(JSON.stringify(kq).includes('a@x'), false);
 });
 
-test('lichSuCongKhai lọc đúng người, đúng kỳ, mới nhất trước', () => {
+test('lichSuCongKhai lọc đúng người, đúng giai đoạn (0 là cả nhiệm kỳ), mới nhất trước', () => {
   const ls = [
-    { HoVaTen: 'A', ThoiGian: new Date(2026, 9, 1), LoaiHoatDong: 'Log', TenHoatDong: '', Diem: 3, NguoiCong: 'X', NhiemKy: '2026-2027', HocKy: 1 },
-    { HoVaTen: 'A', ThoiGian: new Date(2026, 9, 5), LoaiHoatDong: 'Seeding', TenHoatDong: 'react', Diem: 1, NguoiCong: 'X', NhiemKy: '2026-2027', HocKy: 1 },
-    { HoVaTen: 'B', ThoiGian: new Date(2026, 9, 2), LoaiHoatDong: 'Log', Diem: 3, NhiemKy: '2026-2027', HocKy: 1 }
+    { HoVaTen: 'A', ThoiGian: new Date(2026, 9, 1), LoaiHoatDong: 'Log', TenHoatDong: '', Diem: 3, NguoiCong: 'X', NhiemKy: '2026-2027', GiaiDoan: 1 },
+    { HoVaTen: 'A', ThoiGian: new Date(2026, 9, 5), LoaiHoatDong: 'Seeding', TenHoatDong: 'react', Diem: 1, NguoiCong: 'X', NhiemKy: '2026-2027', GiaiDoan: 1 },
+    { HoVaTen: 'A', ThoiGian: new Date(2027, 1, 5), LoaiHoatDong: 'Staff', TenHoatDong: 'hội chợ', Diem: 5, NguoiCong: 'X', NhiemKy: '2026-2027', GiaiDoan: 2 },
+    { HoVaTen: 'B', ThoiGian: new Date(2026, 9, 2), LoaiHoatDong: 'Log', Diem: 3, NhiemKy: '2026-2027', GiaiDoan: 1 }
   ];
   const kq = L.lichSuCongKhai(ls, 'a', '2026-2027', 1);
   assert.strictEqual(kq.length, 2);
   assert.strictEqual(kq[0].ten, 'react');
   assert.strictEqual(JSON.stringify(kq).includes('NguoiCong'), false);
+  assert.deepStrictEqual(L.lichSuCongKhai(ls, 'A', '2026-2027', 0).map((d) => d.giaiDoan), [2, 1, 1]);
 });
 
-test('linkHopLe, kiemTraGopY, taiKhoanBodCanCo', () => {
+test('linkHopLe, kiemTraGopY', () => {
   assert.strictEqual(L.linkHopLe('https://a.com/x'), true);
   assert.strictEqual(L.linkHopLe('javascript:alert(1)'), false);
   assert.notStrictEqual(L.kiemTraGopY('   '), '');
   assert.notStrictEqual(L.kiemTraGopY('x'.repeat(2001)), '');
   assert.strictEqual(L.kiemTraGopY('ok'), '');
-  const bod = L.taiKhoanBodCanCo([{ HoVaTen: 'A', Ban: 'BOD', Email: 'a@x' }, { HoVaTen: 'B', Ban: 'PG', Email: 'b@x' }, { HoVaTen: 'C', Ban: 'BOD', Email: '' }]);
-  assert.deepStrictEqual(bod, [{ Email: 'a@x', HoVaTen: 'A' }]);
 });
 
 test('locNhiemKy: ẩn dữ liệu nhiệm kỳ cũ, không rõ thời điểm thì giữ', () => {
@@ -106,68 +104,79 @@ test('locNhiemKy: ẩn dữ liệu nhiệm kỳ cũ, không rõ thời điểm t
   assert.strictEqual(L.locNhiemKy(ds, (d) => d.t, 0).length, 5);
 });
 
-test('batDauNhiemKyTu: lấy lần tải đợt 1 đầu tiên của nhiệm kỳ đang chạy', () => {
+test('batDauNhiemKyTu: lúc mở giai đoạn 1 đầu tiên của nhiệm kỳ đang chạy', () => {
   const d = (m, n) => new Date(2026, m, n);
   assert.strictEqual(L.batDauNhiemKyTu([]), 0);
   const ds = [
-    { NhiemKy: '2025-2026', HocKy: 1, BatDau: d(0, 1) },
-    { NhiemKy: '2026-2027', HocKy: 1, BatDau: d(8, 10) },
-    { NhiemKy: '2026-2027', HocKy: 1, BatDau: d(8, 12) },
-    { NhiemKy: '2026-2027', HocKy: 2, BatDau: d(11, 1) }
+    { NhiemKy: '2025-2026', GiaiDoan: 1, BatDau: d(0, 1) },
+    { NhiemKy: '2026-2027', GiaiDoan: 1, BatDau: d(8, 10) },
+    { NhiemKy: '2026-2027', GiaiDoan: 2, BatDau: d(11, 1) }
   ];
   assert.strictEqual(L.batDauNhiemKyTu(ds), d(8, 10).getTime());
+  const k = L.khoangNhiemKy(ds);
+  assert.deepStrictEqual(k['2025-2026'], { tu: d(0, 1).getTime(), den: d(8, 10).getTime() });
+  assert.deepStrictEqual(k['2026-2027'], { tu: d(8, 10).getTime(), den: 0 });
 });
 
-test('kiemTraMaHr: gọn khoảng trắng, không trùng giữa các HR', () => {
-  const tk = [
-    { Email: 'a@x.vn', HoVaTen: 'An', VaiTro: 'HR', MaHr: 'HR01' },
-    { Email: 'b@x.vn', HoVaTen: 'Bình', VaiTro: 'HR', MaHr: '' },
-    { Email: 'c@x.vn', HoVaTen: 'Chi', VaiTro: 'BOD', MaHr: 'HR02' }
-  ];
-  assert.deepStrictEqual(L.kiemTraMaHr('  HR  03 ', tk, 'b@x.vn'), { ma: 'HR 03', loi: '' });
-  assert.match(L.kiemTraMaHr('hr01', tk, 'b@x.vn').loi, /An/);
-  assert.strictEqual(L.kiemTraMaHr('HR01', tk, 'A@x.vn').loi, '');
-  assert.strictEqual(L.kiemTraMaHr('HR02', tk, 'b@x.vn').loi, '');
-  assert.strictEqual(L.kiemTraMaHr('', tk, 'b@x.vn').loi, '');
-  assert.match(L.kiemTraMaHr('x'.repeat(21), tk, 'b@x.vn').loi, /20/);
-});
-
-test('kiểu tải: nhiệm kỳ theo năm tải, mỗi đợt một lần, làm lại thì thành Cập nhật', () => {
+test('kiểu tải: gợi ý nhiệm kỳ, mỗi đợt một lần, làm lại thì thành Cập nhật, phải theo thứ tự', () => {
   const K = L.KIEU_TAI;
-  const t10 = new Date(2026, 9, 1), t2 = new Date(2027, 1, 1);
-  assert.strictEqual(L.nhiemKyTheoKieu(t10, K.ODAY), '2026-2027');
-  assert.strictEqual(L.nhiemKyTheoKieu(t10, K.DOT1), '2026-2027');
-  assert.strictEqual(L.nhiemKyTheoKieu(t2, K.DOT2), '2026-2027');
-  let kt = L.kieuTaiThucTe(K.ODAY, t10, []);
-  assert.deepStrictEqual([kt.kieu, kt.nhiemKy, kt.doiThanhCapNhat, kt.dauNhiemKy], [K.ODAY, '2026-2027', false, true]);
-  kt = L.kieuTaiThucTe(K.DOT1, t10, [{ NhiemKy: '2026-2027', Kieu: K.ODAY }]);
+  const t10 = new Date(2026, 9, 1);
+  assert.deepStrictEqual(L.cacKieuTai(2), [K.ODAY, K.DOT1, K.DOT2, K.CAP_NHAT]);
+  assert.strictEqual(L.goiYNhiemKy(K.ODAY, t10, []), '2026-2027');
+  assert.strictEqual(L.goiYNhiemKy(K.DOT2, new Date(2027, 1, 1), [{ NhiemKy: '2026-2027', Kieu: K.DOT1 }]), '2026-2027');
+  assert.strictEqual(L.goiYNhiemKy(K.ODAY, new Date(2027, 8, 1), [{ NhiemKy: '2026-2027', Kieu: K.DOT2 }]), '2027-2028');
+  let kt = L.kieuTaiThucTe(K.ODAY, '2026-2027', [], 2);
+  assert.deepStrictEqual([kt.kieu, kt.doiThanhCapNhat, kt.dauNhiemKy, kt.loi], [K.ODAY, false, true, '']);
+  kt = L.kieuTaiThucTe(K.DOT1, '2026-2027', [{ NhiemKy: '2026-2027', Kieu: K.ODAY }], 2);
   assert.deepStrictEqual([kt.kieu, kt.dauNhiemKy], [K.DOT1, false]);
-  kt = L.kieuTaiThucTe(K.DOT1, t10, [{ NhiemKy: '2026-2027', KieuTaiLen: K.DOT1 }]); // dòng KyHoatDong cũ
+  kt = L.kieuTaiThucTe(K.DOT1, '2026-2027', [{ NhiemKy: '2026-2027', Kieu: K.DOT1 }], 2);
   assert.deepStrictEqual([kt.kieu, kt.doiThanhCapNhat], [K.CAP_NHAT, true]);
-  kt = L.kieuTaiThucTe(K.ODAY, t10, [{ NhiemKy: '2026-2027', Kieu: K.DOT1 }]); // Oday sau đợt 1
+  kt = L.kieuTaiThucTe(K.ODAY, '2026-2027', [{ NhiemKy: '2026-2027', Kieu: K.DOT1 }], 2);
   assert.strictEqual(kt.kieu, K.CAP_NHAT);
-  kt = L.kieuTaiThucTe(K.DOT1, new Date(2027, 8, 1), [{ NhiemKy: '2026-2027', Kieu: K.DOT1 }]); // nhiệm kỳ sau
-  assert.deepStrictEqual([kt.kieu, kt.nhiemKy, kt.dauNhiemKy], [K.DOT1, '2027-2028', true]);
-  assert.strictEqual(L.kieuTaiThucTe(K.CAP_NHAT, t10, []).kieu, K.CAP_NHAT);
+  assert.match(L.kieuTaiThucTe(K.DOT2, '2026-2027', [{ NhiemKy: '2026-2027', Kieu: K.ODAY }], 2).loi, /chưa tải "Sau tuyển đợt 1"/);
+  assert.match(L.kieuTaiThucTe(L.kieuDot(3), '2026-2027', [], 2).loi, /không hợp lệ/);
+  assert.match(L.kieuTaiThucTe(K.ODAY, '2026', [], 2).loi, /2026-2027/);
+  assert.strictEqual(L.kieuTaiThucTe(K.CAP_NHAT, '2026-2027', [], 2).kieu, K.CAP_NHAT);
 });
 
-test('so danh sách: thêm, sửa, ẩn, đổi ban; gắn chính thức và bổ sung', () => {
+test('mã thành viên: năm vào, đợt vào, ban lúc vào, số thứ tự; không cấp lại', () => {
+  assert.strictEqual(L.maThanhVienMoi('2026-2027', 1, 'PG', {}), '26-1-PG-01');
+  assert.strictEqual(L.maThanhVienMoi('2026-2027', 0, 'CAP', { '26-0-CAP-01': 1, '26-0-CAP-09': 1, '26-1-CAP-20': 1 }), '26-0-CAP-10');
+  assert.deepStrictEqual(L.docMaThanhVien('26-2-des-07'), { nam: 2026, nhiemKy: '2026-2027', dot: 2, ban: 'DES', so: 7 });
+  assert.strictEqual(L.docMaThanhVien('PG-07'), null);
+});
+
+test('tải danh sách: nhận người theo mã, email, tên; cấp mã người mới; người vắng thành Đã rời; đổi ban', () => {
+  const K = L.KIEU_TAI, t = new Date(2027, 1, 1);
   const cu = [
-    { HoVaTen: 'An', Ban: 'PG', Lop: '10A1', LoaiThanhVien: 'Chính thức' },
-    { HoVaTen: 'Bình', Ban: 'AD', Lop: '10A2', LoaiThanhVien: 'Bổ sung', DotGiaNhap: 'Đợt 2' },
-    { HoVaTen: 'Chi', Ban: 'HR' }
+    { MaTV: '26-1-PG-01', HoVaTen: 'An', Ban: 'PG', Lop: '10A1', Email: 'an@x', GiaiDoanVao: 1, LoaiThanhVien: 'Chính thức', TrangThai: 'Đang hoạt động' },
+    { MaTV: '26-1-AD-01', HoVaTen: 'Bình', Ban: 'AD', Lop: '10A2', Email: 'binh@x', GiaiDoanVao: 1, LoaiThanhVien: 'Chính thức', TrangThai: 'Đang hoạt động' },
+    { MaTV: '26-1-HR-01', HoVaTen: 'Chi', Ban: 'HR', GiaiDoanVao: 1, TrangThai: 'Đang hoạt động' },
+    { MaTV: '26-1-PG-02', HoVaTen: 'Dũng', Ban: 'PG', GiaiDoanVao: 1, TrangThai: 'Đã rời' }
   ];
-  const moi = [{ HoVaTen: 'an', Ban: 'PR CAP', Lop: '10A1' }, { HoVaTen: 'Bình', Ban: 'AD', Lop: '10A2' }, { HoVaTen: 'Dũng', Ban: 'PG' }];
-  const ss = L.soSanhDanhSach(cu, moi);
-  assert.deepStrictEqual(ss.them, ['Dũng']);
-  assert.deepStrictEqual(ss.sua, ['an']);
-  assert.deepStrictEqual(ss.an, ['Chi']);
-  assert.deepStrictEqual(ss.doiBan, [{ HoVaTen: 'an', BanCu: 'PG', BanMoi: 'PR CAP' }]);
-  const g2 = L.ganLoaiThanhVien(moi, cu, L.KIEU_TAI.DOT2, false);
-  assert.deepStrictEqual(g2.map((t) => [t.LoaiThanhVien, t.DotGiaNhap]), [['Chính thức', ''], ['Bổ sung', 'Đợt 2'], ['Bổ sung', 'Đợt 2']]);
-  const g1 = L.ganLoaiThanhVien(moi, cu, L.KIEU_TAI.DOT1, true); // đầu nhiệm kỳ mới: mọi người là chính thức
-  assert.deepStrictEqual(g1.map((t) => [t.LoaiThanhVien, t.DotGiaNhap]), [['Chính thức', ''], ['Chính thức', ''], ['Chính thức', 'Đợt 1']]);
-  assert.strictEqual(L.ganLoaiThanhVien(moi, cu, L.KIEU_TAI.CAP_NHAT, false)[2].LoaiThanhVien, 'Chính thức');
+  const moi = [
+    { HoVaTen: 'An Nguyễn', Ban: 'pr cap', Lop: '10A1', Email: 'AN@x' }, // đổi tên và ban, nhận theo email
+    { MaTV: '26-1-ad-01', HoVaTen: 'Bình', Ban: 'AD', Lop: '10A2' },
+    { HoVaTen: 'Dũng', Ban: 'PG' }, // quay lại
+    { HoVaTen: 'Em', Ban: 'PG' },
+    { HoVaTen: 'Lạ', Ban: 'ER' }
+  ];
+  const k = L.keHoachTaiDanhSach(moi, cu, { kieu: K.DOT2, nhiemKy: '2026-2027', dauNhiemKy: false, giaiDoan: 2, bayGio: t });
+  assert.deepStrictEqual(k.banLa, ['ER']);
+  assert.deepStrictEqual(k.them.map((x) => [x.MaTV, x.HoVaTen, x.GiaiDoanVao, x.LoaiThanhVien]), [['26-2-PG-01', 'Em', 2, 'Bổ sung']]);
+  assert.deepStrictEqual(k.doiBan, [{ MaTV: '26-1-PG-01', HoVaTen: 'An Nguyễn', BanCu: 'PG', BanMoi: 'PR CAP' }]);
+  assert.deepStrictEqual(k.roi.map((x) => x.HoVaTen), ['Chi']);
+  assert.deepStrictEqual(k.quayLai.map((x) => [x.MaTV, x.GiaiDoanVao, x.LoaiThanhVien]), [['26-1-PG-02', 2, 'Bổ sung']]);
+  assert.deepStrictEqual(k.sua.map((x) => x.MaTV), ['26-1-PG-01']);
+  assert.strictEqual(k.ds.length, 5);
+  const ma = L.keHoachTaiDanhSach([{ MaTV: '99-1-PG-01', HoVaTen: 'X', Ban: 'PG' }], cu, { kieu: K.CAP_NHAT, nhiemKy: '2026-2027', giaiDoan: 2, bayGio: t });
+  assert.match(ma.loi[0], /99-1-PG-01/);
+  // Trùng tên nhưng khác email là người khác.
+  const ten = L.keHoachTaiDanhSach([{ HoVaTen: 'Bình', Ban: 'AD', Email: 'binh2@x' }], cu, { kieu: K.CAP_NHAT, nhiemKy: '2026-2027', giaiDoan: 2, bayGio: t });
+  assert.strictEqual(ten.them.length, 1);
+  // Đầu nhiệm kỳ mới: mọi người ở lại thành chính thức, vào từ giai đoạn 1.
+  const dau = L.keHoachTaiDanhSach([{ HoVaTen: 'Dũng', Ban: 'PG' }, { HoVaTen: 'Chi', Ban: 'HR' }], cu, { kieu: K.ODAY, nhiemKy: '2027-2028', dauNhiemKy: true, giaiDoan: 2, bayGio: t });
+  assert.deepStrictEqual(dau.ds.filter((x) => x.TrangThai === 'Đang hoạt động').map((x) => [x.HoVaTen, x.GiaiDoanVao, x.LoaiThanhVien]), [['Chi', 1, 'Chính thức'], ['Dũng', 1, 'Chính thức']]);
 });
 
 test('ngày sinh và kế hoạch lịch sinh nhật', () => {
@@ -207,38 +216,60 @@ test('top 15%: làm tròn thông thường, tính cả người bằng điểm, 
   assert.deepStrictEqual(L.topTheoDiem(ds([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 'diem'), {});
 });
 
-test('tongHopBangDiem: giai đoạn 1 chỉ xếp hạng chính thức; giai đoạn 2 có bảng giai đoạn 1 và cả nhiệm kỳ', () => {
+test('tongHopBangDiem: mỗi giai đoạn xếp hạng người đã vào đến giai đoạn đó; cả nhiệm kỳ chỉ người vào từ giai đoạn 1', () => {
   const ten = Array.from({ length: 10 }, (_, i) => 'N' + i);
-  const tv = ten.map((t) => ({ HoVaTen: t, Ban: 'PG' })).concat([{ HoVaTen: 'Bs', Ban: 'PG', LoaiThanhVien: 'Bổ sung' }]);
-  const ls = ten.map((t, i) => ({ HoVaTen: t, Diem: 10 - i, NhiemKy: 'K', HocKy: 1 }))
-    .concat([{ HoVaTen: 'N9', Diem: 50, NhiemKy: 'K', HocKy: 2 }, { HoVaTen: 'Bs', Diem: 40, NhiemKy: 'K', HocKy: 2 }]);
-  const gd1 = L.tongHopBangDiem(tv.slice(0, 10), ls, { NhiemKy: 'K', HocKy: 1 }, []);
+  const tv = ten.map((t) => ({ HoVaTen: t, Ban: 'PG', GiaiDoanVao: 1 })).concat([{ HoVaTen: 'Bs', Ban: 'PG', GiaiDoanVao: 2 }]);
+  const ls = ten.map((t, i) => ({ HoVaTen: t, Diem: 10 - i, NhiemKy: 'K', GiaiDoan: 1 }))
+    .concat([{ HoVaTen: 'N9', Diem: 50, NhiemKy: 'K', GiaiDoan: 2 }, { HoVaTen: 'Bs', Diem: 40, NhiemKy: 'K', GiaiDoan: 2 }]);
+  const gd1 = L.tongHopBangDiem(tv.slice(0, 10), ls, { NhiemKy: 'K', GiaiDoan: 1 });
   assert.deepStrictEqual(gd1.filter((p) => p.top).map((p) => p.ten), ['N0', 'N1']);
-  const luuTru = ten.map((t) => ({ NhiemKy: 'K', HocKy: 1, HoVaTen: t }));
-  const gd2 = L.tongHopBangDiem(tv, ls, { NhiemKy: 'K', HocKy: 2 }, luuTru);
-  // Giai đoạn 2: 11 người, top 2 → N9 (50) và Bs (40).
+  const gd2 = L.tongHopBangDiem(tv, ls, { NhiemKy: 'K', GiaiDoan: 2 });
+  // Giai đoạn 2: 11 người, top 15% = 2 → N9 (50) và Bs (40).
   assert.deepStrictEqual(gd2.filter((p) => p.top).map((p) => p.ten), ['N9', 'Bs']);
-  // Giai đoạn 1 và cả nhiệm kỳ: chỉ 10 người chính thức.
-  assert.deepStrictEqual(gd2.filter((p) => p.topHk1).map((p) => p.ten), ['N0', 'N1']);
+  // Giai đoạn 1 và cả nhiệm kỳ: chỉ 10 người vào từ giai đoạn 1.
+  assert.deepStrictEqual(gd2.filter((p) => p.topGd[0]).map((p) => p.ten), ['N0', 'N1']);
   assert.deepStrictEqual(gd2.filter((p) => p.topCaKy).map((p) => p.ten), ['N0', 'N9']);
   const bs = gd2.filter((p) => p.ten === 'Bs')[0];
-  assert.strictEqual(bs.diemHk1, null);
-  assert.strictEqual(bs.diemCaKy, null);
+  assert.deepStrictEqual([bs.gd, bs.caKy], [[null, 40], null]);
 });
 
 test('giới hạn số lần mỗi giai đoạn (góp ý được dùng tối đa 2 lần)', () => {
-  const KY = { NhiemKy: 'K', HocKy: 1 };
+  const KY = { NhiemKy: 'K', GiaiDoan: 1 };
   const LOAI = [{ TenLoai: 'Góp ý', Diem: 10, GioiHan: 2 }, { TenLoai: 'Staff', Diem: 3 }];
   const TV = [{ HoVaTen: 'An' }, { HoVaTen: 'Bình' }];
   const ls = [
-    { HoVaTen: 'An', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', HocKy: 1 },
-    { HoVaTen: 'An', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', HocKy: 1 },
-    { HoVaTen: 'Bình', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', HocKy: 2 } // giai đoạn khác không tính
+    { HoVaTen: 'An', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', GiaiDoan: 1 },
+    { HoVaTen: 'An', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', GiaiDoan: 1 },
+    { HoVaTen: 'Bình', LoaiHoatDong: 'Góp ý', NhiemKy: 'K', GiaiDoan: 2 } // giai đoạn khác không tính
   ];
   const now = new Date();
   assert.match(L.taoDongCongDiem({ loai: 'Góp ý', nguoi: ['An', 'Bình'] }, TV, LOAI, 'BOD', KY, now, ls).loi, /tối đa 2 lần mỗi giai đoạn\. Đã đủ: An\./);
   assert.strictEqual(L.taoDongCongDiem({ loai: 'Góp ý', nguoi: ['Bình'] }, TV, LOAI, 'BOD', KY, now, ls).loi, '');
   assert.strictEqual(L.taoDongCongDiem({ loai: 'Staff', nguoi: ['An'] }, TV, LOAI, 'BOD', KY, now, ls.concat(ls, ls)).loi, '');
+});
+
+test('quy tắc: chỉ nhận các mục BOD được chỉnh, bỏ giá trị sai', () => {
+  const q = L.chuanHoaQuyTac(JSON.stringify({ tiLeTop: 20, sapDenHanNgay: 3, khtSauNgay: 2, thoiLuongBuoi: [180, 60, 60, 5], datTask: 50, soGiaiDoan: 4 }));
+  assert.deepStrictEqual([q.tiLeTop, q.sapDenHanNgay, q.khtSauNgay, q.thoiLuongBuoi], [20, 3, 2, [60, 180]]);
+  assert.deepStrictEqual([q.datTask, q.soGiaiDoan, q.seedingGio], [80, 2, 48], 'mục cố định không đổi được');
+  assert.strictEqual(L.chuanHoaQuyTac({ tiLeTop: 0 }).tiLeTop, 15);
+  assert.strictEqual(L.chuanHoaQuyTac('hỏng').tiLeTop, 15);
+  assert.deepStrictEqual(L.CHINH_DUOC, ['tiLeTop', 'sapDenHanNgay', 'khtSauNgay', 'thoiLuongBuoi']);
+});
+
+test('cơ cấu ban: kiểm tra chữ viết tắt, cần có BOD; áp dụng thì mọi chỗ dùng ban mới', () => {
+  assert.match(L.chuanHoaCoCau([{ ma: 'PG' }]).loi, /ban điều hành/);
+  assert.match(L.chuanHoaCoCau([{ ma: 'BOD', laBod: true }, { ma: 'PG' }, { ma: 'pg' }]).loi, /trùng/);
+  assert.match(L.chuanHoaCoCau([{ ma: 'BOD', laBod: true }, { ma: 'PR A', vietTat: 'PR' }, { ma: 'PR B', vietTat: 'pr' }]).loi, /cùng chữ viết tắt PR/);
+  const kq = L.chuanHoaCoCau([{ ma: 'bod', ten: 'Ban điều hành', laBod: true }, { ma: 'Media', vietTat: 'MD' }, { ma: 'PG', dangDung: false }]);
+  assert.strictEqual(kq.loi, '');
+  try {
+    L.apCauHinh(kq.ds, null);
+    assert.strictEqual(L.laBanBod('Bod'), true);
+    assert.deepStrictEqual(L.banCoo(), ['MEDIA'], 'ban đã giải thể không được giao HR phụ trách');
+    assert.strictEqual(L.timBan('media').vietTat, 'MD');
+  } finally { L.apCauHinh(null, null); }
+  assert.strictEqual(L.timBan('Media'), null);
 });
 
 test('chuanHoaLoaiHoatDong: số lần tối đa, gắn chức năng tự cộng, mức điểm theo quy chế', () => {
@@ -294,4 +325,15 @@ test('báo cáo seeding: dò tên, chặn trùng bài, cảnh báo 48 giờ, c�
   assert.strictEqual(khongGio.loi, '');
   assert.deepStrictEqual(khongGio.canhBao, []);
   assert.strictEqual(khongGio.bao.LucDang, '');
+});
+
+test('lưu trữ: nhiệm kỳ xong hơn một năm mới chuyển; chia dòng theo cột NhiemKy hoặc theo thời gian', () => {
+  const d = (y, m) => new Date(y, m, 1).getTime();
+  const khoang = { '2024-2025': { tu: d(2024, 8), den: d(2025, 8) }, '2025-2026': { tu: d(2025, 8), den: d(2026, 8) }, '2026-2027': { tu: d(2026, 8), den: 0 } };
+  assert.deepStrictEqual(L.nhiemKyCanLuuTru(khoang, d(2026, 9), {}), ['2024-2025']);
+  assert.deepStrictEqual(L.nhiemKyCanLuuTru(khoang, d(2026, 9), { '2024-2025': true }), []);
+  const ds = [{ NhiemKy: '2024-2025', ThoiGian: new Date(2026, 0, 1) }, { ThoiGian: new Date(2025, 0, 1) }, { ThoiGian: new Date(2025, 9, 1) }, { ThoiGian: '' }];
+  const c = L.chiaDongLuuTru(ds, 'ThoiGian', khoang, '2024-2025');
+  assert.deepStrictEqual([c.chuyen.length, c.giu.length], [2, 2]);
+  assert.strictEqual(c.giu[1].ThoiGian, '');
 });

@@ -6,21 +6,27 @@ VIEWS.diem = function () {
   dangTai();
   goiPhien('layDuLieuCongDiem').then(function (d) {
     if (page !== 'diem') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Cộng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.hocKy + '. ' : '') + 'Chọn loại hoạt động và những người được cộng. BOD không tham gia cộng điểm nên không có trong danh sách.</p></div><button class="btn ghost" data-p="caidat" data-s2="types">' + ic('star', 16) + 'Thang điểm</button></div>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Cộng điểm</h2><p class="lead">' + (d.ky ? 'Nhiệm kỳ ' + esc(d.ky.nhiemKy) + ' · Giai đoạn ' + d.ky.giaiDoan + '. ' : '') + 'Chọn loại hoạt động và những người được cộng. BOD không tham gia cộng điểm nên không có trong danh sách.</p></div><button class="btn ghost" data-p="caidat" data-s2="types">' + ic('star', 16) + 'Thang điểm</button></div>' +
       (d.ky ? '' : '<div class="note">' + ic('info') + '<span>Chưa có giai đoạn nào. Hãy tải danh sách thành viên kiểu "Sau tuyển đợt 1" ở menu ECO hậu kỳ trong Google Sheet.</span></div>') +
       '<div class="diem-grid"><form class="card form" id="fd">' +
-      '<div><div style="font-weight:600;font-size:13px;margin-bottom:8px">Loại hoạt động</div><div class="types" id="types">' +
+      '<div><div style="font-weight:500;font-size:13px;margin-bottom:8px">Loại hoạt động</div><div class="types" id="types">' +
       (d.loai.length ? d.loai.map(function (l, i) { return '<button type="button" class="type" aria-pressed="' + (i === 0) + '" data-t="' + esc(l.ten) + '"><b>' + esc(l.ten) + '</b><span>+' + l.diem + ' điểm</span></button>'; }).join('') : '<span class="hint">Chưa có loại hoạt động. Thêm trong Cài đặt.</span>') + '</div></div>' +
       '<label class="f">Tên hoạt động <small>Không bắt buộc</small><input type="text" id="actname" maxlength="200" placeholder="Ví dụ: Hội chợ xuân"></label>' +
       picker('pk', d.thanhVien) +
       '<div class="sticky-foot row"><button class="btn" id="cd-b">' + ic('star', 16) + 'Cộng điểm</button><span id="dmsg"></span></div></form>' +
       '<div class="card recent"><div class="ctitle"><h3>Vừa cộng gần đây</h3><span class="hint">Cộng nhầm thì bấm Xoá</span></div><div class="lst" id="ganday">' +
       (d.ganDay.length ? d.ganDay.map(function (r) {
-        return '<div class="li"><div class="c"><b class="t">' + esc(r.ten) + '</b><span class="s">' + esc(r.loai) + (r.tenHoatDong ? ' · ' + esc(r.tenHoatDong) : '') + ' · ' + ngayGio(r.thoiGian) + ' · ' + esc(r.nguoiCong) + '</span></div><span class="num" style="font-weight:700;color:var(--accent)">+' + r.diem + '</span><button class="btn ghost sm" data-del="' + r.thoiGian + '" data-ten="' + esc(r.ten) + '">Xoá</button></div>';
+        return '<div class="li"><div class="c"><b class="t">' + esc(r.ten) + '</b><span class="s">' + esc(r.loai) + (r.tenHoatDong ? ' · ' + esc(r.tenHoatDong) : '') + ' · ' + ngayGio(r.thoiGian) + ' · ' + esc(r.nguoiCong) + '</span></div><span class="num" style="font-weight:500;color:var(--ink)">+' + r.diem + '</span><button class="btn ghost sm" data-del="' + r.thoiGian + '" data-ten="' + esc(r.ten) + '">Xoá</button></div>';
       }).join('') : rong(ic('star') + 'Chưa có lần cộng nào trong giai đoạn này.')) +
       '</div><div id="delm"></div></div></div>';
     var layChon = bindPicker('pk');
-    $('#types').onclick = function (e) { var b = e.target.closest('[data-t]'); if (!b) return; $$('#types .type').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
+    // Nút ghi rõ sẽ cộng bao nhiêu điểm cho bao nhiêu người.
+    var nutCong = function () {
+      var l = $('#types [aria-pressed=true]'), n = layChon().length, i = d.loai.map(function (x) { return x.ten; }).indexOf(l ? l.getAttribute('data-t') : '');
+      $('#cd-b').innerHTML = ic('star', 16) + (n && i >= 0 ? 'Cộng ' + d.loai[i].diem + ' điểm cho ' + n + ' người' : 'Cộng điểm');
+    };
+    $('#types').onclick = function (e) { var b = e.target.closest('[data-t]'); if (!b) return; $$('#types .type').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); nutCong(); };
+    $('#pk').addEventListener('change', nutCong); $('#pk').addEventListener('click', function () { setTimeout(nutCong, 0); });
     $('#fd').onsubmit = function (e) {
       e.preventDefault();
       var loai = $('#types [aria-pressed=true]');
@@ -81,9 +87,9 @@ function veQuanLyTask(tabs) {
         return '<div class="task ' + st[1] + '"><div><div class="tt">' + esc(t.ten) + '</div>' + (t.moTa ? '<div class="md">' + esc(t.moTa) + '</div>' : '') +
           '<div class="meta"><span class="pill ' + st[0] + '">' + esc(t.trangThai) + '</span>' + pillKetQua(t.ketQua) + '<span>' + ic('users', 14) + ' <b>' + esc(t.nguoi) + '</b></span><span>' + ic('clock', 14) + ' Hạn <b>' + hienNgay(t.hanChot) + '</b>' + (t.hanGoc ? ' (gia hạn từ ' + hienNgay(t.hanGoc) + ')' : '') + '</span>' + (t.ngayNop ? '<span>Nộp ' + hienNgay(t.ngayNop) + (t.dungHan ? ' · ' + esc(t.dungHan) : '') + '</span>' : '') + '<span>' + esc(t.kieuTao) + ' bởi ' + esc(t.nguoiTao) + ' · ' + ngayGio(t.thoiGianTao) + '</span></div>' +
           (t.chatLuong ? '<div class="md">' + esc(t.chatLuong) + ' · ' + esc(t.nguoiDanhGia) + (t.dauHieu ? ': ' + esc(t.dauHieu) : '') + (t.phanHoi ? '<br>Phản hồi của ' + esc(t.nguoi) + ': ' + esc(t.phanHoi) : '') + '</div>' : '') + '</div>' +
-          '<div class="act">' + (bod && t.trangThai === 'Đã xong' ? '<button class="btn sm" data-dg="' + i + '">' + ic('star', 14) + (t.chatLuong ? 'Sửa đánh giá' : 'Đánh giá') + '</button>' : '') +
+          '<div class="act">' + (bod && t.trangThai === 'Đã xong' ? '<button class="btn ghost sm" data-dg="' + i + '">' + ic('star', 14) + (t.chatLuong ? 'Sửa đánh giá' : 'Đánh giá') + '</button>' : '') +
           (t.sua && mo ? '<button class="btn ghost sm" data-gh="' + i + '">Gia hạn</button>' : '') +
-          (!t.sua ? '' : mo || t.trangThai === 'Không hoàn thành' ? '<button class="btn sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
+          (!t.sua ? '' : mo || t.trangThai === 'Không hoàn thành' ? '<button class="btn ghost sm" data-st="Đã xong" data-i="' + i + '">' + ic('check', 14) + 'Đã xong</button><button class="btn ghost sm" data-edit="' + i + '">' + ic('edit', 14) + 'Sửa</button><button class="btn ghost sm" data-st="Đã huỷ" data-i="' + i + '">Huỷ</button>' : '<button class="btn ghost sm" data-st="Đã giao" data-i="' + i + '">Mở lại</button>') + '</div></div>';
       }).join('') || rong(ic('check') + 'Không có task nào.');
       $$('#tl [data-st]').forEach(function (b) {
         b.onclick = function () {
@@ -130,7 +136,7 @@ function veQuanLyTask(tabs) {
 
     var moForm = function (t) {
       var h = moHop({
-        tieuDe: t ? 'Sửa task' : 'Tạo task', lop: 'rong',
+        tieuDe: t ? 'Sửa task' : 'Tạo task', lop: 'ngan',
         than: '<form class="form" id="tf">' + (t ? '' : '<p class="hint" style="margin:0">Chọn nhiều người thì mỗi người nhận một task riêng với cùng nội dung.</p>') +
           '<div class="grid2"><label class="f">Tên task<input type="text" id="tn" maxlength="200" value="' + esc(t ? t.ten : '') + '" placeholder="Ví dụ: Chốt địa điểm workshop"></label>' +
           '<label class="f">Hạn chót<input type="date" id="td" value="' + (t ? t.hanChot : congNgay(d.homNay, 7)) + '"></label></div>' +
@@ -278,7 +284,7 @@ function veTaoFileLog() {
       '<form class="card form" id="lf3"' + (coMau ? '' : ' style="opacity:.55;pointer-events:none" aria-disabled="true"') + '><h3 style="margin:0">Thông tin file</h3><label class="f">Tên file <small>Giữ đúng như bạn gõ</small><input type="text" id="lg-t" maxlength="150" placeholder="[ECO] Đăng ký log - Oday| HR 2627"></label>' + (coMau ? '<p class="hint" style="margin:0">Chép từ <a href="' + esc(d.linkMau) + '" target="_blank" rel="noopener">file mẫu</a>' + (d.linkThuMuc ? ', lưu vào <a href="' + esc(d.linkThuMuc) + '" target="_blank" rel="noopener">thư mục đã chọn</a>' : '') + '. Đổi ở Cài đặt, Hoạt động CLB, File mẫu log.</p>' : '') +
       '<div class="log-grid"><div>' + picker('lp', d.thanhVien, true) + '</div><div class="form"><b style="font-size:13px">Các buổi</b><div id="lb" style="display:grid;gap:8px"></div><div><button type="button" class="btn ghost sm" id="lb-add">' + ic('plus', 14) + 'Thêm buổi</button></div></div></div>' +
       '<div class="sticky-foot row"><button class="btn" id="lg-b"' + (coMau ? '' : ' disabled') + '>' + ic('file', 16) + 'Tạo file</button><span id="lg-m"></span></div></form>' +
-      '<div class="card flush"><div style="padding:16px 18px 4px"><h3>File đã tạo gần đây</h3></div><div class="lst">' + (d.ganDay.length ? d.ganDay.map(function (f) { return '<div class="li"><div class="c"><a class="t" style="font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.ten) + '</a><span class="s">' + f.soNguoi + ' người · ' + f.soBuoi + ' buổi · ' + esc(f.nguoiTao) + ' · ' + ngayDayDu(f.thoiGian) + '</span></div></div>'; }).join('') : rong('Chưa có file nào.')) + '</div></div>';
+      '<div class="card flush"><div style="padding:16px 18px 4px"><h3>File đã tạo gần đây</h3></div><div class="lst">' + (d.ganDay.length ? d.ganDay.map(function (f) { return '<div class="li"><div class="c"><a class="t" style="font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.ten) + '</a><span class="s">' + f.soNguoi + ' người · ' + f.soBuoi + ' buổi · ' + esc(f.nguoiTao) + ' · ' + ngayDayDu(f.thoiGian) + '</span></div></div>'; }).join('') : rong('Chưa có file nào.')) + '</div></div>';
     ganTabLog();
     var layChon = bindPicker('lp');
     if ($('#main [data-s2]')) $('#main [data-s2]').onclick = function () { diToi('caidat', 'logcfg'); };
@@ -306,9 +312,9 @@ VIEWS.gopy = function () {
   dangTai();
   goiPhien('layGopY').then(function (ds) {
     if (page !== 'gopy') return;
-    $('#main').innerHTML = '<div class="head"><div><h2>Hộp góp ý</h2><p class="lead">Thành viên gửi trong app CLB ECO, ẩn danh hoặc ghi tên. Bấm vào góp ý mới để đánh dấu đã đọc. Góp ý có ghi tên được CLB đưa vào sử dụng thì bấm "Đã đưa vào sử dụng" để cộng điểm cho người gửi. Mail báo góp ý mới bật hoặc tắt trong Cài đặt.</p></div></div>' +
-      '<div style="display:grid;gap:10px">' + (ds.length ? ds.map(function (g) {
-        return '<div class="card" ' + (g.daDoc ? '' : 'data-doc="' + g.thoiGian + '" style="cursor:pointer;border-left:4px solid var(--info)"') + '><div class="row sb"><span class="hint">' + (g.ten ? '<b>' + esc(g.ten) + '</b> · ' : 'Ẩn danh · ') + ngayDayDu(g.thoiGian) + '</span>' + (g.daDoc ? '<span class="pill p-mute">Đã đọc</span>' : '<span class="pill p-info">Mới</span>') + '</div><p style="margin:6px 0 0;white-space:pre-wrap">' + esc(g.noiDung) + '</p>' +
+    $('#main').innerHTML = '<div class="head"><div><h2>Góp ý</h2><p class="lead">Thành viên gửi trong app CLB ECO, ẩn danh hoặc ghi tên. Bấm vào góp ý mới để đánh dấu đã đọc. Góp ý có ghi tên được CLB đưa vào sử dụng thì bấm "Đã đưa vào sử dụng" để cộng điểm cho người gửi. Mail báo góp ý mới bật hoặc tắt trong Cài đặt.</p></div></div>' +
+      '<div class="gys">' + (ds.length ? ds.map(function (g) {
+        return '<div class="gy"' + (g.daDoc ? '' : ' data-doc="' + g.thoiGian + '" style="cursor:pointer"') + '><div class="row sb"><span class="hint">' + (g.ten ? '<b>' + esc(g.ten) + '</b> · ' : 'Ẩn danh · ') + ngayDayDu(g.thoiGian) + '</span>' + (g.daDoc ? '<span class="pill p-mute">Đã đọc</span>' : '<span class="pill p-info">Mới</span>') + '</div><p style="margin:6px 0 0;white-space:pre-wrap">' + esc(g.noiDung) + '</p>' +
           (g.daDung ? '<p class="hint" style="margin:8px 0 0">' + ic('star', 14) + ' Đã đưa vào sử dụng' + (g.nguoiDanhDau ? ', ' + esc(g.nguoiDanhDau) + ' xác nhận' : '') + ' lúc ' + ngayDayDu(g.daDung) + '</p>' :
             g.ten ? '<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-dung="' + g.thoiGian + '">' + ic('star', 14) + 'Đã đưa vào sử dụng</button><span data-dm="' + g.thoiGian + '"></span></div>' : '') + '</div>';
       }).join('') : rong(ic('chat') + 'Chưa có góp ý nào.')) + '</div>';
@@ -363,6 +369,9 @@ var CUA_TOI = ['Của tôi', [['tbtoi', 'bell', 'Thông báo', function () { ret
     ['avatar', 'image', 'Ảnh đại diện', function () { return NGUOI.anh ? 'Đang dùng ảnh riêng' : 'Chưa có ảnh'; }, 'ảnh đại diện avatar hình'],
     ['theme', 'sun', 'Giao diện sáng tối', function () { return 'Đang dùng: ' + { light: 'Sáng', dark: 'Tối', auto: 'Theo máy' }[GIAO_DIEN]; }, 'giao diện màu sáng tối dark']], 'cuatoi', 'users'];
 var SET = [
+  ['Quy tắc CLB', [['cocau', 'users', 'Cơ cấu ban', function () { var ds = CD.coCau.filter(function (b) { return b.dangDung; }); return ds.length + ' ban: ' + ds.map(function (b) { return b.ma; }).join(', '); }, 'ban cơ cấu nhóm viết tắt mã thành viên giải thể thêm ban đổi tên'],
+    ['types', 'star', 'Thang điểm', function () { return CD.loai.length + ' loại hoạt động'; }, 'điểm loại hoạt động staff log seeding góp ý react comment tự động cộng điểm thang điểm'],
+    ['quytac', 'award', 'Khen thưởng, hạn task và buổi log', function () { var q = CD.quyTac; return 'Top ' + q.tiLeTop + '%, sắp đến hạn ' + q.sapDenHanNgay + ' ngày, buổi log ' + q.thoiLuongBuoi.join('/') + ' phút'; }, 'khen thưởng top phần trăm sắp đến hạn không hoàn thành trễ hạn buổi log phút thời lượng']], 'quytacclb', 'book'],
   ['Thông báo', [['tbkhac', 'users', 'Thông báo của thành viên', function () { return 'Cách nhận của từng người, gửi thử'; }, 'thông báo mọi người người khác chung nhận zalo app mail cách nhận máy gỡ gửi thử'],
     ['due', 'clock', 'Lịch nhắc task', function () { return CD.nhac.lich.length + ' mốc nhắc: ' + CD.nhac.lich.map(tenMocNhac).join(', '); }, 'không hoàn thành sắp đến hạn task hạn chót giờ nhắc deadline trễ hạn thời điểm lịch'],
     ['notify', 'mail', 'Thông báo khác', function () { var ds = [CD.baoGopY ? 'góp ý' : '', CD.baoThuChoDuyet ? 'mail chờ duyệt' : '', CD.baoSeeding ? 'báo cáo seeding' : ''].filter(String); return ds.length ? 'Mail cho BOD khi có ' + ds.join(', ') : 'Đang tắt'; }, 'góp ý thông báo mail thư chờ duyệt ucv seeding điền báo cáo']], 'thongbao', 'bell'],
@@ -371,22 +380,27 @@ var SET = [
     ['pins', 'pin', 'Ghim và quy chế', function () { return CD.ghim.length + ' link ghim, ' + (CD.quyChe ? 'đã có quy chế' : 'chưa có quy chế') + '. Hiện ở trang chủ thành viên'; }, 'link ghim quy chế luật']], 'clb', 'folder'],
   ['Hộp thư', [['contacts', 'addr', 'Danh bạ', function () { return CD.mail.soThanhVien + ' thành viên CLB, ' + CD.mail.soDanhBa + ' địa chỉ khác'; }, 'danh bạ clb khác đối tác email gửi hàng loạt'],
     ['sign', 'edit', 'Chữ ký', function () { return 'Tự động thêm vào cuối thư UCV gửi'; }, 'chữ ký thư signature']], 'hopthu', 'mail'],
-  ['Tài khoản', [['quyen', 'users', 'Phân quyền', function () { var dem = function (v) { return CD.taiKhoan.filter(function (t) { return t.vaiTro === v; }).length; }; return dem('HR') + ' HR (phụ trách ban, phụ trách seeding), ' + dem('UCV') + ' UCV'; }, 'phân quyền cấp quyền hr ucv nhân sự phụ trách ban seeding mã hr tài khoản'],
+  ['Tài khoản', [['taids', 'sheet', 'Tải danh sách thành viên', function () { return 'Sau Oday, sau mỗi đợt tuyển hoặc khi cần cập nhật'; }, 'tải danh sách thành viên sheet nguồn oday tuyển đợt cập nhật nhiệm kỳ giai đoạn mã thành viên'],
+    ['thanhvien', 'users', 'Thành viên qua các năm', function () { return 'Mã, hồ sơ, các nhiệm kỳ đã tham gia, cả người đã rời'; }, 'thành viên mã hồ sơ đã rời lịch sử nhiệm kỳ cựu thành viên'],
+    ['mkchung', 'key', 'Mật khẩu chung', function () { return 'Cho người chưa tự đổi mật khẩu'; }, 'mật khẩu chung mặc định tài khoản mới'],
+    ['sinhnhat', 'clock', 'Lịch sinh nhật', function () { return 'Google Lịch ghi sinh nhật thành viên'; }, 'lịch sinh nhật google calendar'],
+    ['quyen', 'users', 'Phân quyền', function () { var dem = function (v) { return CD.taiKhoan.filter(function (t) { return t.vaiTro === v; }).length; }; return dem('HR') + ' HR (phụ trách ban, phụ trách seeding), ' + dem('UCV') + ' UCV'; }, 'phân quyền cấp quyền hr ucv nhân sự phụ trách ban seeding mã hr tài khoản'],
     ['accounts', 'lock', 'Đặt lại mật khẩu', function () { return 'Cấp lại mật khẩu cho bất kỳ ai trong CLB'; }, 'mật khẩu tài khoản đặt lại quên'],
     ['loginbg', 'eye', 'Ảnh nền đăng nhập', function () { return CD.anhNen ? 'Đang dùng ảnh riêng' : 'Đang dùng nền xanh mặc định'; }, 'ảnh nền hình nền đăng nhập background'],
     ['google', 'key', 'Đăng nhập bằng Google', function () { return CD.googleClientId ? 'Đã bật' : 'Chưa bật'; }, 'google đăng nhập client id oauth']], 'taikhoan', 'lock'],
+  ['Hệ thống', [['hethong', 'chart', 'Tình trạng hệ thống', function () { return 'Lịch chạy tự động, nhật ký, dung lượng'; }, 'hệ thống lịch chạy tự động nhật ký lỗi dung lượng trigger'],
+    ['saoluu', 'archive', 'Lưu trữ và sao lưu', function () { return 'Tự sao lưu mỗi đêm, khôi phục, file lưu trữ nhiệm kỳ cũ'; }, 'sao lưu khôi phục lưu trữ backup nhiệm kỳ cũ drive file dữ liệu']], 'hethongnhom', 'gear'],
   ['', [['chude', 'star', 'Giao diện theo mùa và sự kiện', function () { var p = timChuDe(CD.chuDe); return 'Đang dùng: ' + (p ? p.ten : 'Mặc định'); }, 'giao diện mùa lễ tết trung thu halloween giáng sinh noel xuân hè thu đông phụ nữ nhà giáo quốc khánh trái đất màu trang trí sự kiện']]],
   CUA_TOI
 ];
 /** Mục mở từ nút trong trang khác, không nằm trong danh sách cài đặt (giữ đúng cấu trúc đã chốt). */
-var CAI_DAT_AN = [['types', 'star', 'Thang điểm hoạt động', function () { return CD.loai.map(function (l) { return l.ten; }).join(', ') + (CD.formSeeding && CD.formSeeding.bat ? ' · Form seeding đang tự cộng' : ''); }, 'điểm loại hoạt động staff log seeding form google reaction comment facebook tự động cộng điểm tên facebook'],
-  ['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối'],
+var CAI_DAT_AN = [['zalo', 'chat', 'Bot Zalo', function () { return (CD.zalo.coBot ? 'Đã kết nối ' + CD.zalo.daKetNoi + '/' + CD.zalo.tong + ' người' : 'Chưa thiết lập bot'); }, 'zalo bot token mã kết nối'],
   ['hr', 'users', 'Phân quyền HR', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'HR'; }).length + ' HR · phụ trách ban, seeding, sinh nhật'; }, 'ban nhân sự hr quyền tài khoản phân ban phụ trách thành viên seeding sinh nhật miễn task ôn thi mã hr'],
   ['ucv', 'users', 'Phân quyền UCV', function () { return CD.taiKhoan.filter(function (t) { return t.vaiTro === 'UCV'; }).length + ' UCV · gửi mail của CLB'; }, 'UCV ucv tài khoản mail']];
 /** Người không phải BOD chỉ có phần Của tôi. */
 function nhomCaiDat() { return NGUOI.vaiTro === 'BOD' ? SET : [['', CUA_TOI[1]]]; }
 /** Nơi quay về từ mục ẩn (mục mở từ nút ở trang khác): [trang, tab]. */
-var VE_TU_CAI_DAT = { types: ['diem'], zalo: ['caidat', 'tbkhac'], hr: ['caidat', 'taikhoan'], ucv: ['caidat', 'taikhoan'] };
+var VE_TU_CAI_DAT = { zalo: ['caidat', 'tbkhac'], hr: ['caidat', 'taikhoan'], ucv: ['caidat', 'taikhoan'] };
 function tenNhomCaiDat(k) { var g = nhomCaiDat().filter(function (g) { return g[2] === k; })[0]; if (g) return g[0]; var x = flatCaiDat().filter(function (y) { return y[0] === k; })[0]; return x ? x[2] : 'Cài đặt'; }
 /** Nút quay lại trong Cài đặt: mục con về thư mục chứa nó, thư mục về Cài đặt. */
 function veTuCaiDat() {
@@ -464,111 +478,16 @@ function luuVa(nut, msg, ten, thamSo, xong) {
 /** Tên mốc nhắc deadline, ví dụ "Trước hạn 2 ngày 19:00". Mốc 'T' là mỗi ngày khi trễ hạn. */
 function tenNgayNhac(n) { return n === 'T' ? 'Trễ hạn, mỗi ngày' : n < 0 ? 'Trước hạn ' + (-n) + ' ngày' : n === 0 ? 'Ngày hạn chót' : 'Trễ hạn ' + n + ' ngày'; }
 function tenMocNhac(m) { return tenNgayNhac(m.ngay) + ' ' + p2(m.gio) + ':' + p2(m.phut || 0); }
-/** Phần form cộng điểm seeding, nằm dưới bảng loại hoạt động (điểm mỗi lượt lấy từ bảng đó). */
-function formSeeding(box) {
-  var chuan = function (x) { return boDau(x).replace(/[^a-z0-9]/g, ''); };
-  var D = null, tabChon = '', tb = null;
-  var conMo = function () { return sub === 'types' && document.body.contains(box); };
-  var nap = function () {
-    box.innerHTML = '<div class="card">' + cho() + '</div>';
-    goiPhien('layFormSeeding').then(function (d) { D = d; if (conMo()) ve(); }).catch(function (err) { if (conMo()) box.innerHTML = '<div class="card"><p class="err">' + esc(err.message) + '</p></div>'; });
-  };
-  // Giống goiYLoaiSeeding_ ở máy chủ: loại có tên chứa tên cột, không có thì loại có chữ "seeding".
-  var goiY = function (cot) {
-    var c = chuan(cot);
-    var l = D.loai.filter(function (x) { return c && chuan(x.ten).indexOf(c) >= 0; })[0] || D.loai.filter(function (x) { return chuan(x.ten).indexOf('seeding') >= 0; })[0];
-    return l ? l.ten : '';
-  };
-  var ve = function () {
-    var ch = D.cauHinh;
-    if (!tabChon || !D.tabs.some(function (t) { return t.ma === tabChon; })) {
-      var goc = D.tabs.filter(function (t) { return t.ma === ch.tab; })[0] || D.tabs.filter(function (t) { return t.cot.some(function (c) { return /reaction|comment/i.test(c); }); })[0] || D.tabs[0];
-      tabChon = goc ? goc.ma : '';
-    }
-    var t = D.tabs.filter(function (x) { return x.ma === tabChon; })[0];
-    var tieuDe = '<div class="note">' + ic('info') + '<span>Đây là cách cũ. Seeding giờ do HR phụ trách seeding điền ở mục Seeding, Nộp báo cáo trong app. Khi HR đã dùng trang đó, bấm Tắt ở dưới để app không cộng qua Google Form nữa.</span></div><div class="ctitle"><h3>' + ic('chat', 18) + ' Form cộng điểm seeding (cách cũ)</h3>' + (ch.bat ? '<span class="pill" style="background:var(--ok-bg);color:var(--ok)">Đang bật</span>' : '<span class="hint">Chưa bật</span>') + '</div>';
-    var huongDan = '<details' + (ch.bat ? '' : ' open') + '><summary style="cursor:pointer;font-weight:600">Cách liên kết Google Form (làm một lần)</summary>' +
-      '<ol style="margin:8px 0 0;padding-left:20px;display:grid;gap:6px"><li>Mở Google Form seeding, vào tab <b>Câu trả lời</b>, bấm <b>Liên kết với Trang tính</b>, chọn <b>Chọn bảng tính hiện có</b> rồi chọn <b>file dữ liệu CLB</b> (file đang chứa danh sách thành viên).</li>' +
-      '<li>Google tự tạo một tab mới tên “Câu trả lời biểu mẫu 1”. Nên đổi tên tab cho dễ nhận, ví dụ <b>Form seeding</b>. Tên gì cũng được, đổi lại sau này app vẫn nhận ra.</li>' +
-      '<li>Quay lại đây bấm <b>Tải lại</b>, chọn loại điểm cho từng cột rồi bấm <b>Lưu và bật</b>. Từ đó mỗi lần có người nộp form, app tự cộng điểm.</li></ol>' +
-      '<p class="hint" style="margin:8px 0 0">Mỗi dòng trong ô Reaction, Comment là một tên Facebook. App so nguyên dòng với cột Tên Facebook trong danh sách thành viên hiện tại (gồm cả BOD), không phân biệt dấu và chữ hoa. Mỗi người được cộng một lần cho mỗi cột trong một lần nộp. Đừng xoá hay sửa cột “ECO đã cộng” trong tab câu trả lời: app dựa vào cột này để không cộng hai lần.</p></details>';
-    var nutLai = '<button class="btn ghost sm" id="sd-lai">' + ic('refresh', 14) + 'Tải lại</button>';
-    if (!t) {
-      box.innerHTML = '<div class="card form">' + tieuDe + huongDan + '<p class="hint" style="margin:0">Chưa thấy tab câu trả lời form nào trong file dữ liệu. Liên kết form theo hướng dẫn ở trên rồi bấm Tải lại.</p><div class="row">' + nutLai + '</div></div>';
-      $('#sd-lai').onclick = nap; return;
-    }
-    var moiLan = ch.tab !== t.ma;
-    var chonLoai = function (cot, i) {
-      var dang = moiLan ? goiY(cot) : (ch.anhXa[cot] || '');
-      if (!D.loai.some(function (l) { return l.ten === dang; })) dang = ''; // loại đã bị xoá khỏi bảng thì không cộng nữa
-      return '<label class="f">Mỗi tên trong cột “' + esc(cot) + '” được cộng<select data-sd="' + i + '">' +
-        D.loai.map(function (l) { return '<option value="' + esc(l.ten) + '"' + (l.ten === dang ? ' selected' : '') + '>' + esc(l.ten) + ' (' + l.diem + ' điểm)</option>'; }).join('') +
-        '<option value=""' + (dang === '' ? ' selected' : '') + '>Không cộng cột này</option></select></label>';
-    };
-    box.innerHTML = '<div class="card form">' + tieuDe + huongDan +
-      (D.tabs.length > 1 ? '<label class="f">Tab câu trả lời của form seeding<select id="sd-tab">' + D.tabs.map(function (x) { return '<option value="' + x.ma + '"' + (x.ma === t.ma ? ' selected' : '') + '>' + esc(x.ten) + ' (' + x.soCau + ' câu trả lời)</option>'; }).join('') + '</select></label>' : '<p class="hint" style="margin:0">Tab câu trả lời: <b>' + esc(t.ten) + '</b>, ' + t.soCau + ' câu trả lời.</p>') +
-      (t.cot.length ? '<div class="grid2">' + t.cot.map(chonLoai).join('') + '</div>' : '<p class="err" style="margin:0">Tab này không có cột danh sách tên nào.</p>') +
-      '<p class="hint" style="margin:0">Muốn Reaction và Comment có điểm khác nhau thì thêm hai dòng, ví dụ “Seeding Reaction” và “Seeding Comment”, vào bảng ở trên (bỏ chọn “BOD cộng”), bấm Lưu rồi chọn ở đây.</p>' +
-      (moiLan && t.soCau ? '<label class="row" style="cursor:pointer;flex-wrap:nowrap;align-items:flex-start"><input type="checkbox" id="sd-cu" style="margin-top:3px"><span>Cộng luôn cho ' + t.soCau + ' câu trả lời đã có trong tab<br><span class="hint">Để trống nếu các câu này đã được cộng điểm trước đây (ví dụ bằng tool cũ).</span></span></label>' : '') +
-      (D.thieuFb.length ? '<div class="note">' + ic('info') + '<span>' + D.thieuFb.length + ' thành viên chưa có Tên Facebook nên form không cộng được cho họ: ' + esc(D.thieuFb.slice(0, 12).join(', ')) + (D.thieuFb.length > 12 ? '…' : '') + '. Bổ sung Tên Facebook cho họ trong danh sách thành viên để những lần nộp sau được cộng.</span></div>' : '') +
-      '<label class="switch"><input type="checkbox" id="sd-mail"' + (ch.baoMail ? ' checked' : '') + '>Gửi mail báo về mail CLB mỗi lần form cộng điểm</label>' +
-      '<div class="row"><button class="btn sm" id="sd-luu">' + (ch.bat && !moiLan ? 'Lưu' : 'Lưu và bật') + '</button>' +
-      (ch.bat && !moiLan && t.chuaCong ? '<button class="btn ghost sm" id="sd-quet">Cộng ' + t.chuaCong + ' câu chưa cộng</button>' : '') +
-      (ch.bat ? '<button class="btn ghost sm" id="sd-tat">Tắt</button>' : '') + nutLai + '<span id="sd-m"></span></div></div>' +
-      '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Các lần form cộng điểm gần đây</h3></div>' +
-      (D.nhatKy.length ? '<div class="sd-nk">' + D.nhatKy.map(function (n) {
-        // Bản ghi cũ chỉ có danh sách tên (ten), chưa có cột đã cộng cho từng người.
-        var duoc = n.duoc || (n.ten || []).map(function (x) { return [x, '']; });
-        var soNguoi = n.soNguoi != null ? n.soNguoi : duoc.length;
-        var them = function (so, ds) { return so > ds.length ? '<li class="hint">và ' + (so - ds.length) + ' tên khác</li>' : ''; };
-        return '<details><summary><span class="sd-nk-dau"><b>' + esc(n.nguoiNop || 'Không rõ người nộp') + '</b><span class="hint">' + ngayGio(n.luc) + '</span></span>' +
-          '<span class="sd-nk-so"><span class="pill" style="background:var(--ok-bg);color:var(--ok)">' + soNguoi + ' người được cộng</span>' +
-          (n.soKhongKhop ? '<span class="pill" style="background:var(--warn-bg);color:var(--warn)">' + n.soKhongKhop + ' tên không khớp</span>' : '') + '</span></summary>' +
-          '<div class="sd-nk-ct"><div><b>Được cộng</b> <span class="hint">(' + n.soLuot + ' lượt)</span>' + (duoc.length ? '<ul>' + duoc.map(function (d) { return '<li>' + esc(d[0]) + (d[1] ? ' <span class="hint">· ' + esc(d[1]) + '</span>' : '') + '</li>'; }).join('') + them(soNguoi, duoc) + '</ul>' : '<p class="hint">Không ai.</p>') + '</div>' +
-          (n.soKhongKhop ? '<div><b>Không được cộng</b> <span class="hint">(tên không khớp Tên Facebook của thành viên nào: sai chính tả hoặc không phải thành viên)</span><ul>' + n.khongKhop.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + them(n.soKhongKhop, n.khongKhop) + '</ul></div>' : '') +
-          '</div></details>';
-      }).join('') + '</div>' : '<p class="hint" style="margin:0">Chưa có lần nào.</p>') + '</div>';
-    $('#sd-lai').onclick = nap;
-    if ($('#sd-tab')) $('#sd-tab').onchange = function () { tabChon = this.value; ve(); };
-    if (tb) { thongBao($('#sd-m'), tb[0], tb[1]); tb = null; }
-    $('#sd-luu').onclick = function () {
-      var anhXa = {};
-      t.cot.forEach(function (cot, i) { var v = $('[data-sd="' + i + '"]').value; if (v) anhXa[cot] = v; });
-      var nut = this; nut.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang lưu…');
-      goiPhien('luuFormSeeding', { tab: t.ma, anhXa: anhXa, congCu: !!($('#sd-cu') && $('#sd-cu').checked) }).then(function (kq) {
-        if (CD) CD.formSeeding = { bat: true };
-        tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã lưu và bật' + (kq.soLuot ? '. Vừa cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.' : '.')];
-        nap();
-      }).catch(function (err) { nut.disabled = false; thongBao($('#sd-m'), 'loi', err.message); });
-    };
-    $('#sd-mail').onchange = function () {
-      var o = this; o.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang lưu…');
-      goiPhien('luuBaoMailSeeding', o.checked).then(function (bat) { o.disabled = false; ch.baoMail = bat; thongBao($('#sd-m'), 'ok', bat ? 'Đã bật mail báo' : 'Đã tắt mail báo'); })
-        .catch(function (err) { o.disabled = false; o.checked = !o.checked; thongBao($('#sd-m'), 'loi', err.message); });
-    };
-    if ($('#sd-quet')) $('#sd-quet').onclick = function () {
-      var nut = this; nut.disabled = true; thongBao($('#sd-m'), 'cho', 'Đang cộng…');
-      goiPhien('quetFormSeeding').then(function (kq) { tb = kq.loi ? ['loi', kq.loi] : ['ok', 'Đã cộng ' + kq.soLuot + ' lượt cho ' + kq.soCau + ' câu trả lời.']; nap(); })
-        .catch(function (err) { nut.disabled = false; thongBao($('#sd-m'), 'loi', err.message); });
-    };
-    if ($('#sd-tat')) $('#sd-tat').onclick = function () {
-      if (!xacNhan(this, 'Bấm lần nữa để tắt')) return;
-      goiPhien('tatFormSeeding').then(function () { if (CD) CD.formSeeding = { bat: false }; tb = ['ok', 'Đã tắt. Form vẫn nhận câu trả lời nhưng app không cộng điểm.']; nap(); })
-        .catch(function (err) { thongBao($('#sd-m'), 'loi', err.message); });
-    };
-  };
-  nap();
-}
 var QUYEN_TAB = 'HR';
 var SUB = {
   types: function () {
     var chep = function (l) { return { ten: l.ten, diem: l.diem, congTay: l.congTay !== false, gioiHan: l.gioiHan || '', dungCho: l.dungCho || '' }; };
     var ds = CD.loai.map(chep);
-    var DUNG_CHO = [['', 'Không'], ['react', 'Seeding: react'], ['comment', 'Seeding: comment'], ['gopy', 'Góp ý được dùng'], ['log90', 'Log vượt (buổi 90 phút)'], ['log180', 'Log vượt (buổi 180 phút)']];
+    var DUNG_CHO = [['', 'Không']].concat(Object.keys(CD.dungCho).map(function (k) { return [k, CD.dungCho[k]]; }));
     $('#subbody').innerHTML = '<div class="card" id="tybox"></div><div id="sdbox" style="display:grid;gap:inherit"></div>';
     var ve = function () {
-      $('#tybox').innerHTML = '<div class="ctitle"><h3>' + ic('star', 18) + ' Thang điểm hoạt động</h3></div><p class="hint" style="margin-top:0">Đây là số điểm thật được cộng mỗi lần. Mọi loại đều hiện ở trang chủ app CLB ECO. Chỉ cộng, không trừ nên điểm không được âm. Đổi số điểm chỉ áp dụng cho các lần cộng từ nay về sau.</p>' +
-        '<ul class="hint" style="margin:0 0 10px;padding-left:18px"><li><b>Tối đa mỗi giai đoạn</b>: số lần một người được cộng loại này trong một giai đoạn. Để trống là không giới hạn.</li><li><b>App tự cộng</b>: gắn loại với báo cáo seeding (react, comment), với nút "Đã đưa vào sử dụng" ở trang Góp ý, hoặc với điểm log vượt số buổi được giao (cộng khi BOD chốt sự kiện log).</li><li>Bỏ chọn <b>BOD cộng</b> nếu loại đó chỉ do app tự cộng, khi đó BOD không thấy nó ở trang Cộng điểm.</li></ul>' +
+      $('#tybox').innerHTML = '<div class="ctitle"><h3>' + ic('star', 18) + ' Thang điểm</h3></div><p class="hint" style="margin-top:0">Đây là số điểm thật được cộng mỗi lần. Mọi loại đều hiện ở trang chủ app. Chỉ cộng, không trừ nên điểm không được âm. Đổi số điểm chỉ áp dụng cho các lần cộng từ nay về sau.</p>' +
+        '<ul class="hint" style="margin:0 0 10px;padding-left:18px"><li><b>Tối đa mỗi giai đoạn</b>: số lần một người được cộng loại này trong một giai đoạn. Để trống là không giới hạn.</li><li><b>App tự cộng</b>: gắn loại với báo cáo seeding (react, comment), với nút "Đã đưa vào sử dụng" ở trang Góp ý, hoặc với buổi log dư chỉ tiêu (cộng khi BOD chốt đợt log). Mỗi thời lượng buổi log có một loại riêng.</li><li>Bỏ chọn <b>BOD cộng</b> nếu loại đó chỉ do app tự cộng, khi đó BOD không thấy nó ở trang Cộng điểm.</li></ul>' +
         '<div class="tscroll"><table><thead><tr><th>Loại hoạt động</th><th class="n">Điểm mỗi lần</th><th class="n">Tối đa mỗi giai đoạn</th><th>App tự cộng</th><th class="c">BOD cộng</th><th></th></tr></thead><tbody>' +
         ds.map(function (l, i) {
           return '<tr><td style="min-width:180px"><input type="text" id="ty' + i + '" value="' + esc(l.ten) + '" aria-label="Tên loại"></td><td style="width:100px"><input type="number" min="0" step="any" id="tp' + i + '" value="' + l.diem + '" aria-label="Điểm"></td>' +
@@ -591,9 +510,7 @@ var SUB = {
       $('#save').onclick = function () { doc(); luuVa($('#save'), $('#m'), 'luuLoaiHoatDong', [ds], function () { ds = CD.loai.map(chep); ve(); thongBao($('#m'), 'ok', 'Đã lưu'); }); };
     };
     ve();
-    // Google Form seeding đã được thay bằng trang Báo cáo seeding. Chỉ hiện phần form khi form cũ còn đang bật, để BOD tắt.
-    if (CD.formSeeding && CD.formSeeding.bat) formSeeding($('#sdbox'));
-    else $('#sdbox').innerHTML = '<div class="note info">' + ic('info') + '<span>Điểm seeding do HR phụ trách seeding điền ở mục Seeding, Nộp báo cáo (BOD cấp quyền ở Cài đặt, Thành viên và phân quyền, Phân quyền HR). Không cần Google Form nữa.</span></div>';
+    $('#sdbox').innerHTML = '<div class="note info">' + ic('info') + '<span>Điểm seeding do HR phụ trách seeding điền ở mục Seeding, Nộp báo cáo (BOD cấp quyền ở Cài đặt, Tài khoản, Phân quyền). Không cần Google Form nữa.</span></div>';
   },
   pins: function () {
     var ds = CD.ghim.map(function (g) { return { tieuDe: g.tieuDe, link: g.link }; });
@@ -621,7 +538,7 @@ var SUB = {
       '<label class="switch"><input type="checkbox" id="bt"' + (CD.baoThuChoDuyet ? ' checked' : '') + '>UCV gửi mail chờ duyệt</label>' +
       '<p class="hint" style="margin:0">UCV luôn được báo qua mail khi thư của mình được duyệt hoặc bị trả lại.</p>' +
       '<label class="switch"><input type="checkbox" id="bs"' + (CD.baoSeeding ? ' checked' : '') + '>HR điền báo cáo seeding</label>' +
-      '<p class="hint" style="margin:0">Kèm số người được cộng điểm và link bài. HR phụ trách seeding luôn nhận nhắc hẹn 48 giờ mình đã đặt.</p><span id="m"></span></div>';
+      '<p class="hint" style="margin:0">Kèm số người được cộng điểm và link bài. HR phụ trách seeding luôn nhận nhắc hẹn ' + CD.quyTac.seedingGio + ' giờ mình đã đặt.</p><span id="m"></span></div>';
     $('#bg').onchange = function () { luuVa($('#bg'), $('#m'), 'luuSuKienThongBao', [{ gopY: $('#bg').checked }]); };
     $('#bt').onchange = function () { luuVa($('#bt'), $('#m'), 'luuSuKienThongBao', [{ thuChoDuyet: $('#bt').checked }]); };
     $('#bs').onchange = function () { luuVa($('#bs'), $('#m'), 'luuSuKienThongBao', [{ seeding: $('#bs').checked }]); };
@@ -672,21 +589,17 @@ var SUB = {
     } else ve();
   },
   theme: function () {
-    var p = timChuDe(CHU_DE);
-    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng trên máy này. “Theo máy” sẽ tự đổi theo chế độ sáng hoặc tối của điện thoại, máy tính.</p>' + chonGiaoDien() +
-      (p && p.toi ? '<p class="hint" style="margin:0">BOD đang chọn giao diện ' + esc(p.ten) + ' nên app luôn tối cho đến khi đổi giao diện khác.</p>' : '') + '</div>' +
-      (p ? '<label class="card row" style="cursor:pointer;flex-wrap:nowrap"><input type="checkbox" id="hu"' + (hieuUngBat() ? ' checked' : '') + '><span><b>Hiện hiệu ứng ' + esc(p.ten.toLowerCase()) + '</b><br><span class="hint">Hoa, lá, tuyết… bay trên màn hình. Tắt nếu máy chạy chậm. Chỉ áp dụng trên máy này.</span></span></label>' : '');
+    $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Chỉ áp dụng trên máy này. “Theo máy” sẽ tự đổi theo chế độ sáng hoặc tối của điện thoại, máy tính.</p>' + chonGiaoDien() + '</div>';
     ganGiaoDien($('#subbody'));
-    if ($('#hu')) $('#hu').onchange = function () { try { localStorage.setItem('eco_hieu_ung', this.checked ? 'bat' : 'tat'); } catch (e) {} veHatRoi(); };
   },
   chude: function () {
     var the = function (p) {
       var ma = p ? p.ma : '', dang = ma === CD.chuDe;
-      return '<button class="chude-the" data-cd="' + ma + '" aria-pressed="' + dang + '"><span class="dai" style="background:' + (p ? p.dai : 'linear-gradient(135deg,#2f5d18,#8cc152)') + '"><span>' + hinhThe(ma) + '</span></span>' + (dang ? '<span class="dang">Đang dùng</span>' : '') +
-        '<span class="chu"><b>' + (p ? p.ten : 'Mặc định') + '</b><small>' + (p ? p.khi : 'Xanh lá của CLB') + '</small></span></button>';
+      return '<button class="chude-the" data-cd="' + ma + '" aria-pressed="' + dang + '"><span class="dai" style="background:' + (p ? p.dai : 'var(--side)') + '"><span>' + hinhThe(ma) + '</span></span>' + (dang ? '<span class="dang">Đang dùng</span>' : '') +
+        '<span class="chu"><b>' + (p ? p.ten : 'Mặc định') + '</b><small>' + (p ? p.khi : 'Không có dải trang trí') + '</small></span></button>';
     };
     var ve = function () {
-      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Áp dụng cho mọi người trên cả app: đổi màu, thêm hoa lá rơi và đồ trang trí hợp dịp. Giao diện không tự đổi theo ngày, hết dịp thì BOD vào đây chọn lại.</p><span id="m"></span></div>' +
+      $('#subbody').innerHTML = '<div class="card form"><p class="hint" style="margin:0">Áp dụng cho mọi người: thêm một dải trang trí hợp dịp ở đầu trang chủ. Màu app không đổi. Giao diện không tự đổi theo ngày, hết dịp thì BOD vào đây chọn lại.</p><span id="m"></span></div>' +
         '<div class="card"><div class="ctitle"><h3>' + ic('sun', 18) + ' Bốn mùa</h3></div><div class="chude-luoi deu">' + [null].concat(DS_CHU_DE.filter(function (p) { return p.nhom === 'mua'; })).map(the).join('') + '</div></div>' +
         '<div class="card"><div class="ctitle"><h3>' + ic('star', 18) + ' Ngày lễ lớn</h3></div><div class="chude-luoi deu">' + DS_CHU_DE.filter(function (p) { return p.nhom === 'le'; }).map(the).join('') + '</div></div>';
       $$('#subbody [data-cd]').forEach(function (b) {
@@ -705,15 +618,10 @@ var SUB = {
     ve();
   },
   due: function () {
-    var opts = [0, 1, 2, 3, 5, 7];
-    if (opts.indexOf(CD.sapDenHanNgay) < 0) opts.push(CD.sapDenHanNgay);
-    var khOpts = [0, 1, 2, 3, 5, 7];
-    if (khOpts.indexOf(CD.khongHoanThanhSau) < 0) khOpts.push(CD.khongHoanThanhSau);
     var lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; });
     var dsNgay = [-7, -5, -3, -2, -1, 0, 1, 2, 3, 5, 7, 'T'];
     $('#subbody').innerHTML = '<form class="card form" id="duef"><p class="hint" style="margin:0">Mỗi người được nhắc task của mình; HR phụ trách được nhắc thêm task của những người mình phụ trách. Mỗi người nhận theo cách đã chọn ở Thông báo.</p>' +
-      '<label class="f">Task hiện “sắp đến hạn” trong danh sách task khi còn<select id="dd">' + opts.map(function (n) { return '<option value="' + n + '"' + (n === CD.sapDenHanNgay ? ' selected' : '') + '>' + (n === 0 ? 'Đúng ngày hạn' : n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
-      '<label class="f">Trễ quá bao nhiêu ngày thì task tính là không hoàn thành <small>Task không hoàn thành thôi được nhắc, không tự xác nhận xong được nữa. Muốn cho thêm thời gian thì sửa hạn chót.</small><select id="dk">' + khOpts.map(function (n) { return '<option value="' + n + '"' + (n === CD.khongHoanThanhSau ? ' selected' : '') + '>' + (n === 0 ? 'Ngay khi trễ hạn' : 'Trễ quá ' + n + ' ngày') + '</option>'; }).join('') + '</select></label>' +
+      '<p class="hint" style="margin:0">Task hiện “sắp đến hạn” khi còn ' + CD.quyTac.sapDenHanNgay + ' ngày, trễ quá ' + CD.quyTac.khtSauNgay + ' ngày thì tính là không hoàn thành và thôi nhắc. Đổi ở Quy tắc CLB, Khen thưởng, hạn task và buổi log.</p>' +
       '<div style="display:grid;gap:6px"><b style="font-size:13.5px">Lịch nhắc</b><span class="hint">Mỗi mốc là một lần nhắc vào ngày và giờ đã chọn, cả trước hạn lẫn trễ hạn. Ví dụ: trước hạn 2 ngày lúc 19:00, ngày hạn chót lúc 06:00, trễ hạn 1 ngày lúc 19:00. Google gửi lệch vài phút quanh giờ đã chọn.</span><span class="hint">Mỗi task được xét riêng theo hạn chót của từng người: những người cùng hạn chót được nhắc chung một lần, hạn chót khác nhau thì chỉ nhắc người có task đúng mốc.</span><div id="dsmoc" style="display:grid;gap:8px"></div></div>' +
       '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
     var chonMoc = function (m, i) {
@@ -738,7 +646,7 @@ var SUB = {
     veMoc();
     $('#duef').onsubmit = function (e) {
       e.preventDefault();
-      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ sapDenHanNgay: Number($('#dd').value), khongHoanThanhSau: Number($('#dk').value), lich: lich }], function () { lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; }); veMoc(); });
+      luuVa($('#save'), $('#m'), 'luuNhacViec', [{ lich: lich }], function () { lich = CD.nhac.lich.map(function (m) { return { ngay: m.ngay, gio: m.gio, phut: m.phut || 0 }; }); veMoc(); });
     };
   },
   tbtoi: function () { veTrangThongBao($('#subbody'), 'toi'); },
@@ -775,7 +683,7 @@ var SUB = {
             '<td style="white-space:nowrap;text-align:right">' + (n.daKetNoi ? '<button class="btn ghost sm" data-thu="' + i + '">Gửi thử</button> <button class="btn ghost sm" data-go="' + i + '">Gỡ</button>' : '') + '</td></tr>';
         }).join('') : '<tr><td colspan="4" class="muted">Chưa có tài khoản nào.</td></tr>') +
         '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="zk"' + (z.coBot ? '' : ' disabled') + '>Kiểm tra tin nhắn mới</button><button class="btn ghost sm" id="zn">Gửi nhắc ngay</button><span id="zm2"></span></div></div>' +
-        '<details class="card"><summary style="cursor:pointer;font-weight:600">Hướng dẫn tạo bot Zalo (Head HR làm mỗi năm)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
+        '<details class="card"><summary style="cursor:pointer;font-weight:500">Hướng dẫn tạo bot Zalo (Head HR làm mỗi năm)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
         '<li>Trên máy tính, mở <b>bot.zaloplatforms.com</b> và đăng nhập bằng Zalo của Head HR.</li>' +
         '<li>Bấm tạo bot mới, đặt tên dễ nhận ra, ví dụ “Bot nhắc việc ECO”.</li>' +
         '<li>Tạo xong, trang sẽ hiện <b>mã bot (token)</b> có dạng <code>số:chuỗi ký tự</code>. Bấm sao chép.</li>' +
@@ -833,7 +741,7 @@ var SUB = {
     goiPhien('layCaiDatMail').then(function (m) {
       var ds = m.danhBa.slice();
       var ve = function () {
-        $('#subbody').innerHTML = '<details class="card"><summary style="cursor:pointer;font-weight:600">Thành viên CLB <span class="hint">(' + m.thanhVien.length + ' người, có sẵn, tự cập nhật theo danh sách thành viên)</span></summary><div class="lst" style="margin:10px -18px -18px">' +
+        $('#subbody').innerHTML = '<details class="card"><summary style="cursor:pointer;font-weight:500">Thành viên CLB <span class="hint">(' + m.thanhVien.length + ' người, có sẵn, tự cập nhật theo danh sách thành viên)</span></summary><div class="lst" style="margin:10px -18px -18px">' +
           (m.thanhVien.length ? m.thanhVien.map(function (t) { return '<div class="li"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + (t.ghiChu ? ' · ' + esc(t.ghiChu) : '') + '</span></div></div>'; }).join('') : rong('Chưa có thành viên nào có email.')) + '</div></details>' +
           '<div class="card"><h3>Danh bạ khác</h3><p class="hint" style="margin-top:0">Ví dụ các CLB khác hay đối tác. Danh bạ dùng khi gửi hàng loạt và để UCV chọn người nhận. Nhóm giúp chọn cả nhóm một lần.</p><datalist id="dbn">' + ds.map(function (d) { return d.nhom; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist><div class="tscroll"><table><thead><tr><th>Nhóm</th><th>Tên</th><th>Email</th><th>Ghi chú</th><th></th></tr></thead><tbody>' +
           ds.map(function (d, i) { return '<tr><td><input type="text" id="dg' + i + '" list="dbn" value="' + esc(d.nhom) + '" aria-label="Nhóm"></td><td><input type="text" id="dt' + i + '" value="' + esc(d.ten) + '" aria-label="Tên"></td><td><input type="email" id="de' + i + '" value="' + esc(d.email) + '" aria-label="Email"></td><td><input type="text" id="dc' + i + '" value="' + esc(d.ghiChu) + '" aria-label="Ghi chú"></td><td><button class="ibtn" data-x="' + i + '" aria-label="Xoá">' + ic('trash', 16) + '</button></td></tr>'; }).join('') +
@@ -867,7 +775,7 @@ var SUB = {
       return '<div style="display:grid;gap:6px;margin-top:8px">' +
         (vaiTro === 'HR' ? '<div class="row" style="gap:10px;flex-wrap:wrap"><span class="hint">Phụ trách ban</span>' + (cacBan.length ? cacBan.map(function (n) { return o('data-pb="' + i + '"', n, t.banQuanLy.indexOf(n) >= 0, n); }).join('') : '<span class="hint">Chưa có ban nào</span>') + '</div>' : '') +
         '<div class="row" style="gap:10px;flex-wrap:wrap">' + NHOM.map(function (n) { return o('data-nh="' + i + '"', n, (t.nhomHr || []).indexOf(n) >= 0, TEN_NHOM_HR[n]); }).join('') + '</div>' +
-        '<div class="row" style="gap:10px;flex-wrap:wrap">' + (vaiTro === 'HR' ? '<label class="row" style="gap:6px;font-size:13px"><span class="hint">Mã HR</span><input type="text" id="mhr' + i + '" value="' + esc(t.maHr || '') + '" maxlength="20" placeholder="VD: HR01" style="width:110px" aria-label="Mã HR của ' + esc(t.ten) + '"></label>' : '') +
+        '<div class="row" style="gap:10px;flex-wrap:wrap">' + 
         '<button class="btn ghost sm" data-luupb="' + i + '">Lưu</button><span id="pbm' + i + '"></span></div></div>';
     };
     $('#subbody').innerHTML = '<div class="seg" id="qtab">' + [['HR', 'HR'], ['UCV', 'UCV']].map(function (x) { return '<button data-v="' + x[0] + '" aria-pressed="' + (x[0] === vaiTro) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
@@ -875,7 +783,7 @@ var SUB = {
       ? '<b>Phụ trách ban</b>: xem KPI task, KPI log của thành viên các ban đó, nhập và cập nhật task giúp BOD, được nhắc khi task của họ sắp đến hạn. <b>Phụ trách seeding</b>: đặt nhắc hẹn và điền báo cáo seeding. HR không có quyền nào thì dùng app như thành viên thường.'
       : 'UCV gửi mail của CLB (BOD duyệt trước khi gửi) và xem được mọi thư đến, thư đi của hộp thư CLB.') + '</span></div>' +
       '<div class="card flush"><div style="padding:16px 18px 6px"><h3 style="margin:0">Đang có quyền</h3></div><div class="lst">' + (hr.length ? hr.map(function (t, i) { return '<div class="li" style="flex-wrap:wrap"><div class="c"><b class="t">' + esc(t.ten) + '</b><span class="s">' + esc(t.email) + '</span>' + quyen(t, i) + '</div><button class="btn ghost sm" data-go="' + esc(t.email) + '">Gỡ quyền</button></div>'; }).join('') : rong('Chưa có ai.')) + '</div><div style="padding:0 18px 12px" id="m1"></div></div>' +
-      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách thành viên</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu mới <small>Không bắt buộc. Bỏ trống thì người đó vẫn đăng nhập bằng mật khẩu đang dùng (hoặc mật khẩu chung của CLB, hoặc Google).</small><input type="text" id="hp" autocomplete="off"></label>' + (vaiTro === 'HR' ? '<label class="f">Mã HR <small>Không bắt buộc, ví dụ HR01. Sửa được sau.</small><input type="text" id="hm" maxlength="20" autocomplete="off"></label>' : '') + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
+      '<form class="card form" id="hf"><h3 style="margin:0">Thêm người</h3><label class="f">Thành viên <small>Chỉ hiện người có email trong danh sách thành viên</small><select id="hn">' + conLai.map(function (t) { return '<option>' + esc(t.ten) + '</option>'; }).join('') + '</select></label><label class="f">Mật khẩu mới <small>Không bắt buộc. Bỏ trống thì người đó vẫn đăng nhập bằng mật khẩu đang dùng (hoặc mật khẩu chung của CLB, hoặc Google).</small><input type="text" id="hp" autocomplete="off"></label>' + '<div class="row"><button class="btn sm" id="hb"' + (conLai.length ? '' : ' disabled') + '>' + (vaiTro === 'UCV' ? 'Thêm UCV' : 'Thêm vào HR') + '</button><span id="m2"></span></div></form>';
     $$('[data-go]').forEach(function (b) { b.onclick = function () { if (!xacNhan(b, 'Gỡ thật?')) return; luuVa(b, $('#m1'), 'goTaiKhoan', [b.getAttribute('data-go')], function () { SUB.hr(vaiTro); }); }; });
     $$('[data-luupb]').forEach(function (b) {
       b.onclick = function () {
@@ -884,20 +792,20 @@ var SUB = {
         if (vaiTro !== 'HR') { luuVa(b, $('#pbm' + i), 'luuNhomHr', [hr[Number(i)].email, nhom]); return; }
         var ds = $$('[data-pb="' + i + '"]:checked').map(function (c) { return c.value; });
         b.disabled = true; thongBao($('#pbm' + i), 'cho', 'Đang lưu…');
-        goiPhien('luuBanQuanLy', hr[Number(i)].email, ds, $('#mhr' + i).value).then(function () {
+        goiPhien('luuBanQuanLy', hr[Number(i)].email, ds).then(function () {
           luuVa(b, $('#pbm' + i), 'luuNhomHr', [hr[Number(i)].email, nhom]);
         }).catch(function (err) { b.disabled = false; thongBao($('#pbm' + i), 'loi', err.message); });
       };
     });
-    $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro, $('#hm') ? $('#hm').value : ''], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
+    $('#hf').onsubmit = function (e) { e.preventDefault(); luuVa($('#hb'), $('#m2'), 'themBanNhanSu', [$('#hn').value, $('#hp').value, vaiTro], function () { SUB.hr(vaiTro); thongBao($('#m2'), 'ok', 'Đã thêm'); }); };
     $('#qtab').onclick = function (e) { var b = e.target.closest('[data-v]'); if (b && b.getAttribute('data-v') !== vaiTro) SUB.hr(b.getAttribute('data-v')); };
   },
   ucv: function () { SUB.hr('UCV'); },
   google: function () {
-    $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản app CLB ECO có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở app CLB ECO qua trang ecotdn.github.io/home hoặc app đã cài.</p>' +
+    $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản app CLB ECO có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở app CLB ECO qua trang ecotdn.github.io/app hoặc app đã cài.</p>' +
       '<label class="f">Google Client ID <small>Tạo một lần trên Google Cloud bằng tài khoản CLB (xem hướng dẫn bên dưới). Bỏ trống để tắt.</small><input type="text" id="gg-i" value="' + esc(CD.googleClientId) + '" placeholder="1234567890-abc….apps.googleusercontent.com"></label>' +
       '<div class="row"><button class="btn sm" id="gg-b">Lưu</button><span id="m"></span></div></form>' +
-      '<details class="card"' + (CD.googleClientId ? '' : ' open') + '><summary style="cursor:pointer;font-weight:600">Hướng dẫn lấy Google Client ID (làm một lần)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
+      '<details class="card"' + (CD.googleClientId ? '' : ' open') + '><summary style="cursor:pointer;font-weight:500">Hướng dẫn lấy Google Client ID (làm một lần)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
       '<li>Trên máy tính, đăng nhập tài khoản Google của CLB, mở <b>console.cloud.google.com</b>. Lần đầu sẽ được hỏi đồng ý điều khoản, bấm đồng ý.</li>' +
       '<li>Ở góc trên bên trái bấm chọn dự án, bấm <b>New project</b>, đặt tên “eco”, bấm <b>Create</b>, rồi chọn dự án vừa tạo.</li>' +
       '<li>Mở menu, vào <b>APIs &amp; Services</b> rồi <b>OAuth consent screen</b> (có thể tên là Google Auth Platform). Bấm <b>Get started</b>, điền tên app “eco”, email hỗ trợ là email CLB, chọn <b>External</b>, điền email liên hệ, đồng ý rồi bấm <b>Create</b>.</li>' +

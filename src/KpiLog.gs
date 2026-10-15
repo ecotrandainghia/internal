@@ -1,10 +1,15 @@
 /**
- * KPI log trong app CLB ECO (quy chế 2026-2027, mục II.1). BOD tạo sự kiện log với số buổi dự kiến và số buổi giao,
- * thêm từng buổi (hoặc nhập từ file đăng ký log), điểm danh, đánh dấu buổi huỷ. Khi sự kiện kết thúc, BOD chốt:
- * số buổi được giao cuối tính theo số buổi thực diễn ra, và ai làm vượt được cộng điểm log vượt.
+ * Quản lý log (quy chế mục II.1). Log là các buổi ở lại trường tô màu, chuẩn bị dụng cụ cho sự kiện của CLB.
+ * Mỗi sự kiện của CLB cần làm log là một "đợt log": BOD đặt số buổi dự kiến và chỉ tiêu (số buổi giao) chung,
+ * riêng cho từng ban hoặc khối lớp; thêm từng buổi (hoặc nhập từ file đăng ký log) và điểm danh mỗi buổi.
+ * Ai đi nhiều hơn chỉ tiêu thì app hiện số buổi dư ngay sau mỗi lần điểm danh. Khi đợt log kết thúc, BOD bấm
+ * "Chốt đợt log": chỉ tiêu cuối tính theo số buổi thực diễn ra và điểm cho các buổi dư được cộng tự động.
+ * Mở lại đợt đã chốt thì gỡ điểm đã cộng; chốt lại sẽ cộng lại.
+ *
+ * Tên bảng và hàm vẫn dùng chữ "SuKien" (bảng SuKienLog): mỗi dòng là một đợt log.
  */
 
-/** Các sự kiện log của nhiệm kỳ này, mỗi sự kiện kèm mảng buoi. */
+/** Các đợt log của nhiệm kỳ này, mỗi đợt kèm mảng buoi. */
 function docSuKienLog_() {
   var buoi = docBangNhiemKy_('BuoiLog', 'ThoiGian');
   return docBangNhiemKy_('SuKienLog', 'ThoiGian').map(function (s) {
@@ -18,15 +23,20 @@ function docSuKienLog_() {
   }).sort(function (a, b) { return new Date(b.ThoiGian).getTime() - new Date(a.ThoiGian).getTime(); });
 }
 
-/** Trang Làm log, phần sự kiện: các sự kiện, buổi, số buổi giao và kết quả từng người. */
+/** Trang Quản lý log: các đợt log, buổi, chỉ tiêu và kết quả từng người (đã đi, chỉ tiêu, số buổi dư). */
 function layLog(phien) {
   canDangNhap_(phien, 'log');
+  var qt = quyTac_();
   var tv = docThanhVien_().filter(khongPhaiBod_);
   var loai = docBang_('LoaiHoatDong');
+  var coLoai = {};
+  qt.thoiLuongBuoi.forEach(function (p) { var l = loaiDungCho_(loai, dungChoLog_(p)); coLoai[p] = l ? Number(l.Diem) || 0 : null; });
   return {
-    thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), ban: String(t.Ban || ''), lop: String(t.Lop || '') }; }),
-    dsBan: tv.reduce(function (a, t) { var b = String(t.Ban || '').trim().toUpperCase(); if (b && a.indexOf(b) < 0) a.push(b); return a; }, []),
-    coLoai: { 90: !!loaiDungCho_(loai, DUNG_CHO.LOG_90), 180: !!loaiDungCho_(loai, DUNG_CHO.LOG_180) },
+    thanhVien: tv.map(function (t) { return { ten: String(t.HoVaTen), maTV: String(t.MaTV || ''), ban: String(t.Ban || ''), lop: String(t.Lop || '') }; }),
+    dsBan: CO_CAU.ban.filter(function (b) { return b.dangDung && !b.laBod; }).reduce(function (a, b) { [b.ma, b.nhom].forEach(function (x) { if (a.indexOf(x) < 0) a.push(x); }); return a; }, []),
+    thoiLuong: qt.thoiLuongBuoi,
+    datLog: qt.datLog,
+    coLoai: coLoai,
     file: docBangNhiemKy_('FileLog', 'ThoiGian').map(function (f) { return { thoiGian: new Date(f.ThoiGian).getTime(), ten: String(f.TenFile), link: String(f.DuongDan) }; })
       .sort(function (a, b) { return b.thoiGian - a.thoiGian; }).slice(0, 20),
     suKien: docSuKienLog_().map(function (s) {
@@ -41,7 +51,7 @@ function layLog(phien) {
         trangThai: String(s.TrangThai || ''), chotLuc: s.ChotLuc ? new Date(s.ChotLuc).getTime() : 0, nguoiChot: String(s.NguoiChot || ''),
         thucDien: soBuoiThucDien_(s, s.buoi),
         buoi: buoiHieuLuc_(s.buoi).map(function (b) {
-          return { ma: b.ThoiGian, ten: String(b.TenBuoi), ngay: b.Ngay, thoiLuong: Number(b.ThoiLuong) || 90, trangThai: String(b.TrangThai || TRANG_THAI_BUOI.CHUA), dangKy: tachTen_(b.DangKy), coMat: tachTen_(b.CoMat) };
+          return { ma: b.ThoiGian, ten: String(b.TenBuoi), ngay: b.Ngay, thoiLuong: Number(b.ThoiLuong) || qt.thoiLuongBuoi[0], trangThai: String(b.TrangThai || TRANG_THAI_BUOI.CHUA), dangKy: tachTen_(b.DangKy), coMat: tachTen_(b.CoMat) };
         }),
         ketQua: ketQua
       };
@@ -54,7 +64,7 @@ function suaDongLog_(ten, ms, ghi) {
   var sh = bangDuLieu_(ten);
   var v = sh.getDataRange().getValues(), td = v[0];
   var dong = timDongTheoThoiGian_(v, 'ThoiGian', ms);
-  if (!dong) throw new Error(ten === 'SuKienLog' ? 'Không tìm thấy sự kiện này.' : 'Không tìm thấy buổi này.');
+  if (!dong) throw new Error(ten === 'SuKienLog' ? 'Không tìm thấy đợt log này.' : 'Không tìm thấy buổi này.');
   var cu = {};
   td.forEach(function (c, i) { cu[c] = v[dong - 1][i]; });
   Object.keys(ghi).forEach(function (c) { sh.getRange(dong, td.indexOf(c) + 1).setValue(ghi[c]); });
@@ -63,13 +73,13 @@ function suaDongLog_(ten, ms, ghi) {
 
 function canSuKienMo_(ms) {
   var s = docBang_('SuKienLog').filter(function (x) { return new Date(x.ThoiGian).getTime() === Number(ms); })[0];
-  if (!s) throw new Error('Không tìm thấy sự kiện này.');
-  if (String(s.TrangThai) === SU_KIEN_HUY) throw new Error('Sự kiện này đã huỷ.');
-  if (String(s.TrangThai) === SU_KIEN_CHOT) throw new Error('Sự kiện đã chốt. Bấm Mở lại để sửa, sửa xong chốt lại.');
+  if (!s) throw new Error('Không tìm thấy đợt log này.');
+  if (String(s.TrangThai) === SU_KIEN_HUY) throw new Error('Đợt log này đã huỷ.');
+  if (String(s.TrangThai) === SU_KIEN_CHOT) throw new Error('Đợt log đã chốt. Bấm Mở lại để sửa, sửa xong chốt lại.');
   return s;
 }
 
-/** Tạo hoặc sửa sự kiện log (yc.ma để sửa). */
+/** Tạo hoặc sửa đợt log (yc.ma để sửa). */
 function luuSuKienLog(phien, yc) {
   var tk = canDangNhap_(phien, 'log');
   var k = chuanHoaSuKienLog_(yc);
@@ -85,7 +95,7 @@ function luuSuKienLog(phien, yc) {
   });
 }
 
-/** Huỷ sự kiện (tạo nhầm): không tính KPI nữa, gỡ điểm log vượt nếu đã chốt. Dữ liệu vẫn giữ trong sheet. */
+/** Huỷ đợt log (tạo nhầm): không tính KPI nữa, gỡ điểm buổi dư nếu đã chốt. Dữ liệu vẫn giữ trong sheet. */
 function huySuKienLog(phien, ms) {
   canDangNhap_(phien, 'log');
   return voiKhoa_(function () {
@@ -134,7 +144,7 @@ function xoaBuoiLog(phien, suKien, ma) {
 
 /**
  * Nhập người đăng ký từ file đăng ký log (file tạo ở phần Tạo file đăng ký, hoặc file cùng mẫu).
- * Buổi trùng tên thì ghi đè danh sách đăng ký; buổi chưa có thì tạo mới (90 phút, chưa diễn ra).
+ * Buổi trùng tên thì ghi đè danh sách đăng ký; buổi chưa có thì tạo mới (thời lượng ngắn nhất, chưa diễn ra).
  */
 function nhapDangKyLog(phien, suKien, link) {
   canDangNhap_(phien, 'log');
@@ -160,7 +170,7 @@ function nhapDangKyLog(phien, suKien, link) {
       }).join(', ');
       var trung = co.filter(function (x) { return String(x.TenBuoi).trim().toLowerCase() === b.ten.toLowerCase(); })[0];
       if (trung) { suaDongLog_('BuoiLog', new Date(trung.ThoiGian).getTime(), { DangKy: dangKy }); soSua++; }
-      else moi.push({ ThoiGian: new Date(bayGio + i), SuKien: Number(suKien), TenBuoi: b.ten.slice(0, 100), Ngay: '', ThoiLuong: 90, TrangThai: TRANG_THAI_BUOI.CHUA, DangKy: dangKy, CoMat: '' });
+      else moi.push({ ThoiGian: new Date(bayGio + i), SuKien: Number(suKien), TenBuoi: b.ten.slice(0, 100), Ngay: '', ThoiLuong: quyTac_().thoiLuongBuoi[0], TrangThai: TRANG_THAI_BUOI.CHUA, DangKy: dangKy, CoMat: '' });
     });
     themDong_('BuoiLog', moi);
     suaDongLog_('SuKienLog', suKien, { LinkDangKy: String(link).trim() });
@@ -168,7 +178,7 @@ function nhapDangKyLog(phien, suKien, link) {
   });
 }
 
-/** Gỡ các dòng điểm log vượt của một lần chốt (ThoiGian = lúc chốt). Gọi trong voiKhoa_. */
+/** Gỡ các dòng điểm buổi dư của một lần chốt (ThoiGian = lúc chốt). Gọi trong voiKhoa_. */
 function goDiemLog_(chotLuc) {
   if (!chotLuc) return 0;
   var ms = new Date(chotLuc).getTime();
@@ -182,21 +192,21 @@ function goDiemLog_(chotLuc) {
 }
 
 /**
- * Chốt sự kiện: từ giờ số buổi được giao cuối tính theo số buổi thực diễn ra; cộng điểm log vượt.
- * Không chốt được khi còn buổi chưa diễn ra (đánh dấu đã diễn ra hoặc huỷ trước).
+ * Chốt đợt log: từ giờ chỉ tiêu cuối tính theo số buổi thực diễn ra; cộng điểm cho các buổi đi dư.
+ * Không chốt được khi còn buổi chưa diễn ra (điểm danh, đánh dấu huỷ hoặc xoá trước).
  */
 function chotSuKienLog(phien, ms) {
   var tk = canDangNhap_(phien, 'log');
   return voiKhoa_(function () {
     var s = docSuKienLog_().filter(function (x) { return new Date(x.ThoiGian).getTime() === Number(ms); })[0];
-    if (!s) throw new Error('Không tìm thấy sự kiện này.');
-    if (String(s.TrangThai) === SU_KIEN_HUY) throw new Error('Sự kiện này đã huỷ.');
-    if (String(s.TrangThai) === SU_KIEN_CHOT) throw new Error('Sự kiện đã chốt rồi.');
+    if (!s) throw new Error('Không tìm thấy đợt log này.');
+    if (String(s.TrangThai) === SU_KIEN_HUY) throw new Error('Đợt log này đã huỷ.');
+    if (String(s.TrangThai) === SU_KIEN_CHOT) throw new Error('Đợt log đã chốt rồi.');
     var chua = buoiHieuLuc_(s.buoi).filter(function (b) { return b.TrangThai === TRANG_THAI_BUOI.CHUA; });
     if (chua.length) throw new Error('Còn ' + chua.length + ' buổi chưa diễn ra (' + chua.map(function (b) { return b.TenBuoi; }).join(', ') + '). Điểm danh, đánh dấu huỷ hoặc xoá các buổi đó trước khi chốt.');
     var bayGio = new Date();
     s.TrangThai = SU_KIEN_CHOT;
-    var kq = dongDiemLogVuot_(s, s.buoi, docBang_('ThanhVien').filter(khongPhaiBod_), docBang_('LoaiHoatDong'), layKyHienTai_(), 'Log: ' + String(tk.HoVaTen), bayGio);
+    var kq = dongDiemLogVuot_(s, s.buoi, docThanhVien_().filter(khongPhaiBod_), docBang_('LoaiHoatDong'), layKyHienTai_(), 'Log: ' + String(tk.HoVaTen), bayGio);
     if (kq.loi) throw new Error(kq.loi);
     themDong_('LichSuDiem', kq.dong);
     suaDongLog_('SuKienLog', ms, { TrangThai: SU_KIEN_CHOT, ChotLuc: bayGio, NguoiChot: String(tk.HoVaTen) });
@@ -207,12 +217,12 @@ function chotSuKienLog(phien, ms) {
   });
 }
 
-/** Mở lại sự kiện đã chốt để sửa: gỡ điểm log vượt của lần chốt đó. Chốt lại sẽ cộng lại. */
+/** Mở lại đợt log đã chốt để sửa: gỡ điểm buổi dư của lần chốt đó. Chốt lại sẽ cộng lại. */
 function moLaiSuKienLog(phien, ms) {
   canDangNhap_(phien, 'log');
   return voiKhoa_(function () {
     var cu = suaDongLog_('SuKienLog', ms, { TrangThai: '', ChotLuc: '', NguoiChot: '' });
-    if (String(cu.TrangThai) !== SU_KIEN_CHOT) { suaDongLog_('SuKienLog', ms, { TrangThai: cu.TrangThai, ChotLuc: cu.ChotLuc, NguoiChot: cu.NguoiChot }); throw new Error('Sự kiện này chưa chốt.'); }
+    if (String(cu.TrangThai) !== SU_KIEN_CHOT) { suaDongLog_('SuKienLog', ms, { TrangThai: cu.TrangThai, ChotLuc: cu.ChotLuc, NguoiChot: cu.NguoiChot }); throw new Error('Đợt log này chưa chốt.'); }
     var xoa = goDiemLog_(cu.ChotLuc);
     xoaBoNhoTam_();
     return xoa;

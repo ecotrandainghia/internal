@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const L = require('./load-logic');
 
-const KY = { NhiemKy: '2026-2027', HocKy: 1 };
-const TV = [{ HoVaTen: 'Nguyễn A', Ban: 'PG' }, { HoVaTen: 'Lê B', Ban: 'BOD' }];
+const KY = { NhiemKy: '2026-2027', GiaiDoan: 1 };
+const TV = [{ MaTV: '26-1-PG-01', HoVaTen: 'Nguyễn A', Ban: 'PG' }, { MaTV: '26-1-BOD-01', HoVaTen: 'Lê B', Ban: 'BOD' }];
 const LOAI = [{ TenLoai: 'Staff', Diem: 5 }, { TenLoai: 'Seeding', Diem: 1 }];
 
 test('coQuyen theo vai trò', () => {
@@ -21,7 +21,7 @@ test('taoDongCongDiem lấy điểm theo loại, bỏ người trùng, chuẩn t
   const kq = L.taoDongCongDiem({ loai: 'Staff', tenHoatDong: ' Hội chợ ', nguoi: ['nguyễn a', 'Lê B', 'Nguyễn A'] }, TV, LOAI, 'Lê B', KY, now);
   assert.strictEqual(kq.loi, '');
   assert.strictEqual(kq.dong.length, 2);
-  assert.deepStrictEqual(kq.dong[0], { ThoiGian: now, HoVaTen: 'Nguyễn A', LoaiHoatDong: 'Staff', TenHoatDong: 'Hội chợ', Diem: 5, NguoiCong: 'Lê B', NhiemKy: '2026-2027', HocKy: 1 });
+  assert.deepStrictEqual(kq.dong[0], { ThoiGian: now, MaTV: '26-1-PG-01', HoVaTen: 'Nguyễn A', LoaiHoatDong: 'Staff', TenHoatDong: 'Hội chợ', Diem: 5, NguoiCong: 'Lê B', NhiemKy: '2026-2027', GiaiDoan: 1 });
 });
 
 test('taoDongCongDiem báo lỗi rõ ràng', () => {
@@ -84,21 +84,9 @@ test('chuanHoaDsGio', () => {
   assert.strictEqual(L.chuanHoaDsGio([1, 2, 3, 4, 5, 6, 7, 8]).length, 6);
 });
 
-test('capNhatThanhVienCu giữ hồ sơ người rời và bỏ người quay lại', () => {
-  const t = new Date(2026, 9, 2);
-  const cu = [{ HoVaTen: 'Nguyễn A', Ban: 'PG', Email: 'a@x.com' }, { HoVaTen: 'Lê B', Ban: 'BOD' }];
-  const moi = [{ HoVaTen: 'lê b', Ban: 'BOD' }, { HoVaTen: 'Trần C', Ban: 'PR' }];
-  const daRoi = [{ HoVaTen: 'Trần C', Ban: 'PR', NgayRoi: t }, { HoVaTen: 'Phạm D', Ban: 'HR', NgayRoi: t }];
-  const kq = L.capNhatThanhVienCu(cu, moi, daRoi, t);
-  assert.strictEqual(kq.soMoiRoi, 1);
-  assert.deepStrictEqual(kq.ds.map(d => d.HoVaTen), ['Phạm D', 'Nguyễn A']);
-  assert.strictEqual(kq.ds[1].Email, 'a@x.com');
-  assert.strictEqual(kq.ds[1].NgayRoi, t);
-});
-
 test('dongBoTaiKhoan: mọi thành viên có email đều có tài khoản, BOD theo cột Ban, người rời CLB bị bỏ', () => {
   const tv = [
-    { HoVaTen: 'An', Ban: 'PG', Email: 'An@x.com' },
+    { MaTV: '26-1-PG-01', HoVaTen: 'An', Ban: 'PG', Email: 'An@x.com' },
     { HoVaTen: 'Bình', Ban: 'BOD', Email: 'binh@x.com' },
     { HoVaTen: 'Chi', Ban: 'HR', Email: 'chi@x.com' },
     { HoVaTen: 'Dũng', Ban: 'AD', Email: '' },
@@ -120,7 +108,7 @@ test('dongBoTaiKhoan: mọi thành viên có email đều có tài khoản, BOD 
   assert.strictEqual(theo['chi@x.com'].MaHr, 'HR01');
   assert.strictEqual(theo['em@x.com'].VaiTro, 'TV');
   assert.strictEqual(theo['giang@x.com'], undefined);
-  assert.deepStrictEqual(kq.moi, [{ Email: 'an@x.com', HoVaTen: 'An', VaiTro: 'TV' }]);
+  assert.deepStrictEqual(kq.moi, [{ Email: 'an@x.com', MaTV: '26-1-PG-01', HoVaTen: 'An', VaiTro: 'TV' }]);
 });
 
 test('thành viên thường chỉ được gửi góp ý', () => {

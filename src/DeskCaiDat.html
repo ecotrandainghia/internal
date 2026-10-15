@@ -1,0 +1,256 @@
+<script>
+/*
+ * Các trang Cài đặt cho phần CLB tự đổi theo năm và phần app tự chạy (chỉ BOD):
+ * Quy tắc CLB (cơ cấu ban, khen thưởng, hạn task và buổi log), Tài khoản (tải danh sách thành viên, thành viên qua các
+ * năm, mật khẩu chung, lịch sinh nhật), Hệ thống (tình trạng, lưu trữ và sao lưu).
+ * Thang điểm vẫn ở SUB.types trong DeskViec.
+ */
+function ngayNgan(ms) { if (!ms) return ''; var d = new Date(ms); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
+function dsTen(ds, toiDa) { toiDa = toiDa || 12; return esc(ds.slice(0, toiDa).join(', ')) + (ds.length > toiDa ? ' và ' + (ds.length - toiDa) + ' người khác' : ''); }
+
+Object.assign(SUB, {
+  /* ---------- Cơ cấu ban ---------- */
+  cocau: function () {
+    var chep = function (b) { return { ma: b.ma, ten: b.ten, nhom: b.nhom, vietTat: b.vietTat, laBod: !!b.laBod, phuTrach: !!b.phuTrach, dangDung: b.dangDung !== false }; };
+    var ds = CD.coCau.map(chep);
+    $('#subbody').innerHTML = '<div class="card" id="ccbox"></div>';
+    var ve = function () {
+      $('#ccbox').innerHTML = '<p class="hint" style="margin-top:0">Ban ghi ở cột Ban của danh sách thành viên phải khớp <b>Mã ban</b> hoặc <b>Tên đầy đủ</b> ở đây. ' +
+        '<b>Nhóm</b> gộp nhiều ban khi xếp hạng và giao log (ví dụ PR Caption, PR Design cùng nhóm PR). <b>Viết tắt</b> nằm trong mã thành viên, ví dụ 26-1-PG-07 là vào năm 2026, đợt tuyển 1, ban PG, người thứ 7; đã có mã dùng chữ này thì không đổi được nữa.</p>' +
+        '<ul class="hint" style="margin:0 0 10px;padding-left:18px"><li>Ban không còn thì bỏ chọn <b>Đang dùng</b> (đã giải thể). Dữ liệu cũ của ban vẫn xem được.</li><li><b>HR phụ trách</b>: ban này có HR phụ trách nhắc task, log.</li><li>Cần đúng một ban là <b>Ban điều hành</b>: thành viên ban này đăng nhập với quyền BOD.</li></ul>' +
+        '<div class="tscroll"><table><thead><tr><th>Mã ban</th><th>Tên đầy đủ</th><th>Nhóm</th><th>Viết tắt</th><th class="c">Ban điều hành</th><th class="c">HR phụ trách</th><th class="c">Đang dùng</th><th></th></tr></thead><tbody>' +
+        ds.map(function (b, i) {
+          return '<tr><td style="min-width:110px"><input type="text" id="cm' + i + '" value="' + esc(b.ma) + '" aria-label="Mã ban"></td>' +
+            '<td style="min-width:160px"><input type="text" id="ct' + i + '" value="' + esc(b.ten) + '" aria-label="Tên đầy đủ"></td>' +
+            '<td style="width:90px"><input type="text" id="cn' + i + '" value="' + esc(b.nhom) + '" aria-label="Nhóm"></td>' +
+            '<td style="width:90px"><input type="text" id="cv' + i + '" value="' + esc(b.vietTat) + '" maxlength="6" aria-label="Viết tắt trong mã thành viên"></td>' +
+            '<td class="c" style="text-align:center"><input type="radio" name="cbod" id="cb' + i + '"' + (b.laBod ? ' checked' : '') + ' aria-label="Ban điều hành"></td>' +
+            '<td class="c" style="text-align:center"><input type="checkbox" id="cp' + i + '"' + (b.phuTrach ? ' checked' : '') + (b.laBod ? ' disabled' : '') + ' aria-label="Có HR phụ trách"></td>' +
+            '<td class="c" style="text-align:center"><input type="checkbox" id="cd' + i + '"' + (b.dangDung ? ' checked' : '') + ' aria-label="Đang dùng"></td>' +
+            '<td style="width:44px"><button class="ibtn" data-x="' + i + '" aria-label="Xoá">' + ic('trash', 16) + '</button></td></tr>';
+        }).join('') +
+        '</tbody></table></div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="add">' + ic('plus', 14) + 'Thêm ban</button><button class="btn sm" id="save">Lưu</button><span id="m"></span></div>';
+      var doc = function () {
+        ds = ds.map(function (_, i) { return { ma: $('#cm' + i).value, ten: $('#ct' + i).value, nhom: $('#cn' + i).value, vietTat: $('#cv' + i).value, laBod: $('#cb' + i).checked, phuTrach: $('#cp' + i).checked, dangDung: $('#cd' + i).checked }; });
+      };
+      $('#add').onclick = function () { doc(); ds.push({ ma: '', ten: '', nhom: '', vietTat: '', laBod: false, phuTrach: true, dangDung: true }); ve(); $('#cm' + (ds.length - 1)).focus(); };
+      $$('#ccbox [data-x]').forEach(function (b) { b.onclick = function () { doc(); ds.splice(Number(b.getAttribute('data-x')), 1); ve(); }; });
+      $$('#ccbox [name=cbod]').forEach(function (r) { r.onchange = function () { doc(); ve(); }; });
+      $('#save').onclick = function () { doc(); luuVa($('#save'), $('#m'), 'luuCoCau', [ds], function () { ds = CD.coCau.map(chep); ve(); thongBao($('#m'), 'ok', 'Đã lưu'); }); };
+    };
+    ve();
+  },
+
+  /* ---------- Khen thưởng, hạn task và buổi log ---------- */
+  quytac: function () {
+    var q = CD.quyTac;
+    $('#subbody').innerHTML = '<form class="card form" id="qtf" style="max-width:620px">' +
+      '<label class="f">Khen thưởng top bao nhiêu phần trăm <small>Mỗi giai đoạn, người có điểm thuộc top này được khen thưởng. Người bằng điểm người cuối top cũng được tính.</small><input type="number" id="q1" min="1" max="100" step="1" value="' + q.tiLeTop + '"></label>' +
+      '<label class="f">Task hiện “sắp đến hạn” khi còn bao nhiêu ngày <small>0 là chỉ hiện vào đúng ngày hạn chót.</small><input type="number" id="q2" min="0" max="30" step="1" value="' + q.sapDenHanNgay + '"></label>' +
+      '<label class="f">Trễ quá bao nhiêu ngày thì task tính là không hoàn thành <small>Task không hoàn thành thôi được nhắc. Muốn cho thêm thời gian thì sửa hạn chót. 0 là ngay khi trễ hạn.</small><input type="number" id="q3" min="0" max="60" step="1" value="' + q.khtSauNgay + '"></label>' +
+      '<label class="f">Thời lượng buổi log (phút) <small>Mỗi thời lượng có một loại điểm “Buổi log dư chỉ tiêu” riêng ở Thang điểm. Cách nhau bằng dấu phẩy, tối đa 4 loại, ví dụ 90, 180.</small><input type="text" id="q4" value="' + esc(q.thoiLuongBuoi.join(', ')) + '"></label>' +
+      '<p class="hint" style="margin:0">Các quy tắc khác cố định theo quy chế: đạt KPI task và log từ ' + q.datTask + '%, bù trừ khi từ ' + q.mucBuTru + '% và lọt top ' + q.tiLeBuTru + '%, mỗi nhiệm kỳ ' + q.soGiaiDoan + ' giai đoạn, điểm về 0 mỗi giai đoạn, xin gia hạn trước hạn ít nhất 24 giờ, nhắc seeding sau ' + q.seedingGio + ' giờ. ' +
+      'Đổi ở đây áp dụng cho nhiệm kỳ đang chạy và các nhiệm kỳ sau; nhiệm kỳ đã qua giữ nguyên.</p>' +
+      '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
+    $('#qtf').onsubmit = function (e) {
+      e.preventDefault();
+      var tl = $('#q4').value.split(/[,;\s]+/).filter(String).map(Number);
+      luuVa($('#save'), $('#m'), 'luuQuyTac', [{ tiLeTop: Number($('#q1').value), sapDenHanNgay: Number($('#q2').value), khtSauNgay: Number($('#q3').value), thoiLuongBuoi: tl }], function () {
+        var moi = CD.quyTac.thoiLuongBuoi.filter(function (p) { return !CD.loai.some(function (l) { return l.dungCho === 'log' + p; }); });
+        thongBao($('#m'), 'ok', moi.length ? 'Đã lưu. Vào Thang điểm để thêm loại điểm cho buổi log ' + moi.join(', ') + ' phút.' : 'Đã lưu');
+      });
+    };
+  },
+
+  /* ---------- Tải danh sách thành viên ---------- */
+  taids: function () {
+    $('#subbody').innerHTML = cho();
+    goiPhien('layThongTinTaiDanhSach').then(function (d) {
+      if (sub !== 'taids') return;
+      var chon = d.kieu.filter(function (k) { return !k.loi && !k.daLam; })[0] || d.kieu[d.kieu.length - 1];
+      var moTaKieu = function (k) { return k.dot === 0 ? 'Đầu nhiệm kỳ, sau Oday. Mở nhiệm kỳ mới.' : k.dot > 0 ? 'Mở giai đoạn ' + k.dot + '. Người mới vào là thành viên đợt ' + k.dot + '.' : 'Sửa thông tin, thêm hoặc bớt người trong giai đoạn đang chạy.'; };
+      $('#subbody').innerHTML = '<div class="card form">' +
+        '<p class="hint" style="margin:0">' + (d.ky ? 'Đang chạy: nhiệm kỳ <b>' + esc(d.ky.nhiemKy) + '</b>, giai đoạn <b>' + d.ky.giaiDoan + '</b>.' : 'Chưa có nhiệm kỳ nào. Lần tải đầu tiên chọn “Sau Oday” hoặc “Sau tuyển đợt 1”.') +
+        ' Tải không xoá dữ liệu cũ: người không còn trong danh sách được đánh dấu đã rời, hồ sơ và điểm vẫn giữ.</p>' +
+        '<div><b style="font-size:13.5px">Lần tải này là</b><div class="types" id="kieu" style="margin-top:8px">' + d.kieu.map(function (k, i) {
+          return '<button type="button" class="type" data-k="' + i + '" aria-pressed="' + (k === chon) + '"' + (k.loi ? ' disabled title="' + esc(k.loi) + '"' : '') + '><b>' + esc(k.kieu) + '</b><span>' + esc(k.loi || (k.daLam ? 'Đã làm trong nhiệm kỳ ' + k.nhiemKy + ', lần này tính là Cập nhật' : moTaKieu(k))) + '</span></button>';
+        }).join('') + '</div></div>' +
+        '<label class="f">Nhiệm kỳ <small>Dạng 2026-2027. App gợi ý theo ngày hôm nay.</small><input type="text" id="nk" value="' + esc(chon.nhiemKy) + '" style="max-width:180px"></label>' +
+        '<label class="f">Link sheet danh sách thành viên <small>Chia sẻ sheet cho tài khoản Google của CLB. Cột cần có: Họ và tên, Ban; nên có Email, Lớp, Chức vụ, Ngày sinh, Số điện thoại, Facebook. Cột nào không có thì app giữ thông tin cũ.</small><input type="url" id="lk" value="' + esc(d.link) + '" placeholder="https://docs.google.com/spreadsheets/d/…"></label>' +
+        '<label class="f">Tên tab <small>Để trống là tab đầu tiên.</small><input type="text" id="tab" style="max-width:240px"></label>' +
+        '<label class="switch"><input type="checkbox" id="gm" checked>Ghi mã thành viên vào sheet nguồn</label>' +
+        '<p class="hint" style="margin:0">Có mã trên sheet thì lần tải sau nhận đúng người dù đổi tên hay đổi email.</p>' +
+        '<div class="row"><button class="btn" id="xt">' + ic('eye', 16) + 'Xem trước</button><span id="m"></span></div></div>' +
+        '<div id="kq" style="display:grid;gap:14px"></div>' +
+        (d.lanTai.length ? '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Các lần tải gần đây</h3></div><div class="tscroll"><table><thead><tr><th>Lúc</th><th>Nhiệm kỳ</th><th>Kiểu</th><th class="n">Thêm</th><th class="n">Sửa</th><th class="n">Rời</th><th class="n">Tổng</th><th>Người tải</th></tr></thead><tbody>' +
+          d.lanTai.map(function (l) { return '<tr><td>' + ngayDayDu(l.luc) + '</td><td>' + esc(l.nhiemKy) + '</td><td>' + esc(l.kieu) + '</td><td class="n">' + l.them + '</td><td class="n">' + l.sua + '</td><td class="n">' + l.roi + '</td><td class="n">' + l.tong + '</td><td>' + esc(l.nguoi) + '</td></tr>'; }).join('') +
+          '</tbody></table></div></div>' : '');
+      $$('#kieu [data-k]').forEach(function (b) {
+        b.onclick = function () { chon = d.kieu[Number(b.getAttribute('data-k'))]; $$('#kieu .type').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); $('#nk').value = chon.nhiemKy; $('#kq').innerHTML = ''; };
+      });
+      var yeuCau = function (themBanMoi) { return { kieu: chon.kieu, nhiemKy: $('#nk').value.trim(), link: $('#lk').value.trim(), tenTab: $('#tab').value.trim(), ghiMa: $('#gm').checked, themBanMoi: !!themBanMoi, idLich: d.idLich || '' }; };
+      var xemTruoc = function (themBanMoi) {
+        if (!$('#lk').value.trim()) { thongBao($('#m'), 'loi', 'Dán link sheet danh sách thành viên trước nhé.'); return; }
+        $('#xt').disabled = true; thongBao($('#m'), 'cho', 'Đang đọc sheet…'); $('#kq').innerHTML = '';
+        goiPhien('xemTruocTaiDanhSach', yeuCau(themBanMoi)).then(function (x) {
+          $('#xt').disabled = false; $('#m').innerHTML = '';
+          var chan = x.loi.length || (x.banLa.length && !themBanMoi) || x.canMatKhau;
+          var muc = function (ten, ds) { return ds.length ? '<p style="margin:0"><b>' + ten + ' (' + ds.length + '):</b> ' + dsTen(ds) + '</p>' : ''; };
+          $('#kq').innerHTML = '<div class="card form"><div class="ctitle"><h3>' + ic('eye', 18) + ' Xem trước</h3></div>' +
+            (x.doiThanhCapNhat ? '<div class="note info">' + ic('info') + '<span>“' + esc(x.kieuChon) + '” đã làm trong nhiệm kỳ ' + esc(x.nhiemKy) + ' nên lần này được tính là Cập nhật.</span></div>' : '') +
+            '<div class="kpis"><div class="kpi"><b>' + x.tong + '</b><span>thành viên sau khi tải</span></div><div class="kpi"><b>' + x.them.length + '</b><span>người mới</span></div><div class="kpi"><b>' + x.sua.length + '</b><span>sửa thông tin</span></div><div class="kpi"><b>' + x.roi.length + '</b><span>đã rời</span></div></div>' +
+            '<p style="margin:0">' + esc(x.giaiDoan) + (x.boSung ? ' ' + x.boSung + ' người là thành viên bổ sung.' : '') + '</p>' +
+            muc('Người mới, kèm mã', x.them) + muc('Quay lại CLB', x.quayLai) + muc('Đã rời', x.roi) +
+            (x.doiBan.length ? '<p style="margin:0"><b>Đổi ban (' + x.doiBan.length + '):</b> ' + x.doiBan.slice(0, 12).map(function (b) { return esc(b.HoVaTen + ' ' + b.BanCu + ' → ' + b.BanMoi); }).join(', ') + '</p>' : '') +
+            (x.banMoi.length ? '<div class="note info">' + ic('info') + '<span>Sẽ thêm vào cơ cấu ban: ' + esc(x.banMoi.join(', ')) + '. Sửa tên đầy đủ, nhóm sau ở Cơ cấu ban.</span></div>' : '') +
+            (x.banLa.length ? '<div class="note">' + ic('info') + '<span>Có ban chưa có trong cơ cấu CLB: <b>' + esc(x.banLa.join(', ')) + '</b>. Sửa cột Ban trên sheet nguồn nếu ghi nhầm, hoặc thêm các ban này vào cơ cấu.</span></div><div class="row"><button class="btn ghost sm" id="thban">' + ic('plus', 14) + 'Thêm các ban này vào cơ cấu</button></div>' : '') +
+            (x.canMatKhau ? '<div class="note">' + ic('info') + '<span>Có ' + x.soTkMoi + ' người chưa có tài khoản. Đặt mật khẩu chung ở Cài đặt, Tài khoản, Mật khẩu chung trước nhé.</span></div>' : x.soTkMoi ? '<p class="hint" style="margin:0">Sẽ tạo ' + x.soTkMoi + ' tài khoản mới, đăng nhập bằng mật khẩu chung.</p>' : '') +
+            x.loi.map(function (l) { return '<p class="err" style="margin:0">' + esc(l) + '</p>'; }).join('') +
+            '<div class="row"><button class="btn" id="tai"' + (chan ? ' disabled' : '') + '>' + ic('check', 16) + 'Tải lên</button><span id="m2"></span></div></div>';
+          if ($('#thban')) $('#thban').onclick = function () { xemTruoc(true); };
+          $('#tai').onclick = function () {
+            $('#tai').disabled = true; thongBao($('#m2'), 'cho', 'Đang tải danh sách, chờ chút nhé…');
+            goiPhien('taiDanhSachThanhVien', yeuCau(themBanMoi)).then(function (kq) {
+              CD = null;
+              napCaiDat().then(function () {
+                $('#kq').innerHTML = '<div class="card form"><div class="ctitle"><h3>' + ic('check', 18) + ' Đã tải xong</h3></div>' + kq.split('\n').map(function (l) { return '<p style="margin:0">' + esc(l) + '</p>'; }).join('') + '</div>';
+              });
+            }).catch(function (err) { $('#tai').disabled = false; thongBao($('#m2'), 'loi', err.message); });
+          };
+        }).catch(function (err) { $('#xt').disabled = false; thongBao($('#m'), 'loi', err.message); });
+      };
+      $('#xt').onclick = function () { xemTruoc(false); };
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  },
+
+  /* ---------- Thành viên qua các năm ---------- */
+  thanhvien: function () {
+    $('#subbody').innerHTML = cho();
+    goiPhien('layDanhSachThanhVien').then(function (ds) {
+      if (sub !== 'thanhvien') return;
+      var nam = ds.map(function (t) { return t.nhiemKyVao; }).filter(function (n, i, a) { return n && a.indexOf(n) === i; }).sort().reverse();
+      var loc = { q: '', nam: '', tt: 'dang' };
+      $('#subbody').innerHTML = '<div class="row" style="gap:8px"><div class="setsearch" style="flex:1;min-width:200px">' + ic('search', 16) + '<input type="search" id="tv-q" placeholder="Tìm theo tên, mã, ban, lớp" aria-label="Tìm thành viên"></div>' +
+        '<select id="tv-nam" aria-label="Năm vào CLB"><option value="">Mọi năm vào</option>' + nam.map(function (n) { return '<option value="' + esc(n) + '">Vào ' + esc(n) + '</option>'; }).join('') + '</select></div>' +
+        '<div class="seg" id="tv-tt"><button data-tt="dang" aria-pressed="true">Đang hoạt động</button><button data-tt="roi" aria-pressed="false">Đã rời</button><button data-tt="" aria-pressed="false">Tất cả</button></div>' +
+        '<p class="hint" style="margin:0">Mã thành viên cho biết năm vào, đợt vào và ban lúc vào: 26-1-PG-07 là vào năm 2026, đợt tuyển 1 (0 là Oday), ban PG, người thứ 7. Mã không bao giờ đổi, kể cả khi đổi ban hay rời rồi quay lại.</p>' +
+        '<div class="card flush"><div class="lst" id="tv-ds"></div></div>';
+      var ve = function () {
+        var q = boDau(loc.q);
+        var f = ds.filter(function (t) {
+          return (!loc.nam || t.nhiemKyVao === loc.nam) && (!loc.tt || (loc.tt === 'roi') === t.roi) && (!q || boDau(t.ten + ' ' + t.ma + ' ' + t.ban + ' ' + t.lop).indexOf(q) >= 0);
+        });
+        $('#tv-ds').innerHTML = f.map(function (t) {
+          return '<button class="li" data-ma="' + esc(t.ma) + '" style="width:100%;text-align:left;border:0;background:none;cursor:pointer"><div class="c"><b class="t">' + esc(t.ten) + (t.roi ? ' <span class="pill p-mute">Đã rời</span>' : '') + '</b><span class="s">' + esc([t.ma || 'Chưa có mã', t.ban, t.lop, t.chucVu].filter(String).join(' · ')) + '</span></div><span class="chev">' + ic('chev', 16) + '</span></button>';
+        }).join('') || rong('Không có ai khớp.');
+        $$('#tv-ds [data-ma]').forEach(function (b) { b.onclick = function () { moHoSo(b.getAttribute('data-ma')); }; });
+      };
+      $('#tv-q').oninput = function (e) { loc.q = e.target.value; ve(); };
+      $('#tv-nam').onchange = function (e) { loc.nam = e.target.value; ve(); };
+      $$('#tv-tt [data-tt]').forEach(function (b) { b.onclick = function () { loc.tt = b.getAttribute('data-tt'); $$('#tv-tt button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); ve(); }; });
+      ve();
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+    function moHoSo(ma) {
+      if (!ma) return;
+      var h = moHop({ tieuDe: 'Hồ sơ thành viên', lop: 'rong', than: cho() });
+      goiPhien('layHoSoThanhVien', ma).then(function (t) {
+        var dong = function (k, v) { return v ? '<div class="li"><div class="c"><span class="s">' + k + '</span><b class="t">' + v + '</b></div></div>' : ''; };
+        h.querySelector('.dlg-b').innerHTML = '<h3 style="margin:0 0 4px">' + esc(t.ten) + '</h3><p class="hint" style="margin:0 0 10px">' + esc(t.ma) + (t.roi ? ' · Đã rời' + (t.ngayRoi ? ' từ ' + esc(t.ngayRoi) : '') : '') + '</p>' +
+          '<div class="lst">' + dong('Ban', esc(t.ban)) + dong('Lớp', esc(t.lop)) + dong('Chức vụ', esc(t.chucVu)) + dong('Email', esc(t.email)) + dong('Số điện thoại', esc(t.sdt)) + dong('Ngày sinh', esc(t.ngaySinh)) +
+          dong('Facebook', t.facebook ? '<a href="' + esc(t.facebook) + '" target="_blank" rel="noopener">' + esc(t.facebook) + '</a>' : '') + dong('Ngày vào', esc(t.ngayVao)) + '</div>' +
+          '<h4 style="margin:14px 0 6px">Các giai đoạn đã tham gia</h4>' + (t.giaiDoan.length ? '<div class="tscroll"><table><thead><tr><th>Nhiệm kỳ</th><th class="n">Giai đoạn</th><th>Ban</th><th>Chức vụ</th></tr></thead><tbody>' +
+            t.giaiDoan.map(function (g) { return '<tr><td>' + esc(g.nhiemKy) + '</td><td class="n">' + g.giaiDoan + '</td><td>' + esc(g.ban) + '</td><td>' + esc(g.chucVu) + (g.loai ? ' <span class="pill p-mute">' + esc(g.loai) + '</span>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="hint">Chưa có.</p>') +
+          (t.doiBan.length ? '<h4 style="margin:14px 0 6px">Đổi ban</h4>' + t.doiBan.map(function (d) { return '<p style="margin:0">' + ngayNgan(d.luc) + ': ' + esc(d.cu) + ' → ' + esc(d.moi) + '</p>'; }).join('') : '') +
+          '<h4 style="margin:14px 0 6px">Kết quả các nhiệm kỳ</h4>' + (t.ketQua.length ? '<div class="tscroll"><table><thead><tr><th>Nhiệm kỳ</th><th>Ban</th><th>Điểm từng giai đoạn</th><th class="n">KPI task</th><th class="n">KPI log</th><th>Chứng nhận</th></tr></thead><tbody>' +
+            t.ketQua.map(function (k) { return '<tr><td>' + esc(k.nhiemKy) + '</td><td>' + esc(k.ban) + '</td><td>' + esc(k.diemGd) + (k.top ? ' <span class="pill p-ok">' + esc(k.top) + '</span>' : '') + '</td><td class="n">' + (k.task === null ? '' : k.task + '%') + '</td><td class="n">' + (k.log === null ? '' : k.log + '%') + '</td><td>' + esc(k.chungNhan) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="hint">Chưa có nhiệm kỳ nào kết thúc.</p>');
+      }).catch(function (err) { h.querySelector('.dlg-b').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+    }
+  },
+
+  /* ---------- Mật khẩu chung ---------- */
+  mkchung: function () {
+    $('#subbody').innerHTML = '<form class="card form" id="mkf" style="max-width:520px"><p class="hint" style="margin:0">Tài khoản mới tạo khi tải danh sách thành viên đăng nhập bằng mật khẩu này cho tới khi tự đổi. Đổi mật khẩu chung không ảnh hưởng người đã tự đặt mật khẩu riêng.</p>' +
+      '<label class="f">Mật khẩu chung mới <small>Ít nhất 6 ký tự</small><input type="text" id="mk" autocomplete="off"></label>' +
+      '<div class="row"><button class="btn sm" id="save">Lưu</button><span id="m"></span></div></form>';
+    $('#mkf').onsubmit = function (e) { e.preventDefault(); luuVa($('#save'), $('#m'), 'luuMatKhauChung', [$('#mk').value], function () { $('#mk').value = ''; thongBao($('#m'), 'ok', 'Đã đổi mật khẩu chung'); }); };
+  },
+
+  /* ---------- Lịch sinh nhật ---------- */
+  sinhnhat: function () {
+    $('#subbody').innerHTML = '<form class="card form" id="snf" style="max-width:620px"><p class="hint" style="margin:0">Mỗi nhiệm kỳ dùng một Google Lịch của tài khoản CLB. Mỗi lần tải danh sách thành viên, app tự thêm sinh nhật người mới và bỏ người đã rời.</p>' +
+      '<ol class="hint" style="margin:0;padding-left:18px"><li>Mở Google Lịch bằng tài khoản CLB, tạo lịch mới (ví dụ “Sinh nhật ECO 2026-2027”).</li><li>Vào cài đặt của lịch đó, chép <b>ID lịch</b> (dạng …@group.calendar.google.com).</li><li>Dán vào đây rồi bấm Lưu và đồng bộ.</li></ol>' +
+      '<label class="f">ID lịch của nhiệm kỳ đang chạy <small>Để trống rồi bấm lưu để bỏ lịch.</small><input type="text" id="lid" placeholder="…@group.calendar.google.com"></label>' +
+      '<div class="row"><button class="btn sm" id="save">Lưu và đồng bộ</button><span id="m"></span></div></form>';
+    goiPhien('layThongTinTaiDanhSach').then(function (d) { if ($('#lid') && !$('#lid').value) $('#lid').value = d.idLich || ''; }).catch(function () { /* để trống */ });
+    $('#snf').onsubmit = function (e) {
+      e.preventDefault();
+      $('#save').disabled = true; thongBao($('#m'), 'cho', 'Đang đồng bộ…');
+      goiPhien('luuLichSinhNhat', $('#lid').value).then(function (kq) { $('#save').disabled = false; thongBao($('#m'), 'ok', kq); })
+        .catch(function (err) { $('#save').disabled = false; thongBao($('#m'), 'loi', err.message); });
+    };
+  },
+
+  /* ---------- Tình trạng hệ thống ---------- */
+  hethong: function () {
+    $('#subbody').innerHTML = cho();
+    goiPhien('layHeThong').then(function (d) {
+      if (sub !== 'hethong') return;
+      var thieu = d.lichChay.filter(function (l) { return !l.so; });
+      var loi = d.nhatKy.filter(function (n) { return n.ketQua !== 'OK'; });
+      $('#subbody').innerHTML =
+        (thieu.length ? '<div class="note">' + ic('info') + '<span>Thiếu lịch chạy: ' + esc(thieu.map(function (l) { return l.ten; }).join(', ')) + '. Bấm Sửa lịch chạy.</span></div>' : '<div class="note info">' + ic('check') + '<span>App đang tự chạy đủ các việc.</span></div>') +
+        '<div class="card"><div class="ctitle"><h3>' + ic('clock', 18) + ' Lịch chạy tự động</h3></div><div class="lst">' + d.lichChay.map(function (l) {
+          return '<div class="li"><div class="c"><b class="t">' + esc(l.ten) + '</b><span class="s">' + (l.chayCuoi ? 'Chạy lần cuối ' + ngayDayDu(l.chayCuoi) : 'Chưa chạy lần nào') + '</span></div><span class="pill ' + (l.so ? 'p-ok' : 'p-bad') + '">' + (l.so ? 'Đang bật' : 'Thiếu') + '</span></div>';
+        }).join('') + '</div><div class="row" style="margin-top:10px"><button class="btn ghost sm" id="sua">' + ic('refresh', 14) + 'Sửa lịch chạy</button><span id="m"></span></div>' +
+        '<p class="hint" style="margin:8px 0 0">Khi một việc tự chạy bị lỗi, app gửi mail cho BOD (tối đa mỗi ngày một lần cho mỗi việc).</p></div>' +
+        '<div class="card"><div class="ctitle"><h3>' + ic('sheet', 18) + ' Dung lượng file dữ liệu</h3></div><div class="kpis"><div class="kpi"><b>' + d.dungLuong.tiLe + '%</b><span>' + d.dungLuong.o.toLocaleString('vi-VN') + ' / ' + d.dungLuong.toiDa.toLocaleString('vi-VN') + ' ô</span></div></div>' +
+        '<p class="hint" style="margin:8px 0 0">Google Sheet chứa được tối đa 10 triệu ô. Dữ liệu nhiệm kỳ đã xong hơn ' + d.luuTruSauNgay + ' ngày được tự chuyển sang file lưu trữ để file chính luôn nhẹ.</p>' +
+        '<div class="row" style="margin-top:10px"><a class="btn ghost sm" href="' + esc(d.fileDuLieu) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Mở file dữ liệu</a><a class="btn ghost sm" href="' + esc(d.thuMuc) + '" target="_blank" rel="noopener">' + ic('folder', 14) + 'Mở thư mục app</a><button class="btn ghost sm" id="lm">' + ic('refresh', 14) + 'Làm mới dữ liệu</button><span id="m3"></span></div>' +
+        '<p class="hint" style="margin:8px 0 0">Không sửa tay trên file dữ liệu nếu không cần. Nếu đã sửa mà app chưa thấy, bấm Làm mới dữ liệu.</p></div>' +
+        '<div class="card"><div class="ctitle"><h3>' + ic('file', 18) + ' Nhật ký</h3>' + (loi.length ? '<span class="pill p-bad">' + loi.length + ' lỗi gần đây</span>' : '') + '</div>' +
+        (d.nhatKy.length ? '<div class="tscroll"><table><thead><tr><th>Lúc</th><th>Việc</th><th>Kết quả</th><th>Chi tiết</th></tr></thead><tbody>' + d.nhatKy.map(function (n) {
+          return '<tr><td style="white-space:nowrap">' + ngayDayDu(n.luc) + '</td><td>' + esc(n.viec) + '</td><td><span class="pill ' + (n.ketQua === 'OK' ? 'p-ok' : 'p-bad') + '">' + (n.ketQua === 'OK' ? 'Xong' : 'Lỗi') + '</span></td><td>' + esc(n.chiTiet) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' : '<p class="hint">Chưa có gì.</p>') + '</div>';
+      $('#sua').onclick = function () {
+        $('#sua').disabled = true; thongBao($('#m'), 'cho', 'Đang sửa…');
+        goiPhien('suaLichChay').then(function () { SUB.hethong(); }).catch(function (err) { $('#sua').disabled = false; thongBao($('#m'), 'loi', err.message); });
+      };
+      $('#lm').onclick = function () {
+        $('#lm').disabled = true;
+        goiPhien('lamMoiDuLieu').then(function () { $('#lm').disabled = false; CD = null; napCaiDat(); thongBao($('#m3'), 'ok', 'Đã làm mới'); }).catch(function (err) { $('#lm').disabled = false; thongBao($('#m3'), 'loi', err.message); });
+      };
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  },
+
+  /* ---------- Lưu trữ và sao lưu ---------- */
+  saoluu: function () {
+    $('#subbody').innerHTML = cho();
+    goiPhien('layHeThong').then(function (d) {
+      if (sub !== 'saoluu') return;
+      $('#subbody').innerHTML = '<div class="card"><div class="ctitle"><h3>' + ic('archive', 18) + ' Sao lưu</h3><button class="btn sm" id="sl">' + ic('plus', 14) + 'Sao lưu ngay</button></div>' +
+        '<p class="hint" style="margin-top:0">App tự sao lưu file dữ liệu mỗi đêm lúc 2 giờ và giữ ' + d.giuSaoLuu + ' bản gần nhất trong thư mục “Sao lưu”. <b>Khôi phục</b> dùng một bản sao lưu làm file dữ liệu; file đang dùng được đổi tên và giữ lại, không bị xoá.</p><span id="m"></span>' +
+        (d.saoLuu.length ? '<div class="lst">' + d.saoLuu.map(function (b) {
+          return '<div class="li"><div class="c"><b class="t">' + esc(b.ten) + '</b><span class="s">' + ngayDayDu(b.luc) + '</span></div><button class="btn ghost sm" data-kp="' + esc(b.id) + '">Khôi phục</button></div>';
+        }).join('') + '</div>' : '<p class="hint">Chưa có bản sao lưu nào.</p>') + '</div>' +
+        '<div class="card"><div class="ctitle"><h3>' + ic('folder', 18) + ' Lưu trữ nhiệm kỳ cũ</h3></div>' +
+        '<p class="hint" style="margin-top:0">Nhiệm kỳ đã xong hơn ' + d.luuTruSauNgay + ' ngày: app tự chuyển điểm, task, log, mail của nhiệm kỳ đó sang một file riêng trong thư mục “Lưu trữ”. Kết quả nhiệm kỳ, hồ sơ thành viên và tài khoản vẫn ở file chính để xem trong app.</p>' +
+        (d.luuTru.length ? '<div class="lst">' + d.luuTru.map(function (l) {
+          return '<div class="li"><div class="c"><b class="t">Nhiệm kỳ ' + esc(l.nhiemKy) + '</b><span class="s">' + (l.id ? 'Đã lưu trữ ngày ' + ngayNgan(l.luc) : 'Đang ở file chính') + '</span></div>' + (l.id ? '<a class="btn ghost sm" href="https://docs.google.com/spreadsheets/d/' + esc(l.id) + '" target="_blank" rel="noopener">' + ic('ext', 14) + 'Mở</a>' : '') + '</div>';
+        }).join('') + '</div>' : '<p class="hint">Chưa có nhiệm kỳ nào.</p>') +
+        '<div class="row" style="margin-top:10px"><a class="btn ghost sm" href="' + esc(d.thuMuc) + '" target="_blank" rel="noopener">' + ic('folder', 14) + 'Mở thư mục app trên Drive</a></div></div>';
+      $('#sl').onclick = function () {
+        $('#sl').disabled = true; thongBao($('#m'), 'cho', 'Đang sao lưu…');
+        goiPhien('saoLuuNgay').then(function () { SUB.saoluu(); }).catch(function (err) { $('#sl').disabled = false; thongBao($('#m'), 'loi', err.message); });
+      };
+      $$('#subbody [data-kp]').forEach(function (b) {
+        b.onclick = function () {
+          if (!xacNhan(b, 'Bấm lần nữa để khôi phục')) return;
+          b.disabled = true; thongBao($('#m'), 'cho', 'Đang khôi phục…');
+          goiPhien('khoiPhucSaoLuu', b.getAttribute('data-kp')).then(function (ten) { CD = null; napCaiDat(); thongBao($('#m'), 'ok', 'Đã khôi phục từ ' + ten + '. Ai đang mở app nên tải lại trang.'); })
+            .catch(function (err) { b.disabled = false; thongBao($('#m'), 'loi', err.message); });
+        };
+      });
+    }).catch(function (err) { $('#subbody').innerHTML = '<p class="err">' + esc(err.message) + '</p>'; });
+  }
+});
+</script>
