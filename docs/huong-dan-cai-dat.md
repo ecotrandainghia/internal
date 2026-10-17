@@ -61,7 +61,7 @@ Nếu Google hỏi thêm quyền (ví dụ Lịch, Gmail), bấm **Cho phép** n
 
 ## 5. Gắn link app vào trang vỏ
 
-Mở file `pwa/config.js` và dán URL ứng dụng web vào `webAppUrl`. Đây là link của dự án mới, khác link của dự án cũ. Đưa thay đổi lên trang vỏ trên GitHub Pages như trong `docs/huong-dan-cai-app.md`. Từ đó mọi người mở app ở `https://ecotdn.github.io/app/`.
+Mở file `pwa/config.js` và dán URL ứng dụng web vào `webAppUrl`. Đây là link của dự án mới, khác link của dự án cũ. Gộp thay đổi vào `main` thì GitHub tự đăng lại trang vỏ. Từ đó mọi người mở app ở `https://ecotrandainghia.github.io/internal/`.
 
 ## 6. Tải danh sách thành viên
 
@@ -93,7 +93,7 @@ Làm một lần, khoảng 5 phút, bằng **tài khoản Google của CLB**. H�
 
 1. Mở https://console.cloud.google.com, tạo một dự án (ví dụ "CLB ECO").
 2. Vào **APIs & Services → OAuth consent screen**, chọn **External**, điền tên app và email CLB, lưu rồi bấm **Publish app**.
-3. Vào **Credentials → Create credentials → OAuth client ID**, loại **Web application**. Ở **Authorized JavaScript origins** thêm `https://ecotdn.github.io`. Bấm **Create**.
+3. Vào **Credentials → Create credentials → OAuth client ID**, loại **Web application**. Ở **Authorized JavaScript origins** thêm `https://ecotrandainghia.github.io`. Bấm **Create**.
 4. Sao chép **Client ID** (đuôi `.apps.googleusercontent.com`), dán vào app ở **Cài đặt → Tài khoản → Đăng nhập bằng Google**, bấm Lưu.
 
-Nút Google chỉ hiện khi mở app từ trang vỏ (link `ecotdn.github.io/app/`). Người đăng nhập phải dùng đúng email đã có tài khoản trong app (email trong danh sách thành viên).
+Nút Google chỉ hiện khi mở app từ trang vỏ (link `ecotrandainghia.github.io/internal/`). Người đăng nhập phải dùng đúng email đã có tài khoản trong app (email trong danh sách thành viên).

@@ -8,7 +8,7 @@ Mã nguồn của app quản lý CLB ECO (CLB Môi trường của trường). A
 - Thành viên: Trang chủ, KPI của tôi (Task, Log), Điểm và xếp hạng, Góp ý, Cài đặt của tôi. HR phụ trách ban có thêm Ban phụ trách, HR phụ trách seeding có thêm Seeding, UCV có thêm Hộp thư.
 - Những gì CLB hay đổi (cơ cấu ban, thang điểm, phần trăm khen thưởng, hạn task, thời lượng buổi log) BOD chỉnh trong Cài đặt. Các quy tắc còn lại cố định theo quy chế.
 - App tự chạy: tự sao lưu mỗi đêm, tự chuyển dữ liệu nhiệm kỳ cũ sang file lưu trữ, tự báo BOD qua mail khi có lỗi.
-- Cài được lên điện thoại như app nhờ trang vỏ trong `pwa/`, địa chỉ `https://ecotdn.github.io/app/`.
+- Cài được lên điện thoại như app nhờ trang vỏ trong `pwa/`, địa chỉ `https://ecotrandainghia.github.io/internal/`. GitHub tự đẩy `src/` lên Apps Script và tự đăng `pwa/` mỗi lần gộp vào `main`.
 
 ## Tài liệu
 

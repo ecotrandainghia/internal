@@ -1,0 +1,34 @@
+# Mỗi khi gộp thay đổi trong pwa/ vào main, tự đăng trang vỏ lên GitHub Pages
+# ở https://ecotrandainghia.github.io/internal/.
+# Cần bật một lần: Settings → Pages → Source: GitHub Actions.
+name: Đăng trang vỏ lên GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['pwa/**', '.github/workflows/dang-trang-vo.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: dang-trang-vo
+  cancel-in-progress: false
+
+jobs:
+  dang-trang-vo:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.dang.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pwa
+      - id: dang
+        uses: actions/deploy-pages@v4

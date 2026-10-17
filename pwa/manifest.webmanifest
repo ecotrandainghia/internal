@@ -1,0 +1,17 @@
+{
+  "name": "CLB ECO",
+  "short_name": "CLB ECO",
+  "description": "App của CLB ECO Trần Đại Nghĩa",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#faf8f5",
+  "icons": [
+    { "src": "icons/eco-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/eco-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/eco-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

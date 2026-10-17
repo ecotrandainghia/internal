@@ -19,7 +19,7 @@ function doGet(e) {
   return trang.evaluate()
     .setTitle('CLB ECO')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
-    .setFaviconUrl('https://ecotdn.github.io/icons/tab-eco.png')
+    .setFaviconUrl('https://ecotrandainghia.github.io/internal/icons/tab-eco.png')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
