@@ -16,10 +16,7 @@ function tbInTab(t, tab) {
 PAGES.task = function (main) {
   openTaskBoard(main, 'task', 'Quản lý task', 'Thành viên tự bấm “Đã xong”, app tự biết đúng hạn hay trễ. Xin gia hạn vẫn nhắn Messenger, BOD hoặc NS sửa hạn ở đây.', 'Tạo task');
 };
-/* NS phụ trách ban: trang Ban phụ trách. Bước 8 thêm danh sách cần nhắc và log của ban. */
-PAGES['my-team'] = function (main) {
-  openTaskBoard(main, 'my-team', 'Ban phụ trách · ' + USER.leadDepts.join(', '), 'Task của các ban bạn phụ trách. Xin gia hạn vẫn nhắn Messenger, bạn sửa hạn ở đây.', 'Nhập task giúp BOD');
-};
+/* NS phụ trách ban dùng cùng danh sách task ở trang Ban phụ trách (team.html). */
 
 function openTaskBoard(main, pageId, title, lead, newText) {
   TB.page = pageId; TB.open = null; TB.data = null; closeDrawer();
@@ -33,6 +30,7 @@ function openTaskBoard(main, pageId, title, lead, newText) {
 function renderBoard() {
   var d = TB.data, body = $('tbBody');
   if (!body) return;
+  if (TB.page === 'my-team' && TEAM.tab !== 'task') return teamDataChanged();
   var focus = document.activeElement && document.activeElement.id === 'tbQuery';
   var filtered = d.tasks.filter(function (t) {
     if (TB.dept && t.dept !== TB.dept) return false;

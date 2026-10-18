@@ -556,4 +556,23 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .nc-table .link-btn { color: var(--good); font-weight: 400; }
 .mtable.nc-table { min-width: 0; }
 .nc-table tbody tr { cursor: default; }
+
+/* Ban phụ trách, lịch nhắc task */
+.team-tabs { margin: 4px 0 16px; }
+.tm-h { margin: 8px 0 4px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.tm-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+.tm-row small { display: block; font-size: 12px; color: var(--ink-2); }
+.tm-row b { font-weight: 500; }
+.tm-row .acts { display: flex; gap: 6px; }
+.tm-row a { color: var(--good); }
+#tbBody > .hint + .sec { margin-top: 12px; }
+.tm-log td small { display: block; font-size: 12px; color: var(--ink-2); }
+.rm-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.rm-row select { flex: 1; }
+.rm-row input { width: 120px; }
+@media (max-width: 720px) {
+  .tm-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .tm-row .tm-who { grid-column: 1 / -1; grid-row: 2; }
+  .tm-row .acts { grid-column: 1 / -1; }
+}
 </style>
