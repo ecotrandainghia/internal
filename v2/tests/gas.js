@@ -107,6 +107,7 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
   const mails = [];
   const files_ = {};
   const folders = [];
+  const blobs = {};
   let nextId = 1;
   const lockCalls = { taken: 0, released: 0 };
   const pad = (n) => String(n).padStart(2, '0');
@@ -155,6 +156,10 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       Access: { ANYONE_WITH_LINK: 'anyone_with_link' },
       Permission: { EDIT: 'edit' },
       getFileById: (id) => {
+        if (blobs[id]) {
+          const b = blobs[id];
+          return { getId: () => id, getName: () => b.name, getSize: () => b.bytes.length, getBlob: () => ctx.Utilities.newBlob(b.bytes, b.type, b.name) };
+        }
         const ss = files_[id];
         if (!ss) throw new Error('not found');
         return {
@@ -172,7 +177,12 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       },
       getFolderById: (id) => { const f = folders.find((x) => x.id === id); if (!f) throw new Error('not found'); return f; },
       getFoldersByName: (name) => { const list = folders.filter((x) => x.name === name); return { hasNext: () => list.length > 0, next: () => list.shift() }; },
-      createFolder: (name) => { const f = { id: 'folder' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name, getName: () => name }; folders.push(f); return f; }
+      createFolder: (name) => {
+        const f = { id: 'folder' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name, getName: () => name,
+          createFile: (blob) => { const id = 'blob' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx'; blobs[id] = { name: blob.getName(), type: blob.getContentType(), bytes: blob.getBytes(), folder: name }; return ctx.DriveApp.getFileById(id); } };
+        folders.push(f);
+        return f;
+      }
     },
     LockService: { getScriptLock: () => ({ tryLock: () => { lockCalls.taken++; return true; }, releaseLock: () => { lockCalls.released++; } }) },
     Session: {
@@ -186,6 +196,12 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       // Giống Google: trả về mảng byte có dấu (-128..127)
       computeDigest: (alg, s, charset) => Array.from(crypto.createHash(alg).update(String(s), charset || 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
       base64Encode: (bytes) => Buffer.from(bytes.map((b) => b & 255)).toString('base64'),
+      base64Decode: (s) => Array.from(Buffer.from(s, 'base64')),
+      newBlob: (bytes, type, name) => {
+        const b = { bytes: Array.from(bytes), type, name };
+        const o = { getBytes: () => b.bytes, getContentType: () => b.type, getName: () => b.name, setName: (n) => { b.name = n; return o; }, getSize: () => b.bytes.length };
+        return o;
+      },
       getUuid: () => crypto.randomUUID(),
       formatDate: (d) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     },
@@ -199,6 +215,7 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
   ctx.__mails = mails;
   ctx.__files = files_;
   ctx.__folders = folders;
+  ctx.__blobs = blobs;
   ctx.__props = props;
   ctx.__lock = lockCalls;
   return ctx;
