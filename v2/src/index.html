@@ -9,7 +9,8 @@
   <?!= include('styles') ?>
 </head>
 <body>
-  <div class="app">
+  <div id="screen"><div class="splash">Đang mở app…</div></div>
+  <div class="app" id="app" hidden>
     <aside class="side" id="side" aria-label="Menu chính">
       <div class="brand">
         <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l8-8"/></svg></span>
@@ -35,7 +36,8 @@
   <div class="menu-scrim" id="menuScrim" hidden></div>
   <div class="menu" id="meMenu" role="menu" aria-label="Tài khoản" hidden></div>
   <div class="overlay" id="settings" hidden></div>
-  <script>var ROLE = <?= role ?>;</script>
+  <div class="overlay small" id="modal" hidden></div>
+  <script>var GOOGLE_CLIENT_ID = <?= googleClientId ?>;</script>
   <?!= include('shell') ?>
 </body>
 </html>

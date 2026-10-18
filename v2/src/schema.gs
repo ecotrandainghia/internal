@@ -144,7 +144,7 @@ var DEFAULT_DEPARTMENTS = [
 ];
 
 /**
- * Dòng có sẵn ở tab Cài đặt khi tạo file: các mức trong quy chế. Những dòng khác (giờ nhắc, lịch sinh nhật, Zalo...)
+ * Dòng có sẵn ở tab Cài đặt khi tạo file: các mức trong quy chế và mã đăng nhập Google. Những dòng khác (giờ nhắc, lịch sinh nhật, Zalo...)
  * do bước làm tính năng đó thêm vào.
  */
 var DEFAULT_SETTINGS = [
@@ -152,5 +152,6 @@ var DEFAULT_SETTINGS = [
   { key: 'offset_threshold', value: '60', description: '% tối thiểu mỗi phần để được xét bù trừ' },
   { key: 'top_reward_percent', value: '15', description: 'Khen thưởng top bao nhiêu % mỗi giai đoạn' },
   { key: 'offset_top_percent', value: '40', description: 'Lọt top bao nhiêu % bảng bù trừ thì được cấp certificate' },
-  { key: 'not_done_after_hours', value: '24', description: 'Quá hạn bao nhiêu giờ mà chưa xác nhận thì task tính là Không làm' }
+  { key: 'not_done_after_hours', value: '24', description: 'Quá hạn bao nhiêu giờ mà chưa xác nhận thì task tính là Không làm' },
+  { key: 'google_client_id', value: '', description: 'Mã ứng dụng Google (OAuth Client ID) để đăng nhập bằng Google. Để trống là tắt đăng nhập bằng Google' }
 ];
