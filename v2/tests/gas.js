@@ -202,17 +202,21 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
         if (!ss) throw new Error('not found');
         return {
           getId: () => id,
+          getName: () => ss.name,
+          setName: (n) => { ss.name = n; },
+          setTrashed: (t) => { ss.trashed = !!t; },
           setSharing: (a, p) => { ss.sharing = a + ':' + p; },
           moveTo: (folder) => { ss.folder = folder.name; },
           makeCopy: (name, folder) => {
             const copy = new FakeSpreadsheet('file' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name);
             copy.sheets = ss.sheets.map((sh) => Object.assign(new FakeSheet(sh.name), { data: JSON.parse(JSON.stringify(sh.data)), maxRows: sh.maxRows, maxCols: sh.maxCols }));
-            copy.folder = folder.name;
+            copy.folder = folder ? folder.name : '';
             files_[copy.id] = copy;
             return ctx.DriveApp.getFileById(copy.id);
           }
         };
       },
+      getRootFolder: () => ({ id: 'root', name: '' }),
       getFolderById: (id) => { const f = folders.find((x) => x.id === id); if (!f) throw new Error('not found'); return f; },
       getFoldersByName: (name) => { const list = folders.filter((x) => x.name === name); return { hasNext: () => list.length > 0, next: () => list.shift() }; },
       createFolder: (name) => {

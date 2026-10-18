@@ -169,6 +169,12 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Ảnh nền đăng nhập: BOD chọn ảnh, app thu nhỏ còn rộng 1600 px và lưu JPEG vào thư mục Drive `Ảnh nền đăng nhập`; đổi ảnh thì ảnh cũ vào thùng rác. Máy giữ ảnh và chỉ tải lại khi BOD đổi ảnh.
 - Cài đặt dùng: `season_theme`, `login_bg_file_id`, `login_bg_version`. Mỗi lần đổi ghi Nhật ký.
 
+## Hệ thống: việc tự chạy, sao lưu, lưu trữ nhiệm kỳ cũ
+
+- Mỗi đêm lúc 2 giờ (`runNightly`, cài lúc cài đặt lần đầu và mỗi lần BOD mở Tình trạng hệ thống): sao lưu cả file dữ liệu vào thư mục Drive `Sao lưu` (giữ 30 bản, danh sách ở Script Properties `BACKUP_LIST`), chuyển dữ liệu nhiệm kỳ đã kết thúc hơn 365 ngày sang file `[ECO] Lưu trữ nhiệm kỳ ...` trong thư mục `Lưu trữ` (ghi sang trước, đếm đủ dòng rồi mới bỏ ở file chính), dọn phiên đăng nhập hết hạn, kiểm tra dung lượng (từ 70% thì báo BOD, mỗi tuần một lần).
+- Mọi việc tự chạy (việc ban đêm, nhắc task, nhắc sinh nhật, nhắc seeding, gửi thư hẹn giờ) ghi lần chạy cuối vào Script Properties `JOB_STATUS`. Chạy lỗi thì báo mọi BOD qua Zalo hoặc app, mỗi việc tối đa một tin mỗi ngày.
+- Cài đặt, Hệ thống: Tình trạng hệ thống (các việc tự chạy, dung lượng, file lưu trữ); Sao lưu và khôi phục (Sao lưu ngay, Khôi phục). Khôi phục chép bản sao lưu thành file dữ liệu mới; file đang dùng đổi tên `(trước khôi phục ...)` và giữ lại. Sao lưu tay và khôi phục ghi Nhật ký (việc `backup_restore`).
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.

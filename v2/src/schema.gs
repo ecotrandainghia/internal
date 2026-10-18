@@ -129,7 +129,8 @@ var ENUMS = {
   'audit_log.action': { grade_task: 'Chấm task', change_deadline: 'Sửa hạn chót', add_points: 'Cộng điểm', cancel_points: 'Huỷ điểm',
     mark_attendance: 'Điểm danh', close_event: 'Chốt sự kiện', reopen_event: 'Mở chốt', approve_mail: 'Duyệt mail', upload_sheet: 'Tải sheet',
     undo_upload: 'Hoàn tác', change_setting: 'Sửa cài đặt', edit_member: 'Sửa thông tin thành viên',
-    change_task_status: 'Đổi trạng thái task', remove_assignee: 'Bỏ người khỏi task', apply_feedback: 'Đánh dấu góp ý áp dụng' }
+    change_task_status: 'Đổi trạng thái task', remove_assignee: 'Bỏ người khỏi task', apply_feedback: 'Đánh dấu góp ý áp dụng',
+    backup_restore: 'Sao lưu, khôi phục' }
 };
 
 /** Đợt gia nhập trong Mã TV (giữ mã ngắn, không đổi sang tiếng Anh). */

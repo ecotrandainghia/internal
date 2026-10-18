@@ -201,7 +201,7 @@ function sendTaskReminders_(minute) {
 /** Chạy tự động mỗi ngày vào các giờ nhắc. */
 function runTaskReminders(e) {
   if (!fromOwnTrigger_(e)) return null;
-  return sendTaskReminders_(remindMinuteOf_(e, remindTimes_()));
+  return trackJob_('task_reminders', function () { return sendTaskReminders_(remindMinuteOf_(e, remindTimes_())); });
 }
 
 /** Cài lịch tự chạy cho đúng các giờ nhắc (cài lại khi lịch đổi). Gọi được nhiều lần. */
