@@ -1,0 +1,99 @@
+<style>
+/* Màu theo design system "Thiết kế app CLB ECO". Xanh ECO chỉ dùng cho mục đang chọn. */
+:root {
+  --paper: #FAF8F5; --surface: #FDFBFA; --side: #F3F1EC; --sunken: #F1EFEA;
+  --ink: #27251E; --ink-2: #72706B; --ink-3: #92918B; --line: #D1D1CD; --line-soft: #E6E3DC;
+  --accent: #274E13; --on-accent: #FFFFFF; --accent-soft: #E4EBDD;
+  --btn: #27251E; --on-btn: #FAF8F5; --bad: #9A4636;
+  --shadow-pop: 0 12px 32px rgb(39 37 30 / .16), 0 1px 2px rgb(39 37 30 / .08);
+  --r-btn: 6px; --r-in: 12px; --r-card: 16px;
+  --content: 1040px;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --paper: #161613; --surface: #1D1C18; --side: #1A1916; --sunken: #24231F;
+  --ink: #EDEBE5; --ink-2: #A9A69E; --ink-3: #85827A; --line: #34322C; --line-soft: #2B2A25;
+  --accent: #2F5E18; --accent-soft: #25331D; --btn: #EDEBE5; --on-btn: #1D1C18; --bad: #D08A7A;
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / .5);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 14px/1.5 "Be Vietnam Pro", system-ui, sans-serif; }
+button { font: inherit; color: inherit; }
+svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+[hidden] { display: none !important; }
+
+.app { display: flex; min-height: 100dvh; }
+.side { position: sticky; top: 0; height: 100dvh; width: 248px; flex: none; background: var(--side); border-right: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 2px; padding: 16px 12px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; font-size: 16px; }
+.brand b { flex: 1; font-weight: 500; }
+.logo { width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--r-in); color: var(--ink-2); font-weight: 500; text-decoration: none; }
+.nav-item:hover { background: var(--sunken); color: var(--ink); }
+.nav-item[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
+.badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 11px; display: grid; place-items: center; }
+.nav-item[aria-current="page"] .badge { background: rgb(255 255 255 / .2); }
+.grow { flex: 1; }
+
+.me { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; margin-top: 8px; border: 0; border-top: 1px solid var(--line-soft); border-radius: var(--r-in); background: none; cursor: pointer; text-align: left; }
+.me:hover, .me[aria-expanded="true"] { background: var(--sunken); }
+.me span.who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.me small { color: var(--ink-2); font-size: 12px; }
+.avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 500; flex: none; }
+.menu-scrim { position: fixed; inset: 0; z-index: 35; }
+.menu { position: fixed; width: 224px; z-index: 36; background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--r-card); box-shadow: var(--shadow-pop); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.menu .email { padding: 10px 10px 8px; font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: var(--r-in); background: none; text-align: left; cursor: pointer; }
+.menu-item:hover { background: var(--sunken); }
+.menu-item kbd { margin-left: auto; font: inherit; font-size: 12px; color: var(--ink-3); }
+.menu-item.danger { color: var(--bad); }
+.menu hr { border: 0; height: 1px; background: var(--line-soft); margin: 4px 6px; }
+.seg { display: inline-flex; gap: 2px; background: var(--sunken); border-radius: 999px; padding: 2px; margin-left: auto; }
+.seg button { border: 0; background: none; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+
+.body { flex: 1; min-width: 0; }
+.main { max-width: calc(var(--content) + 80px); margin: 0 auto; padding: 32px 40px 64px; }
+.main h1 { margin: 0 0 4px; font-size: 22px; font-weight: 500; }
+.lead { margin: 0; color: var(--ink-2); }
+.todo { margin-top: 24px; border: 1px dashed var(--line); border-radius: var(--r-in); padding: 24px; color: var(--ink-2); text-align: center; }
+
+.icon-btn { width: 44px; height: 44px; border: 0; background: none; border-radius: var(--r-in); display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
+.avatar-btn { width: 44px; height: 44px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+.topbar { position: sticky; top: 0; z-index: 10; height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: var(--paper); border-bottom: 1px solid var(--line-soft); }
+.topbar-title { flex: 1; font-size: 16px; font-weight: 500; }
+.only-phone { display: none; }
+.scrim, .overlay { position: fixed; inset: 0; background: rgb(28 27 23 / .32); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 20; }
+
+/* Pop-up Cài đặt */
+.overlay { z-index: 40; display: grid; place-items: center; padding: 24px; }
+.dialog { position: relative; width: min(960px, 100%); height: min(640px, 100%); background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-pop); display: flex; overflow: hidden; }
+.dialog .close { position: absolute; top: 10px; right: 10px; }
+.set-nav { width: 256px; flex: none; background: var(--side); border-right: 1px solid var(--line-soft); padding: 16px 10px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.set-search { display: flex; align-items: center; gap: 8px; margin: 0 4px 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); color: var(--ink-3); }
+.set-search input { border: 0; outline: 0; background: none; font: inherit; color: var(--ink); width: 100%; min-width: 0; }
+.set-group { padding: 10px 12px 4px; font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.set-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 0; border-radius: var(--r-in); background: none; text-align: left; cursor: pointer; color: var(--ink-2); }
+.set-item[aria-current="true"] { background: var(--sunken); color: var(--ink); font-weight: 500; }
+.set-body { flex: 1; min-width: 0; padding: 28px 40px; overflow: auto; }
+.set-body h2 { margin: 0 0 4px; font-size: 22px; font-weight: 500; }
+.row { display: flex; align-items: center; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--line-soft); }
+.row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row small { color: var(--ink-2); font-size: 12px; }
+.btn-outline { padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r-btn); background: none; cursor: pointer; white-space: nowrap; }
+
+@media (max-width: 860px) {
+  .only-phone { display: flex; }
+  .side { position: fixed; left: 0; top: 0; z-index: 30; width: 300px; transform: translateX(-100%); transition: transform .2s ease; box-shadow: none; }
+  .side.open { transform: none; box-shadow: 8px 0 32px rgb(28 27 23 / .18); }
+  .main { padding: 16px; }
+  .overlay { padding: 24px 0 0; place-items: end stretch; }
+  .dialog { width: 100%; height: 100%; border-radius: var(--r-card) var(--r-card) 0 0; flex-direction: column; }
+  .set-nav { width: auto; border-right: 0; }
+  .dialog.in-section .set-nav { display: none; }
+  .dialog:not(.in-section) .set-body { display: none; }
+  .set-body { padding: 20px 16px; }
+  .menu-scrim { background: rgb(28 27 23 / .32); backdrop-filter: blur(4px); }
+  .menu { left: 0 !important; right: 0; bottom: 0 !important; width: auto; border-radius: var(--r-card) var(--r-card) 0 0; padding: 8px 12px 24px; }
+}
+</style>
