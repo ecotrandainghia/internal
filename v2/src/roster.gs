@@ -398,18 +398,34 @@ function applyRoster(token, req) {
 
 /* ---------- Hoàn tác, kết thúc nhiệm kỳ ---------- */
 
-/** Hoàn tác lần tải danh sách thành viên mới nhất (trong ROSTER_UNDO_DAYS ngày), dựa vào tab _undo của bản chép. */
+/** Lần tải còn áp dụng mới nhất của từng loại sheet (Thành viên, Core team, UCV): { loại: dòng Lần tải sheet }. */
+function latestUploads_(uploads) {
+  var out = {};
+  uploads.forEach(function (u) {
+    if (u.status === 'applied' && (!out[u.sheet_type] || u.uploaded_at.getTime() > out[u.sheet_type].uploaded_at.getTime())) out[u.sheet_type] = u;
+  });
+  return out;
+}
+
+/**
+ * Hoàn tác lần tải mới nhất của một loại sheet (trong ROSTER_UNDO_DAYS ngày), dựa vào tab _undo của bản chép.
+ * Sheet Core team, UCV thì gỡ, trả lại các nhãn (labelsheet.gs).
+ */
 function undoRoster(token, uploadId) {
   var me = requireUser_(token, 'bod');
   withLock_(function () {
-    var ups = readTable_('roster_uploads').filter(function (u) { return u.sheet_type === 'members' && u.status === 'applied'; })
-      .sort(function (a, b) { return b.uploaded_at.getTime() - a.uploaded_at.getTime(); });
-    var up = ups[0];
-    if (!up || up.upload_id !== uploadId) throw new Error('Chỉ hoàn tác được lần tải danh sách thành viên mới nhất.');
+    var uploads = readTable_('roster_uploads'), mine = uploads.filter(function (u) { return u.upload_id === uploadId; })[0];
+    var up = mine && latestUploads_(uploads)[mine.sheet_type];
+    if (!up || up.upload_id !== uploadId) throw new Error('Chỉ hoàn tác được lần tải mới nhất của mỗi loại sheet.');
     if (Date.now() - up.uploaded_at.getTime() > ROSTER_UNDO_DAYS * 864e5) throw new Error('Lần tải này đã quá ' + ROSTER_UNDO_DAYS + ' ngày nên không hoàn tác được nữa.');
     var term = findRecord_('terms', String(up.term_id));
     if (term && term.prep_start_at && currentTerm_(readTable_('terms')).term_id !== term.term_id) throw new Error('Nhiệm kỳ này đã kết thúc nên không hoàn tác được.');
     var undo = readUndo_(SpreadsheetApp.openById(idFromUrl_(up.copy_url)));
+    if (up.sheet_type !== 'members') {
+      undoLabelSheet_(undo, me);
+      updateRecord_('roster_uploads', up.upload_id, { status: 'undone' }, { actorId: me.memberId, action: 'undo_upload' });
+      return;
+    }
     // Người mới thêm mà đã có hoạt động thì không xoá được
     var busy = {};
     [['task_assignments', 'member_id'], ['attendance', 'member_id'], ['point_entries', 'member_id'], ['member_labels', 'member_id']].forEach(function (t) {
@@ -461,8 +477,7 @@ function endTerm(token) {
 function rosterPageFor_() {
   var now = new Date(), terms = readTable_('terms'), term = currentTerm_(terms), phase = term ? phaseAt_(term, now) : '';
   var names = namesById_(readTable_('members')), uploads = readTable_('roster_uploads');
-  var latest = uploads.filter(function (u) { return u.sheet_type === 'members' && u.status === 'applied'; })
-    .sort(function (a, b) { return b.uploaded_at.getTime() - a.uploaded_at.getTime(); })[0];
+  var latest = latestUploads_(uploads);
   var kinds = ['oday', 'batch_1', 'batch_2', 'update'].map(function (k) { return { kind: k, block: batchBlock_(k, term) }; });
   var endBlock = !term || !term.phase2_start_at ? 'Chỉ kết thúc nhiệm kỳ được khi đang ở GD2.' : '';
   return {
@@ -472,7 +487,7 @@ function rosterPageFor_() {
     link: String(getSetting_('roster_sheet_url', '') || ''),
     uploads: uploads.slice().sort(function (a, b) { return b.uploaded_at.getTime() - a.uploaded_at.getTime(); }).slice(0, 10).map(function (u) {
       return { id: u.upload_id, type: u.sheet_type, kind: u.batch_type, at: u.uploaded_at.getTime(), by: names[u.uploaded_by] || u.uploaded_by, summary: u.summary,
-        status: u.status, url: u.copy_url, canUndo: !!latest && u.upload_id === latest.upload_id && now.getTime() - u.uploaded_at.getTime() <= ROSTER_UNDO_DAYS * 864e5 };
+        status: u.status, url: u.copy_url, canUndo: !!latest[u.sheet_type] && u.upload_id === latest[u.sheet_type].upload_id && now.getTime() - u.uploaded_at.getTime() <= ROSTER_UNDO_DAYS * 864e5 };
     })
   };
 }
