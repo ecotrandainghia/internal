@@ -128,8 +128,14 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
         remove: (k) => { delete cache[k]; }
       })
     },
-    MailApp: { sendEmail: (to, subject, body) => { mails.push({ to, subject, body }); } },
-    ScriptApp: { getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/app/exec' }) },
+    MailApp: { sendEmail: (to, subject, body) => { mails.push({ to, subject, body }); }, getRemainingDailyQuota: () => ctx.__quota },
+    ScriptApp: {
+      getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/app/exec' }),
+      getProjectTriggers: () => ctx.__triggers.map((h) => ({ getHandlerFunction: () => h })),
+      newTrigger: (h) => { const b = { timeBased: () => b, everyMinutes: () => b, create: () => { ctx.__triggers.push(h); } }; return b; }
+    },
+    __quota: 100,
+    __triggers: [],
     UrlFetchApp: { fetch: (url, opts) => ctx.__fetch(url, opts) },
     HtmlService: {
       XFrameOptionsMode: { ALLOWALL: 'ALLOWALL' },

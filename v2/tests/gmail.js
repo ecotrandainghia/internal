@@ -29,8 +29,23 @@ function fakeGmail(clubEmail = 'clb@example.com') {
     isInInbox: () => t.box === 'inbox', isInTrash: () => t.box === 'trash', isInSpam: () => t.box === 'spam',
     moveToArchive: () => { t.box = 'archive'; }, moveToInbox: () => { t.box = 'inbox'; }, moveToTrash: () => { t.box = 'trash'; }, moveToSpam: () => { t.box = 'spam'; }
   });
+  const drafts = [];
+  const blob = (f) => ({ getName: () => f.name, getSize: () => f.bytes.length, getContentType: () => f.type || 'text/plain', getBytes: () => f.bytes });
+  const draft = (d) => ({
+    getId: () => d.id,
+    getMessage: () => ({
+      getId: () => 'dm' + d.id, getSubject: () => d.subject, getBody: () => d.html, getTo: () => d.to || '', getCc: () => '', getBcc: () => '', getDate: () => d.date,
+      getAttachments: (o = {}) => (d.files || []).filter((f) => (f.inline ? o.includeInlineImages : o.includeAttachments !== false)).map(blob)
+    }),
+    send: () => { sent.push({ kind: 'draft', to: d.to, subject: d.subject, opts: { htmlBody: d.html } }); drafts.splice(drafts.indexOf(d), 1); }
+  });
   const api = {
-    threads, sent,
+    threads, sent, drafts,
+    addDraft(subject, html, extra = {}) {
+      const d = { id: 'r-' + next++, subject, html, date: new Date(Date.now() + next * 1000), ...extra };
+      drafts.unshift(d);
+      return d.id;
+    },
     add(subject, from, html, extra = {}) {
       const t = { id: 'th' + next++, box: 'inbox', labels: [], unread: true, ...extra, messages: [] };
       t.messages.push({ id: 'msg' + next++, from, to: clubEmail, subject, html, date: new Date(Date.now() - 36e5), files: extra.files || [] });
@@ -45,6 +60,12 @@ function fakeGmail(clubEmail = 'clb@example.com') {
       getUserLabels: () => Object.keys(labels).map((n) => labels[n]),
       getUserLabelByName: (n) => label(n),
       createLabel: (n) => makeLabel(n),
+      getDrafts: () => drafts.map(draft),
+      getDraft: (id) => { const d = drafts.find((x) => x.id === id); if (!d) throw new Error('Invalid argument: id'); return draft(d); },
+      sendEmail: (to, subject, text, opts) => {
+        if (/fail/.test(to)) throw new Error('Địa chỉ bị từ chối');
+        sent.push({ kind: 'bulk', to, subject, text, opts });
+      },
       createDraft: (to, subject, text, opts) => ({
         send: () => {
           const id = api.add(subject, clubEmail, opts.htmlBody, { box: 'sent', unread: false });
