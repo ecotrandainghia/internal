@@ -1,0 +1,127 @@
+<script>
+/* Cài đặt > Tài khoản và phân quyền: Phân quyền nhân sự, Đặt lại mật khẩu, Đăng nhập bằng Google. */
+var ADM = { data: null };
+var STAFF_BOXES = [
+  ['dept_lead', 'NS phụ trách ban', 'Có trang Ban phụ trách: xem task, nhắc hạn, giao task cho ban mình phụ trách. Ban nào cũng chọn được, kể cả HR. Một người phụ trách nhiều ban thì thêm nhiều dòng.'],
+  ['seeding_lead', 'NS phụ trách seeding', 'Có trang Seeding: đăng bài cần seeding, dán bình luận để ghi nhận.'],
+  ['birthday_lead', 'NS phụ trách sinh nhật', 'Có trang Sinh nhật và nhận tin nhắc sinh nhật. Chưa có ai thì tin nhắc gửi BOD.']
+];
+
+function loadAdmin(draw, title) {
+  openModal('<h2 id="boxTitle">' + esc(title) + '</h2>' + loadingHtml());
+  call('accountAdmin', TOKEN).then(function (d) { ADM.data = d; draw(d); }).catch(function (err) { failBox(title, err); });
+}
+
+function adminCall(btn, msgId, fn, args, redraw, okText) {
+  btn.disabled = true; setMsg(msgId, '', 'Đang lưu…');
+  call.apply(null, [fn, TOKEN].concat(args)).then(function (d) { ADM.data = d; redraw(d, okText); })
+    .catch(function (err) { btn.disabled = false; setMsg(msgId, 'bad', err.message); });
+}
+
+/** Ô chọn người, nhóm theo ban. */
+function personSelect(id, people, label) {
+  var groups = [], by = {};
+  people.forEach(function (p) { if (!by[p.dept]) { by[p.dept] = []; groups.push(p.dept); } by[p.dept].push(p); });
+  return '<select id="' + id + '" aria-label="' + esc(label) + '"><option value="">' + esc(label) + '…</option>' + groups.map(function (g) {
+    return '<optgroup label="' + esc(g) + '">' + by[g].map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + (p.cls ? ' (' + esc(p.cls) + ')' : '') + '</option>'; }).join('') + '</optgroup>';
+  }).join('') + '</select>';
+}
+
+/* ---------- Phân quyền nhân sự ---------- */
+function openStaffRoles() { loadAdmin(drawStaffRoles, 'Phân quyền nhân sự'); }
+
+function drawStaffRoles(d, flash) {
+  wideModal('<h2 id="boxTitle">Phân quyền nhân sự</h2>' +
+    '<p class="hint">BOD gán tay từng người, cho nhiệm kỳ ' + esc(d.termLabel) + '. Sang nhiệm kỳ mới thì gán lại. Gỡ thì người đó mất trang tương ứng ngay; Nhật ký vẫn giữ ai phụ trách gì, từ lúc nào.</p>' +
+    '<span class="msg" id="srMsg" role="status"></span>' +
+    (d.people.length ? STAFF_BOXES.map(function (b) {
+      var list = d.leads[b[0]];
+      return '<section class="sec"><h2>' + esc(b[1]) + ' (' + list.length + ')</h2><p class="hint">' + esc(b[2]) + '</p>' +
+        (list.length ? '<div>' + list.map(function (l) {
+          return '<div class="fp-row"><div><b>' + esc(l.name) + '</b>' + (l.dept ? '<small>Phụ trách ban ' + esc(l.dept) + '</small>' : '') + '</div>' +
+            '<button type="button" class="icon-btn" data-sr-del="' + esc(l.labelId) + '" aria-label="Gỡ ' + esc(l.name) + '">' + icon('close') + '</button></div>';
+        }).join('') + '</div>' : '<div class="empty">Chưa có ai.</div>') +
+        '<div class="sr-add">' + personSelect('sr-p-' + b[0], d.people, 'Chọn người') +
+        (b[0] === 'dept_lead' ? '<select id="sr-d" aria-label="Ban phụ trách"><option value="">Ban phụ trách…</option>' + d.depts.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.code + ' · ' + x.name) + '</option>'; }).join('') + '</select>' : '') +
+        '<button type="button" class="btn ghost sm" data-sr-add="' + b[0] + '">' + icon('plus') + 'Thêm</button></div></section>';
+    }).join('') : '<div class="empty">Chưa có ai trong nhiệm kỳ này. Tải danh sách thành viên trước đã.</div>') +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+  if (flash) setMsg('srMsg', 'ok', flash);
+  document.querySelectorAll('[data-sr-add]').forEach(function (btn) {
+    btn.onclick = function () {
+      var type = btn.dataset.srAdd, who = $('sr-p-' + type).value;
+      if (!who) return setMsg('srMsg', 'bad', 'Chọn người trước đã.');
+      adminCall(btn, 'srMsg', 'addStaffLabel', [{ type: type, memberId: who, dept: type === 'dept_lead' ? $('sr-d').value : '' }], drawStaffRoles, 'Đã thêm.');
+    };
+  });
+  document.querySelectorAll('[data-sr-del]').forEach(function (btn) {
+    btn.onclick = function () { adminCall(btn, 'srMsg', 'removeStaffLabel', [btn.dataset.srDel], drawStaffRoles, 'Đã gỡ.'); };
+  });
+}
+
+/* ---------- Đặt lại mật khẩu ---------- */
+function openResetPassword() { loadAdmin(drawResetPassword, 'Đặt lại mật khẩu'); }
+
+function drawResetPassword(d, flash) {
+  var row = function (p) {
+    return '<div class="fp-row" data-rp-name="' + esc((p.name + ' ' + p.email + ' ' + p.dept).toLowerCase()) + '"><div><b>' + esc(p.name) + '</b><small>' +
+      esc([p.dept, p.email || 'chưa có email', p.ownPassword ? 'mật khẩu riêng' : 'đang dùng mật khẩu chung', p.lastLogin ? 'vào app ' + fmtDay(p.lastLogin) : 'chưa vào app lần nào'].join(' · ')) + '</small></div>' +
+      (p.id === d.me ? '' : p.ownPassword ? '<button type="button" class="btn ghost sm" data-rp="' + esc(p.id) + '">Đặt lại</button>' : '') + '</div>';
+  };
+  wideModal('<h2 id="boxTitle">Đặt lại mật khẩu</h2>' +
+    '<p class="hint">Đặt lại thì người đó đăng nhập bằng mật khẩu chung của CLB rồi tự đổi mật khẩu mới. Các máy đang đăng nhập tài khoản đó phải đăng nhập lại.</p>' +
+    '<span class="msg" id="rpMsg" role="status"></span>' +
+    '<label class="field">Tìm<input id="rpFind" placeholder="Tên, email hoặc ban"></label>' +
+    '<div class="rp-list">' + d.people.map(row).join('') + '</div>' +
+    '<section class="sec"><h2>Mật khẩu chung của CLB</h2><p class="hint">Dùng cho tài khoản mới và người được đặt lại mật khẩu. Đổi thì ai đang dùng mật khẩu chung phải dùng mật khẩu mới; người đã có mật khẩu riêng không bị ảnh hưởng.</p>' +
+    '<form id="cpForm" class="sr-add"><input type="password" id="cpNew" autocomplete="new-password" placeholder="Mật khẩu chung mới" aria-label="Mật khẩu chung mới" required>' +
+    '<input type="password" id="cpAgain" autocomplete="new-password" placeholder="Gõ lại" aria-label="Gõ lại mật khẩu chung" required><button class="btn ghost sm" id="cpSave">Đổi</button></form></section>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+  if (flash) setMsg('rpMsg', 'ok', flash);
+  $('rpFind').oninput = function () {
+    var q = this.value.trim().toLowerCase();
+    document.querySelectorAll('[data-rp-name]').forEach(function (r) { r.hidden = q && r.dataset.rpName.indexOf(q) < 0; });
+  };
+  document.querySelectorAll('[data-rp]').forEach(function (btn) {
+    btn.onclick = function () {
+      var p = d.people.filter(function (x) { return x.id === btn.dataset.rp; })[0];
+      if (!confirm('Đặt lại mật khẩu của ' + p.name + ' về mật khẩu chung của CLB?')) return;
+      adminCall(btn, 'rpMsg', 'resetPassword', [p.id], drawResetPassword, 'Đã đặt lại mật khẩu của ' + p.name + '. Nhắn bạn ấy đăng nhập bằng mật khẩu chung rồi đổi mật khẩu mới.');
+    };
+  });
+  $('cpForm').onsubmit = function (e) {
+    e.preventDefault();
+    if ($('cpNew').value !== $('cpAgain').value) return setMsg('rpMsg', 'bad', 'Hai lần gõ mật khẩu chung chưa giống nhau.');
+    if (!confirm('Đổi mật khẩu chung của CLB?')) return;
+    var btn = $('cpSave');
+    btn.disabled = true; setMsg('rpMsg', '', 'Đang lưu…');
+    call('changeClubPassword', TOKEN, $('cpNew').value).then(function () { btn.disabled = false; $('cpForm').reset(); setMsg('rpMsg', 'ok', 'Đã đổi mật khẩu chung.'); })
+      .catch(function (err) { btn.disabled = false; setMsg('rpMsg', 'bad', err.message); });
+  };
+}
+
+/* ---------- Đăng nhập bằng Google ---------- */
+function openGoogleLogin() { loadAdmin(drawGoogleLogin, 'Đăng nhập bằng Google'); }
+
+function drawGoogleLogin(d, flash) {
+  openModal('<h2 id="boxTitle">Đăng nhập bằng Google</h2>' +
+    '<p class="hint">Khi bật, ai có tài khoản app có thể bấm Đăng nhập bằng Google thay vì gõ mật khẩu, nếu email Google trùng email trong danh sách thành viên. Nút này hiện khi mở app qua trang ecotrandainghia.github.io/internal hoặc app đã cài.</p>' +
+    '<form id="ggForm" style="display:flex;flex-direction:column;gap:12px"><label class="field">Google Client ID (để trống là tắt)<input id="ggId" value="' + esc(d.googleClientId) + '" placeholder="1234567890-abc….apps.googleusercontent.com"></label>' +
+    '<span class="msg" id="ggMsg" role="status"></span>' +
+    '<details class="gg-help"' + (d.googleClientId ? '' : ' open') + '><summary>Cách lấy Google Client ID (làm một lần)</summary><ol>' +
+    '<li>Trên máy tính, đăng nhập tài khoản Google của CLB, mở <b>console.cloud.google.com</b>. Lần đầu bấm đồng ý điều khoản.</li>' +
+    '<li>Bấm chọn dự án ở góc trên bên trái, bấm <b>New project</b>, đặt tên “eco”, bấm <b>Create</b>, rồi chọn dự án vừa tạo.</li>' +
+    '<li>Vào <b>APIs &amp; Services</b>, <b>OAuth consent screen</b> (có thể tên là Google Auth Platform). Bấm <b>Get started</b>, tên app “eco”, email hỗ trợ là email CLB, chọn <b>External</b>, điền email liên hệ, đồng ý rồi bấm <b>Create</b>.</li>' +
+    '<li>Vào <b>Audience</b>, bấm <b>Publish app</b> để ai cũng đăng nhập được (app chỉ xin email và tên nên Google không cần duyệt).</li>' +
+    '<li>Vào <b>Clients</b> (hoặc Credentials), bấm <b>Create client</b>, chọn <b>Web application</b>, tên “eco”.</li>' +
+    '<li>Ở <b>Authorized JavaScript origins</b>, bấm Add URI và dán đúng <code>https://ecotrandainghia.github.io</code>. Bấm <b>Create</b>.</li>' +
+    '<li>Chép <b>Client ID</b> (đuôi .apps.googleusercontent.com), dán vào ô ở trên rồi bấm Lưu.</li></ol></details>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="ggSave">Lưu</button></div></form>');
+  if (flash) setMsg('ggMsg', 'ok', flash);
+  $('ggForm').onsubmit = function (e) {
+    e.preventDefault();
+    var id = $('ggId').value.trim();
+    adminCall($('ggSave'), 'ggMsg', 'saveGoogleClientId', [id], function (x, t) { GOOGLE_CLIENT_ID = x.googleClientId; drawGoogleLogin(x, t); }, id ? 'Đã bật đăng nhập bằng Google.' : 'Đã tắt đăng nhập bằng Google.');
+  };
+}
+</script>

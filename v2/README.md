@@ -149,6 +149,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Hoàn tác: chỉ lần tải danh sách thành viên mới nhất, trong 7 ngày, khi người mới chưa có task, điểm danh, điểm hay nhãn. Hoàn tác đợt 2 bỏ ảnh chụp GD1 (`dropRound_`) và GD1 mở lại.
 - Kết thúc nhiệm kỳ (chỉ ở GD2, chặn khi GD2 còn việc như trên): chụp GD2 và cả nhiệm kỳ (`snapshotRound_('round_2')`), file bằng chứng seeding của nhiệm kỳ vào thùng rác, mở nhiệm kỳ mới ở giai đoạn giao thoa. Mọi người vẫn vào app tới lần tải Oday.
 
+## Phân quyền nhân sự, đặt lại mật khẩu, đăng nhập Google
+
+- Phân quyền nhân sự: BOD gán NS phụ trách ban (chọn ban, ban nào cũng được, kể cả HR), NS phụ trách seeding, NS phụ trách sinh nhật cho người đang ở CLB trong nhiệm kỳ đang chạy. Mỗi lần gán là một dòng Nhãn và phân công; gỡ thì ghi Đến ngày, không xoá dòng. Sang nhiệm kỳ mới thì gán lại.
+- Đặt lại mật khẩu: xoá mật khẩu riêng của một người, người đó đăng nhập bằng mật khẩu chung rồi tự đổi; các máy đang đăng nhập tài khoản đó phải đăng nhập lại. Cùng hộp có chỗ đổi mật khẩu chung (chỉ cất bản băm trong Script Properties).
+- Đăng nhập bằng Google: BOD dán Client ID (dòng Cài đặt `google_client_id`, để trống là tắt), có hướng dẫn tạo Client ID một lần trên Google Cloud.
+- Mọi thay đổi ghi Nhật ký (`change_setting`), không bao giờ ghi mật khẩu.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
