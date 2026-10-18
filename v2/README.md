@@ -94,6 +94,14 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Thư hẹn giờ: đến giờ app mới đọc thư nháp, nên sửa trong Gmail trước giờ gửi vẫn kịp. Việc tự chạy `runScheduledSends` mỗi 10 phút, app tự cài khi có thư hẹn đầu tiên. Tab Lịch gửi: thư chờ gửi (kể cả từ nhiệm kỳ trước) để đổi giờ hoặc huỷ, và kết quả các lần gửi (ví dụ "Đã gửi 38/40 thư").
 - Danh bạ ở Cài đặt, Hộp thư, Danh bạ: thêm, sửa, xoá liên hệ theo nhóm. Thành viên CLB có sẵn, không cần thêm.
 
+## Thành viên, KPI, xếp hạng, tổng kết
+
+- KPI của tôi: KPI task (đạt ÷ (đạt + chưa đạt), task chưa xong hoặc chờ chấm chưa tính) và KPI log (đã đi ÷ giao, đơn vị buổi 90 phút), kèm từng task, từng sự kiện và dự báo "cần thêm 2 buổi log" hoặc "thêm 1 task đạt". Thành viên chính thức tính cả nhiệm kỳ, bổ sung tính từ GD2; BOD không tính KPI.
+- Điểm và xếp hạng: bảng của GD1 (chỉ thành viên chính thức) và GD2 (tất cả), lọc theo ban, đánh dấu top 15% (làm tròn thông thường, bằng điểm người cuối cũng vào, 0 điểm không vào) và lịch sử cộng điểm của chính mình.
+- Trang Thành viên (BOD): bảng tổng hợp Bảng điểm, KPI task, KPI log, lọc theo ban, khối, chính thức hay bổ sung, sự kiện; bấm một dòng để xem từng task, từng sự kiện, lịch sử điểm.
+- Tab Tổng kết: khen thưởng top GD1, GD2, cả nhiệm kỳ (tổng GD1 + GD2, chỉ chính thức) và certificate (cấp vì đạt KPI, cấp nhờ bù trừ, chưa cấp). Danh sách được cấp có nút copy Họ tên, Ngày sinh (dd/mm/yyyy), SĐT và Ngày sinh + SĐT để dán vào sheet Đoàn.
+- Chụp kết quả và khoá: `snapshotRound_('round_1')` ghi dòng GD1 vào tab Kết quả giai đoạn, `snapshotRound_('round_2')` ghi dòng GD2 và Cả nhiệm kỳ (bước tải sheet đợt 2 và nút Kết thúc nhiệm kỳ ở bước 9 sẽ gọi). Trước lúc chụp, tab Tổng kết hiện kết quả tạm tính. Sau khi chụp, app chặn mở chốt sự kiện, sửa hoặc chấm task, xác nhận task, huỷ điểm thuộc giai đoạn đó. Task thuộc giai đoạn chứa hạn chót; sự kiện thuộc giai đoạn chứa lúc chốt.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.

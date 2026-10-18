@@ -71,8 +71,13 @@ test('KPI task: chỉ tính task được tính, chưa huỷ, đúng nhiệm k�
     A('T5'), A('T6'), A('T7'), A('T8'),
     { task_id: 'T9', member_id: 'B', confirmed_at: d('05/11/2026'), quality: 'complete' }
   ];
-  const k = plain(app.kpiTask_('A', { tasks, assignments, events, termId: '2627', from: null, now: d('10/11/2026'), notDoneHours: 24 }));
-  assert.deepEqual(k, { assigned: 5, pass: 1, fail: 2, waiting: 1, open: 1, percent: 33 });
+  const { list, ...k } = plain(app.kpiTask_('A', { tasks, assignments, events, termId: '2627', from: null, now: d('10/11/2026'), notDoneHours: 24, threshold: 80 }));
+  // cần thêm 7 task đạt: (1 + 7) ÷ (3 + 7) = 80%
+  assert.deepEqual(k, { assigned: 5, pass: 1, fail: 2, waiting: 1, open: 1, percent: 33, needed: 7 });
+  assert.deepEqual(list.map((t) => [t.taskId, t.result]), [['T1', 'pass'], ['T2', 'fail'], ['T3', 'fail'], ['T4', 'waiting'], ['T8', 'open']]);
+  const nov = app.kpiTask_('A', { tasks, assignments, events, termId: '2627', from: null, range: { from: d('01/11/2026'), to: d('01/12/2026') },
+    now: d('10/11/2026'), notDoneHours: 24 });
+  assert.equal(nov.assigned, 4);
   const sup = app.kpiTask_('A', { tasks, assignments, events, termId: '2627', from: d('02/11/2026'), now: d('10/11/2026'), notDoneHours: 24 });
   assert.equal(sup.assigned, 0);
   assert.equal(app.kpiTask_('A', { tasks, assignments, events, termId: '2627', from: false, now: d('10/11/2026'), notDoneHours: 24 }).assigned, 0);
@@ -119,12 +124,18 @@ test('KPI log: sự kiện đã chốt lấy số lúc chốt, sự kiện đang
     attendance: [{ session_id: 'B2', member_id: 'A' }, { session_id: 'B4', member_id: 'A' }, { session_id: 'B3', member_id: 'B' }],
     termId: '2627', from: null, threshold: 80
   };
-  const k = plain(app.kpiLog_('A', { dept_code: 'PR' }, c));
+  const { list, ...k } = plain(app.kpiLog_('A', { dept_code: 'PR' }, c));
+  assert.deepEqual(list, [{ eventId: 'SK1', name: undefined, quota: 1.17, attended: 1, closed: true }, { eventId: 'SK2', name: undefined, quota: 4, attended: 2, closed: false }].map(plain));
   // SK1 đã chốt: 1 / 1,17; SK2 đang mở: 2 (buổi 180 phút) / 4; SK3 tạo trong giao thoa, SK4 nhiệm kỳ khác: bỏ
   assert.deepEqual(k, { quota: 5.17, attended: 3, percent: 58, needed: 2, events: 2 });
   const sup = app.kpiLog_('A', { dept_code: 'PR' }, { ...c, from: d('15/11/2026') });
   assert.deepEqual([sup.quota, sup.attended, sup.events], [4, 2, 1]);
-  const none = plain(app.kpiLog_('C', { dept_code: 'HR' }, c));
+  // chỉ tính sự kiện có ngày trong khoảng: SK1 chưa có lúc chốt nên lấy ngày dự kiến 01/11
+  const dec = app.kpiLog_('A', { dept_code: 'PR' }, { ...c, range: { from: d('15/11/2026'), to: null } });
+  assert.deepEqual([dec.quota, dec.attended], [4, 2]);
+  const late = app.kpiLog_('A', { dept_code: 'PR' }, { ...c, closings: [{ event_id: 'SK1', status: 'closed', closed_at: d('20/11/2026') }], range: { from: d('15/11/2026'), to: null } });
+  assert.deepEqual([late.quota, late.attended], [5.17, 3]);
+  const { list: l0, ...none } = plain(app.kpiLog_('C', { dept_code: 'HR' }, c));
   assert.deepEqual(none, { quota: 0, attended: 0, percent: null, needed: 0, events: 0 });
 });
 
@@ -155,4 +166,40 @@ test('phần trăm làm tròn thông thường', () => {
   assert.equal(app.percent_(1, 3), 33);
   assert.equal(app.percent_(1, 0), null);
   assert.equal(app.percent_(5, 200), 3);
+});
+
+test('top 15%: làm tròn thông thường, bằng điểm người cuối cũng vào, 0 điểm không vào', () => {
+  assert.equal(app.topCount_(70, 15), 11);
+  assert.equal(app.topCount_(10, 15), 2);
+  const list = app.rankList_(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'], { A: 50, B: 40, C: 40, D: 30 });
+  assert.deepEqual(Object.keys(app.topIds_(list, 15)).sort(), ['A', 'B', 'C']);
+  assert.deepEqual(Object.keys(app.topIds_(app.rankList_(['A', 'B'], {}), 50)), []);
+  assert.deepEqual(Object.keys(app.topIds_([], 15)), []);
+});
+
+test('certificate: đạt KPI, bù trừ, chưa cấp; phần không có việc coi như đạt', () => {
+  const r = { threshold: 80, offsetThreshold: 60 };
+  assert.equal(app.certificateOf_(80, 90, false, r), 'cert_kpi');
+  assert.equal(app.certificateOf_(null, 85, false, r), 'cert_kpi');
+  assert.equal(app.certificateOf_(70, 90, true, r), 'cert_offset');
+  assert.equal(app.certificateOf_(70, 90, false, r), 'none');
+  assert.equal(app.certificateOf_(59, 90, true, r), 'none');
+  assert.equal(app.needsOffset_(70, null, r), true);
+  assert.equal(app.needsOffset_(90, 90, r), false);
+  assert.equal(app.tasksNeeded_(3, 1, 80), 1);
+  assert.equal(app.tasksNeeded_(4, 0, 80), 0);
+});
+
+test('khoá sau tổng kết: GD1 đã chụp thì khoá tới lúc bắt đầu GD2; GD2 khoá tới lúc nhiệm kỳ sau bắt đầu', () => {
+  const terms = [
+    { term_id: '2627', prep_start_at: d('01/08/2026'), phase1_start_at: d('01/09/2026'), phase2_start_at: d('01/01/2027') },
+    { term_id: '2728', prep_start_at: d('01/06/2027') }
+  ];
+  let ranges = app.lockedRanges_(terms, [{ term_id: '2627', phase: 'phase_1' }]);
+  assert.equal(app.lockedAt_(ranges, d('15/12/2026')).phase, 'phase_1');
+  assert.equal(app.lockedAt_(ranges, d('15/01/2027')), null);
+  assert.equal(app.lockedAt_(ranges, null), null);
+  ranges = app.lockedRanges_(terms, [{ term_id: '2627', phase: 'phase_1' }, { term_id: '2627', phase: 'phase_2' }, { term_id: '2627', phase: 'full_term' }]);
+  assert.equal(app.lockedAt_(ranges, d('15/05/2027')).phase, 'phase_2');
+  assert.equal(app.lockedAt_(ranges, d('15/06/2027')), null);
 });

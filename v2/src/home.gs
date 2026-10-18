@@ -158,7 +158,7 @@ function memberHome_(memberId, data, term, phase, tasks, assignments, now, rules
   }
   var from = kpiFrom_(member, term), events = readTable_('events');
   out.kpiTask = kpiTask_(memberId, { tasks: tasks, assignments: assignments, events: events, termId: term.term_id, from: from, now: now,
-    notDoneHours: rules.notDoneHours });
+    notDoneHours: rules.notDoneHours, threshold: rules.threshold });
   out.kpiLog = kpiLog_(memberId, memberTerm, { events: events, closings: readTable_('event_closings'), sessions: readTable_('log_sessions'),
     attendance: readTable_('attendance'), quotas: readTable_('log_quotas'), results: readTable_('log_results'), termId: term.term_id,
     from: from, threshold: rules.threshold });

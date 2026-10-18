@@ -504,4 +504,39 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .overlay.small { padding: 24px 16px; place-items: center; }
   .menu { left: 0 !important; right: 0; bottom: 0 !important; width: auto; border-radius: var(--r-card) var(--r-card) 0 0; padding: 8px 12px 24px; }
 }
+
+/* Thành viên, KPI của tôi, Điểm và xếp hạng */
+.stats .stat { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-left: 1px solid var(--line); }
+.stats .stat:first-child { border-left: 0; padding-left: 0; }
+.kpi-page, .stack { display: flex; flex-direction: column; gap: 20px; }
+.stack > .hint { margin-top: -8px; }
+#rkTabs:empty { display: none; }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.soft { color: var(--ink-2); font-weight: 400; }
+.small { font-size: 12px; }
+.big { margin-left: auto; font-size: 22px; font-weight: 500; }
+.click { cursor: pointer; }
+.click:hover b, .rank-row.click:hover .n { text-decoration: underline; text-underline-offset: 3px; }
+.rank-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.rank-row { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.rank-row.me { background: var(--accent-soft); font-weight: 500; }
+.rank-row .no { width: 28px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rank-row .n { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rank-row .n small { color: var(--ink-2); font-size: 12px; font-weight: 400; }
+.table-wrap { overflow-x: auto; }
+.mtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.mtable th { padding: 8px 6px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 500; color: var(--ink-2); text-align: left; white-space: nowrap; }
+.mtable td { padding: 10px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.mtable td b { font-weight: 500; }
+.mtable td small { display: block; font-size: 12px; color: var(--ink-2); }
+.mtable .r { text-align: right; }
+.mtable tbody tr { cursor: pointer; }
+.mtable tbody tr:hover, .mtable tbody tr:focus-visible { background: var(--sunken); outline: none; }
+.copy-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.copy-bar > span:first-child { flex: 1 1 220px; }
+.copy-bar .msg { flex-basis: 100%; }
+@media (max-width: 860px) {
+  .mtable { min-width: 620px; }
+  .stats .stat { padding: 12px 8px; }
+}
 </style>
