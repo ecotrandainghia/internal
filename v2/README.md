@@ -44,6 +44,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
 - `v2/src/points.gs`, `v2/src/points.html`: trang Cộng điểm và Thang điểm (chỉ BOD).
 - `v2/src/log.gs`, `v2/src/log.html`: Kế hoạch năm (sự kiện) và trang Quản lý log: buổi log, chỉ tiêu, điểm danh, chốt và mở chốt.
+- `v2/src/feedback.gs`, `v2/src/feedback.html`: trang Góp ý (thành viên gửi, BOD đọc và đánh dấu áp dụng).
 - `v2/src/signup.gs`: sheet đăng ký log của từng sự kiện: tạo, dán link, đọc người đăng ký khi điểm danh.
 
 ## Task
@@ -71,6 +72,12 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Nút Sheet đăng ký trong Quản lý log: tạo sheet mới hoặc dán link sheet có sẵn. Sheet mới có tên thành viên (không có BOD, không có số điện thoại) xếp theo ban, mỗi buổi một cột ô tích, dòng đếm số người đăng ký và tab Kế hoạch (thời gian, địa điểm, mục tiêu, trạng thái từng buổi). Ai có link đều tích được; tên, ban và tiêu đề khoá dạng cảnh báo.
 - Có file mẫu (`log_template_url`, mẫu của tool cũ có tab Đăng ký log) thì app chép mẫu rồi điền như tool cũ. Sheet lưu vào thư mục `log_folder_url`, để trống là thư mục [ECO] Đăng ký log. Sửa ở Cài đặt, Hoạt động CLB, File mẫu log.
 - Khi mở một buổi để điểm danh, app đọc cột trùng tên buổi (không phân biệt dấu, hoa thường) và tick sẵn người đã đăng ký; tên trong sheet không khớp thành viên nào thì app liệt kê ra. Buổi tạo sau khi đã có sheet thì bấm Thêm cột vào sheet.
+
+## Góp ý
+
+- Thành viên gửi góp ý có tên hoặc ẩn danh (mặc định ẩn danh). Ẩn danh thì không lưu mã người gửi và chỉ ghi ngày, không ghi giờ. BOD không gửi góp ý.
+- Một BOD mở trang Góp ý là các góp ý chưa đọc chuyển sang đã đọc; lần xem đó vẫn hiện chữ Mới.
+- BOD đánh dấu góp ý có tên là đã áp dụng thì người gửi được cộng điểm (hoạt động `feedback_activity_id`, +10), tối đa 2 lần mỗi giai đoạn; giai đoạn giao thoa không đánh dấu được. Bấm nhầm thì Bỏ đánh dấu, dòng điểm bị huỷ. Mọi lần đánh dấu ghi Nhật ký.
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
