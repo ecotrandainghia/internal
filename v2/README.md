@@ -110,6 +110,12 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Báo BOD: góp ý mới, thư UCV chờ duyệt (mặc định bật), NS seeding ghi nhận một bài (mặc định tắt); bật tắt ở Cài đặt, Thông báo của CLB, Báo cho BOD (dòng `notify_bod_*`). UCV luôn được báo kết quả duyệt thư.
 - BOD xem ai nhận qua đường nào, ai đã kết nối Zalo, có máy nào; đổi đường nhận giúp, gỡ kết nối nhầm, gửi thử cho một người hoặc mọi người.
 
+## Ban phụ trách và lịch nhắc hạn task
+
+- NS phụ trách ban (nhãn `dept_lead`, ban nào cũng gán được, kể cả ban Nhân sự) có trang Ban phụ trách với ba tab. Cần nhắc: theo từng ban, task trễ hạn và sắp đến hạn của từng người chưa bấm Đã xong, kèm tên Facebook (bấm được nếu có link) và lớp để nhắn Messenger; không soạn sẵn tin. Task của ban: cùng danh sách ở trang Quản lý task, trong phạm vi các ban mình phụ trách. Log của ban: số buổi đã đi so với số buổi giao của từng người, theo từng sự kiện.
+- Lịch nhắc hạn task (Cài đặt, Thông báo của CLB, Lịch nhắc task): mỗi mốc là một ngày so với ngày hạn chót và một giờ, mặc định 20:30 hôm trước, 6:30 ngày hạn, 6:30 hôm sau (dòng `task_remind_times`). Chỉ nhắc người chưa xác nhận xong. Tin gửi NS phụ trách ban của task; task của BOD gửi thẳng BOD đó; ban chưa có NS phụ trách thì gửi thẳng người được giao; ai bật Tự nhắc hạn task thì nhận thêm task của mình.
+- Việc tự chạy `runTaskReminders`: mỗi giờ nhắc một lịch chạy hằng ngày, app tự cài (và cài lại khi lịch đổi) lúc BOD mở Thông báo của CLB hoặc ai đó lưu cách nhận tin. Mỗi lần chạy cũng đọc tin mới của bot Zalo và xoá thông báo cũ. Nút Gửi nhắc ngay gửi mọi mốc của hôm nay.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
