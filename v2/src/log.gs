@@ -102,7 +102,7 @@ function logBoardFor_(me, eventId) {
   }).sort(function (a, b) { return a.id < b.id ? -1 : 1; });
   var closing = closedEvents_()[ev.id];
   out.event = {
-    id: ev.id, name: ev.name, closed: ev.closed,
+    id: ev.id, name: ev.name, closed: ev.closed, signupUrl: signupUrl_(ev.id),
     closedBy: closing ? names[closing.closed_by] || closing.closed_by : '', closedAt: closing && closing.closed_at ? closing.closed_at.getTime() : null,
     sessions: list, summary: sum,
     quotas: quotas.map(function (q) { return { type: q.scope_type, value: String(q.scope_value), sessions: Number(q.initial_sessions) || 0 }; }),

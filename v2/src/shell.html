@@ -50,7 +50,7 @@ var SETTINGS = [
   ['Câu lạc bộ (chỉ BOD)', true, [
     ['rules', 'Quy tắc CLB', 'book', 'Mỗi lần sửa được ghi vào Nhật ký.', [['Cơ cấu ban', 'Tên ban, viết tắt, ban nào có NS phụ trách', 'Sửa'], ['Thang điểm', 'Các loại hoạt động và số điểm mỗi loại', 'Sửa'], ['Khen thưởng và hạn task', 'Top khen thưởng, số ngày tính là sắp đến hạn', 'Sửa'], ['Ngưỡng cảnh báo', 'Có số mặc định, sửa được khi cần', 'Sửa'], ['Kế hoạch năm', 'Các sự kiện trong năm để gom task và log', 'Mở', 'plan']]],
     ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua kênh nào, gửi thử', 'Xem'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, báo cáo seeding', 'Sửa'], ['Bot Zalo', 'Mã kết nối và số người đã kết nối', 'Mở']]],
-    ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu file log', 'Sửa'], ['Sheet đăng ký log', 'App đọc sheet này khi BOD điểm danh', 'Đổi link'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa']]],
+    ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu sheet đăng ký log', 'Sửa', 'log-files'], ['Sheet đăng ký log', 'Mỗi sự kiện một sheet, tạo hoặc đổi ở trang Quản lý log', 'Mở', 'log-page'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa']]],
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem']]],
     ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển', 'Tải lên'], ['Phân quyền nhân sự', 'BOD gán tay từng người', 'Sửa'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai', 'Mở'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Bật'], ['Lịch sinh nhật', 'Google Lịch ghi sinh nhật thành viên', 'Mở']]],
     ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', 'Hình trang trí ở trang chủ và màn đăng nhập', 'Đổi'], ['Ảnh nền đăng nhập', 'Đang dùng nền xanh mặc định', 'Đổi ảnh']]],
@@ -410,6 +410,8 @@ document.addEventListener('click', function (e) {
   else if (act === 'logout') logOut();
   else if (act === 'password') openPasswordBox();
   else if (act === 'plan') openPlan();
+  else if (act === 'log-files') openLogFiles();
+  else if (act === 'log-page') { closeSettings(); page = 'log'; renderPage(); }
   else if (act === 'close-modal') closeModal();
   else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); }
   else if (act === 'todo') alert('Phần này làm ở các bước sau của kế hoạch.');

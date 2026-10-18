@@ -10,6 +10,16 @@ const SRC = path.join(__dirname, '..', 'src');
 class FakeRange {
   constructor(sheet, row, col, rows, cols) {
     Object.assign(this, { sheet, row, col, rows, cols });
+    // Định dạng (màu, viền, gộp ô...) không ảnh hưởng dữ liệu: hàm nào giả lập không có thì bỏ qua và trả lại vùng.
+    return new Proxy(this, { get: (t, k) => (k in t ? t[k] : typeof k === 'string' ? () => t.proxy : undefined) });
+  }
+  get proxy() { return this.sheet.getRange(this.row, this.col, this.rows, this.cols); }
+  getValue() { return this.getValues()[0][0]; }
+  setValue(v) { return this.setValues([[v]]); }
+  getBackground() { return '#ffffff'; }
+  insertCheckboxes() {
+    this.setValues(this.getValues().map((l) => l.map((v) => (v === '' ? false : v))));
+    return this;
   }
   getValues() {
     const out = [];
@@ -63,16 +73,21 @@ class FakeSheet {
   getRange(row, col, rows = 1, cols = 1) { return new FakeRange(this, row, col, rows, cols); }
   getDataRange() { return this.getRange(1, 1, Math.max(1, this.getLastRow()), Math.max(1, this.getLastColumn())); }
   setFrozenRows(n) { this.frozen = n; }
+  setFrozenColumns() {}
+  setName(n) { this.name = n; return this; }
+  clear() { this.data = []; return this; }
+  appendRow(line) { this.data.splice(this.getLastRow(), 0, line.slice()); this.data.length = Math.max(this.data.length, this.getLastRow()); return this; }
+  insertColumnBefore(col) { this.maxCols++; this.data.forEach((l) => { if (l.length >= col) l.splice(col - 1, 0, ''); }); return this; }
   setTabColor(c) { this.tabColor = c; }
   protect() {
     this.protectedTab = true;
-    const p = { setDescription: () => p, getEditors: () => [], removeEditors: () => p, canDomainEdit: () => false, setDomainEdit: () => p };
+    const p = { setDescription: () => p, setWarningOnly: () => p, setUnprotectedRanges: () => p, getEditors: () => [], removeEditors: () => p, canDomainEdit: () => false, setDomainEdit: () => p };
     return p;
   }
 }
 
 class FakeSpreadsheet {
-  constructor(id) { this.id = id; this.sheets = [new FakeSheet('Sheet1')]; }
+  constructor(id, name) { this.id = id; this.name = name || ''; this.sheets = [new FakeSheet('Sheet1')]; }
   getId() { return this.id; }
   getUrl() { return 'https://docs.google.com/spreadsheets/d/' + this.id; }
   getSheets() { return this.sheets.slice(); }
@@ -91,6 +106,7 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
   const cache = {};
   const mails = [];
   const files_ = {};
+  const folders = [];
   let nextId = 1;
   const lockCalls = { taken: 0, released: 0 };
   const pad = (n) => String(n).padStart(2, '0');
@@ -129,10 +145,34 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       createHtmlOutputFromFile: (name) => ({ getContent: () => fs.readFileSync(path.join(SRC, name + '.html'), 'utf8') })
     },
     SpreadsheetApp: {
-      create: () => { const ss = new FakeSpreadsheet('file' + nextId++); files_[ss.id] = ss; return ss; },
+      create: (name) => { const ss = new FakeSpreadsheet('file' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name); files_[ss.id] = ss; return ss; },
       openById: (id) => { if (!files_[id]) throw new Error('not found'); return files_[id]; },
       flush: () => {},
-      newDataValidation: () => ({ requireCheckbox() { return this; }, build: () => ({}) })
+      newDataValidation: () => ({ requireCheckbox() { return this; }, requireValueInList() { return this; }, build: () => ({}) })
+    },
+    // Drive: thư mục là { id, name, files }, file trong Drive là chính file Sheets giả.
+    DriveApp: {
+      Access: { ANYONE_WITH_LINK: 'anyone_with_link' },
+      Permission: { EDIT: 'edit' },
+      getFileById: (id) => {
+        const ss = files_[id];
+        if (!ss) throw new Error('not found');
+        return {
+          getId: () => id,
+          setSharing: (a, p) => { ss.sharing = a + ':' + p; },
+          moveTo: (folder) => { ss.folder = folder.name; },
+          makeCopy: (name, folder) => {
+            const copy = new FakeSpreadsheet('file' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name);
+            copy.sheets = ss.sheets.map((sh) => Object.assign(new FakeSheet(sh.name), { data: JSON.parse(JSON.stringify(sh.data)), maxRows: sh.maxRows, maxCols: sh.maxCols }));
+            copy.folder = folder.name;
+            files_[copy.id] = copy;
+            return ctx.DriveApp.getFileById(copy.id);
+          }
+        };
+      },
+      getFolderById: (id) => { const f = folders.find((x) => x.id === id); if (!f) throw new Error('not found'); return f; },
+      getFoldersByName: (name) => { const list = folders.filter((x) => x.name === name); return { hasNext: () => list.length > 0, next: () => list.shift() }; },
+      createFolder: (name) => { const f = { id: 'folder' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name, getName: () => name }; folders.push(f); return f; }
     },
     LockService: { getScriptLock: () => ({ tryLock: () => { lockCalls.taken++; return true; }, releaseLock: () => { lockCalls.released++; } }) },
     Session: {
@@ -158,6 +198,7 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
   ctx.__cache = cache;
   ctx.__mails = mails;
   ctx.__files = files_;
+  ctx.__folders = folders;
   ctx.__props = props;
   ctx.__lock = lockCalls;
   return ctx;

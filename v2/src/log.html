@@ -1,7 +1,7 @@
 <script>
 /* Trang Quản lý log (BOD) và pop-up Kế hoạch năm. Chọn sự kiện, chọn buổi bên trái, điểm danh bên phải.
    Mỗi thao tác máy chủ trả lại cả dữ liệu của sự kiện để vẽ lại. */
-var LG = { data: null, eventId: '', sid: '', outcome: '', sel: {}, dept: '', q: '' };
+var LG = { data: null, eventId: '', sid: '', outcome: '', sel: {}, dept: '', q: '', sg: {} };
 var LG_PILLS = { pending: ['Chưa điểm danh', ''], held: ['Đã diễn ra', 'good'], no_work: ['Huỷ: hết việc', ''], other_reason: ['Huỷ: lý do khác', 'info'] };
 var LG_OUTCOMES = [['held', 'Diễn ra'], ['no_work', 'Huỷ: hết việc'], ['other_reason', 'Huỷ: lý do khác']];
 
@@ -22,6 +22,7 @@ function loadLog(eventId) {
 function setLog(d) {
   if (currentPage() !== 'log') return;
   var changed = !LG.data || !d.event || !LG.data.event || LG.data.event.id !== d.event.id;
+  if (changed || !d.event || LG.data.event.signupUrl !== d.event.signupUrl) LG.sg = {};
   LG.data = d; LG.eventId = d.event ? d.event.id : '';
   var ev = d.event;
   if (changed || !ev || !ev.sessions.some(function (s) { return s.id === LG.sid; })) LG.sid = ev && ev.sessions.length ? (ev.sessions.filter(function (s) { return s.outcome === 'pending'; })[0] || ev.sessions[0]).id : '';
@@ -51,7 +52,7 @@ function renderLog() {
     '<span class="hint lg-sum">' + ev.sessions.length + ' buổi · đã diễn ra ' + sum.held + ' · huỷ ' + sum.cancelled + ' · dự kiến ' + fmtNum(sum.planned) + ' buổi 90 phút</span>' +
     '<span class="grow"></span><button type="button" class="btn ghost sm" data-lg="plan">Kế hoạch năm</button>' +
     (ev.closed ? '<button type="button" class="btn ghost sm" data-lg="reopen">Mở chốt</button>' :
-      '<button type="button" class="btn ghost sm" data-lg="quota">Chỉ tiêu</button><button type="button" class="btn sm" data-lg="close">Chốt sự kiện</button>') + '</div>' +
+      '<button type="button" class="btn ghost sm" data-lg="signup">Sheet đăng ký</button><button type="button" class="btn ghost sm" data-lg="quota">Chỉ tiêu</button><button type="button" class="btn sm" data-lg="close">Chốt sự kiện</button>') + '</div>' +
     '<span class="msg" id="lgMsg" role="status"></span>';
   if (ev.closed) html += closedView(ev);
   else if (!ev.sessions.length) html += '<div class="empty">Sự kiện này chưa có buổi log nào. Bấm Buổi log mới để tạo các buổi dự kiến.</div>';
@@ -99,12 +100,86 @@ function renderPanel() {
       }).join('') + '</div></div>' +
       '<div class="pts-tools"><label class="search">' + icon('search') + '<input type="search" id="lgFind" placeholder="Tìm tên" aria-label="Tìm người" value="' + esc(LG.q) + '"></label>' +
       '<button type="button" class="btn ghost sm" data-lg="all">Chọn hết</button><button type="button" class="btn ghost sm" data-lg="none">Bỏ chọn</button></div>' +
-      '<div class="lg-people" id="lgPeople"></div>';
+      '<div id="lgSignup"></div><div class="lg-people" id="lgPeople"></div>';
   }
   html += '<div class="dr-actions"><span class="msg" id="lgSaveMsg" role="status"></span><button type="button" class="btn" data-lg="save" id="lgSave"></button></div>';
   $('lgPanel').innerHTML = html;
   if ($('lgFind')) $('lgFind').oninput = function () { LG.q = this.value; renderLgPeople(); };
   renderLgPeople();
+  if ($('lgSignup')) loadSignup(s, false);
+}
+
+/* ---------- Sheet đăng ký: đọc người đăng ký buổi đang chọn, tick sẵn khi buổi chưa điểm danh ---------- */
+function loadSignup(s, again) {
+  var ev = LG.data.event;
+  if (!ev.signupUrl) { $('lgSignup').innerHTML = '<p class="hint">Sự kiện chưa có sheet đăng ký. Bấm Sheet đăng ký ở trên để tạo, app sẽ tick sẵn người đăng ký khi điểm danh.</p>'; return; }
+  var got = LG.sg[s.id];
+  if (got && !again) return drawSignup(s, got);
+  $('lgSignup').innerHTML = '<p class="hint">Đang đọc sheet đăng ký…</p>';
+  call('signupFor', TOKEN, s.id).then(function (r) {
+    LG.sg[s.id] = r;
+    // Buổi chưa điểm danh và chưa tick ai: tick sẵn người đăng ký.
+    if (r.found && s.outcome === 'pending' && !Object.keys(LG.sel).some(function (k) { return LG.sel[k]; })) r.ids.forEach(function (id) { LG.sel[id] = true; });
+    if (LG.sid === s.id && $('lgSignup')) { drawSignup(s, r); renderLgPeople(); }
+  }).catch(function (err) { if (LG.sid === s.id && $('lgSignup')) $('lgSignup').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+
+function drawSignup(s, r) {
+  var again = ' <button type="button" class="link-btn" data-lg="sg-again">Đọc lại</button>';
+  var open = '<a class="link-btn" href="' + esc(r.url) + '" target="_blank" rel="noopener">Mở sheet</a>';
+  if (!r.found) {
+    $('lgSignup').innerHTML = '<div class="note plain"><span>Sheet đăng ký chưa có cột “' + esc(s.name) + '”. Buổi tạo sau khi đã có sheet, hoặc vừa đổi tên, thì thêm cột vào sheet để mọi người đăng ký.</span>' +
+      '<button type="button" class="btn sm" data-lg="sg-col">Thêm cột vào sheet</button></div>';
+    return;
+  }
+  var text = 'Sheet có ' + r.total + ' người đăng ký buổi này.';
+  if (s.outcome === 'pending') text += ' App đã tick sẵn ' + r.ids.length + ' người. Kiểm tra lại: bỏ tick người vắng, thêm người app đọc sót.';
+  else text += ' Người đăng ký có nhãn Đăng ký trong danh sách.';
+  if (r.unmatched.length) text += ' Không khớp được với thành viên nào: ' + r.unmatched.join(', ') + '.';
+  $('lgSignup').innerHTML = '<p class="hint lg-sg">' + esc(text) + ' ' + open + again + '</p>';
+}
+
+/* ---------- Sheet đăng ký: tạo, đổi link ---------- */
+function openSignupBox() {
+  var ev = LG.data.event;
+  openModal('<h2 id="boxTitle">Sheet đăng ký · ' + esc(ev.name) + '</h2>' +
+    (ev.signupUrl ? '<p>Sự kiện đang dùng <a href="' + esc(ev.signupUrl) + '" target="_blank" rel="noopener">sheet này</a>. Gửi link cho thành viên để tích buổi mình đi được.</p>'
+      : '<p>Sự kiện chưa có sheet đăng ký. App tạo sheet mới có sẵn tên thành viên (không có BOD) xếp theo ban, mỗi buổi log một cột ô tích, thêm tab Kế hoạch để ghi thời gian, địa điểm từng buổi. Ai có link đều tích được.</p>' +
+        '<p class="hint">File mẫu và thư mục lưu sửa ở Cài đặt > Hoạt động CLB > File mẫu log.</p>' +
+        '<div class="actions" style="justify-content:flex-start"><button type="button" class="btn" id="sgNew">Tạo sheet đăng ký</button></div>') +
+    '<form id="sgForm" class="form"><label class="field">' + (ev.signupUrl ? 'Đổi sang sheet khác' : 'Hoặc dùng sheet có sẵn') +
+    '<input id="sgUrl" type="url" placeholder="Dán link Google Sheet" autocomplete="off"></label>' +
+    '<p class="hint">Sheet cần một dòng tiêu đề có cột Họ và tên, sau đó mỗi buổi một cột ô tích, tên cột trùng tên buổi trong app. Chia sẻ sheet cho tài khoản Google của CLB.</p>' +
+    '<span class="msg" id="sgMsg" role="status"></span><div class="actions">' + (ev.signupUrl ? '<button type="button" class="btn ghost danger" id="sgDrop">Bỏ liên kết</button>' : '') +
+    '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="sgBtn">Lưu link</button></div></form>');
+  var done = function (d) { setLog(d); if (d.notice) alert(d.notice); };
+  var run = function (btn, fn, args, wait) {
+    btn.disabled = true; setMsg('sgMsg', '', wait);
+    call.apply(null, [fn, TOKEN].concat(args)).then(function (d) { closeModal(); done(d); }).catch(function (err) { btn.disabled = false; setMsg('sgMsg', 'bad', err.message); });
+  };
+  if ($('sgNew')) $('sgNew').onclick = function () { run(this, 'createSignupSheet', [ev.id], 'Đang tạo sheet, chờ chút nhé…'); };
+  if ($('sgDrop')) $('sgDrop').onclick = function () { if (confirm('Bỏ liên kết sheet này? Sheet vẫn còn trong Drive, chỉ là app không đọc nữa.')) run(this, 'setSignupLink', [ev.id, ''], 'Đang lưu…'); };
+  $('sgForm').onsubmit = function (e) { e.preventDefault(); run($('sgBtn'), 'setSignupLink', [ev.id, $('sgUrl').value], 'Đang đọc sheet…'); };
+}
+
+/** Cài đặt > Hoạt động CLB > File mẫu log. */
+function openLogFiles() {
+  closeSettings();
+  openModal('<h2 id="boxTitle">File mẫu log</h2>' + loadingHtml());
+  call('logFiles', TOKEN).then(function (f) {
+    openModal('<h2 id="boxTitle">File mẫu log</h2><form id="lfForm" class="form">' +
+      '<label class="field">File mẫu (không bắt buộc)<input id="lfTpl" type="url" placeholder="Dán link Google Sheet" value="' + esc(f.templateUrl) + '"></label>' +
+      '<p class="hint">Mẫu của tool tạo file log cũ, có tab Đăng ký log. Để trống thì app tự kẻ bảng.</p>' +
+      '<label class="field">Thư mục lưu (không bắt buộc)<input id="lfDir" type="url" placeholder="Dán link thư mục Google Drive" value="' + esc(f.folderUrl) + '"></label>' +
+      '<p class="hint">Để trống thì app lưu vào thư mục [ECO] Đăng ký log trong Drive của CLB.</p>' +
+      '<span class="msg" id="lfMsg" role="status"></span><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="lfBtn">Lưu</button></div></form>');
+    $('lfForm').onsubmit = function (e) {
+      e.preventDefault();
+      var b = $('lfBtn'); b.disabled = true; setMsg('lfMsg', '', 'Đang kiểm tra link…');
+      call('saveLogFiles', TOKEN, { templateUrl: $('lfTpl').value, folderUrl: $('lfDir').value }).then(function () { setMsg('lfMsg', 'ok', 'Đã lưu.'); b.disabled = false; })
+        .catch(function (err) { b.disabled = false; setMsg('lfMsg', 'bad', err.message); });
+    };
+  }).catch(function (err) { openModal('<h2 id="boxTitle">File mẫu log</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
 }
 
 function lgShown() {
@@ -116,10 +191,11 @@ function renderLgPeople() {
   var n = Object.keys(LG.sel).filter(function (k) { return LG.sel[k]; }).length;
   if ($('lgPeople')) {
     var list = lgShown();
+    var sg = LG.sg[LG.sid], signed = sg && sg.found ? sg.ids : [];
     $('lgPeople').innerHTML = list.length ? list.map(function (m) {
       var note = m.quota ? 'Đã đi ' + fmtNum(m.attended) + '/' + fmtNum(m.quota) + ' buổi' + (m.attended > m.quota ? ', đi dư' : '') : (m.attended ? 'Đã đi ' + fmtNum(m.attended) + ' buổi, không có chỉ tiêu' : 'Không có chỉ tiêu');
       return '<label class="check pts-person"><input type="checkbox" data-lg-person="' + esc(m.id) + '"' + (LG.sel[m.id] ? ' checked' : '') + '>' +
-        '<span class="n">' + esc(m.name) + '</span><span class="d">' + esc([m.dept, m.subTeam].filter(String).join(' ')) + '</span><span class="p">' + esc(note) + '</span></label>';
+        '<span class="n">' + esc(m.name) + (signed.indexOf(m.id) >= 0 ? ' ' + pill('Đăng ký', 'info') : '') + '</span><span class="d">' + esc([m.dept, m.subTeam].filter(String).join(' ')) + '</span><span class="p">' + esc(note) + '</span></label>';
     }).join('') : '<p class="hint">Không có ai khớp.</p>';
   }
   $('lgSave').textContent = LG.outcome === 'no_work' ? 'Lưu: buổi bị huỷ' : (LG.outcome === 'other_reason' ? 'Lưu (' + n + ' người đã đăng ký)' : 'Lưu điểm danh (' + n + ' người)');
@@ -247,6 +323,13 @@ document.addEventListener('click', function (e) {
   else if (act === 'edit' && s) openSessionBox(s);
   else if (act === 'delete' && s) { if (confirm('Xoá buổi “' + s.name + '”? Chỉ xoá buổi tạo nhầm.')) lgCall(b, 'deleteSession', [s.id]); }
   else if (act === 'quota') openQuotaBox();
+  else if (act === 'signup') openSignupBox();
+  else if (act === 'sg-again' && s) loadSignup(s, true);
+  else if (act === 'sg-col' && s) {
+    b.disabled = true;
+    call('addSignupColumn', TOKEN, s.id).then(function (r) { LG.sg[s.id] = r; if (LG.sid === s.id) { drawSignup(s, r); renderLgPeople(); } })
+      .catch(function (err) { b.disabled = false; alert(err.message); });
+  }
   else if (act === 'all') { lgShown().forEach(function (m) { LG.sel[m.id] = true; }); renderLgPeople(); }
   else if (act === 'none') { LG.sel = {}; renderLgPeople(); }
   else if (act === 'save' && s) {

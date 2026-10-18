@@ -44,6 +44,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
 - `v2/src/points.gs`, `v2/src/points.html`: trang Cộng điểm và Thang điểm (chỉ BOD).
 - `v2/src/log.gs`, `v2/src/log.html`: Kế hoạch năm (sự kiện) và trang Quản lý log: buổi log, chỉ tiêu, điểm danh, chốt và mở chốt.
+- `v2/src/signup.gs`: sheet đăng ký log của từng sự kiện: tạo, dán link, đọc người đăng ký khi điểm danh.
 
 ## Task
 
@@ -63,7 +64,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - BOD tạo sự kiện ở Cài đặt, Kế hoạch năm (hoặc nút Kế hoạch năm trong Quản lý log). Mọi task và buổi log thuộc một sự kiện.
 - Trong Quản lý log: tạo buổi (90 hoặc 180 phút), đặt chỉ tiêu theo ban, khối, từng người (người thắng khối, khối thắng ban), rồi mỗi buổi chọn Diễn ra (tick người có mặt), Huỷ: hết việc, hoặc Huỷ: lý do khác (tick người đã đăng ký, tính như có mặt). Lưu lại nhiều lần được.
 - Chốt khi mọi buổi đã có kết quả và mọi task của sự kiện đã có kết quả. App ghi Kết quả log (giao cuối = thực diễn ra × giao ban đầu ÷ dự kiến) và cộng +20 mỗi buổi vượt. Mở chốt thì huỷ điểm log vượt, chốt lại tính lại.
-- Sheet đăng ký log (tạo từ file mẫu, đọc lại khi điểm danh) làm ở PR sau.
+
+## Sheet đăng ký log
+
+- Mỗi sự kiện một Google Sheet để thành viên tích buổi mình đi được. Link lưu ở Cài đặt, dòng `log_signup_<mã sự kiện>`.
+- Nút Sheet đăng ký trong Quản lý log: tạo sheet mới hoặc dán link sheet có sẵn. Sheet mới có tên thành viên (không có BOD, không có số điện thoại) xếp theo ban, mỗi buổi một cột ô tích, dòng đếm số người đăng ký và tab Kế hoạch (thời gian, địa điểm, mục tiêu, trạng thái từng buổi). Ai có link đều tích được; tên, ban và tiêu đề khoá dạng cảnh báo.
+- Có file mẫu (`log_template_url`, mẫu của tool cũ có tab Đăng ký log) thì app chép mẫu rồi điền như tool cũ. Sheet lưu vào thư mục `log_folder_url`, để trống là thư mục [ECO] Đăng ký log. Sửa ở Cài đặt, Hoạt động CLB, File mẫu log.
+- Khi mở một buổi để điểm danh, app đọc cột trùng tên buổi (không phân biệt dấu, hoa thường) và tick sẵn người đã đăng ký; tên trong sheet không khớp thành viên nào thì app liệt kê ra. Buổi tạo sau khi đã có sheet thì bấm Thêm cột vào sheet.
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
