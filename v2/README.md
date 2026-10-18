@@ -184,4 +184,4 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
-Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
+Xem thử: làm theo `docs/chuyen-sang-app-moi.md`. Workflow `Đẩy app mới lên Apps Script thử` đẩy `v2/src` lên một dự án Apps Script riêng (secret `NEW_SCRIPT_ID`, `NEW_DEPLOYMENT_ID`), không đụng app cũ. Lần đầu mở link sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
