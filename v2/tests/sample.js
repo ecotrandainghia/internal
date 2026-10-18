@@ -1,7 +1,7 @@
 // Dữ liệu mẫu cho test trang chủ (và để chạy thử giao diện): app đã cài, đang ở GD1, có BOD và hai thành viên.
 const { loadApp } = require('./gas');
 
-const FILES = ['schema.gs', 'records.gs', 'db.gs', 'access.gs', 'auth.gs', 'setup.gs', 'main.gs', 'stats.gs', 'home.gs', 'tasks.gs', 'points.gs', 'log.gs'];
+const FILES = ['schema.gs', 'records.gs', 'db.gs', 'access.gs', 'auth.gs', 'setup.gs', 'main.gs', 'stats.gs', 'home.gs', 'tasks.gs', 'points.gs', 'log.gs', 'signup.gs'];
 const DAY = 864e5, HOUR = 36e5;
 const ago = (ms) => new Date(Date.now() - ms);
 const later = (ms) => new Date(Date.now() + ms);

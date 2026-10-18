@@ -159,6 +159,8 @@ var DEFAULT_SETTINGS = [
   { key: 'comment_activity_id', value: '', description: 'Mã hoạt động app tự cộng khi seeding ghi nhận comment' },
   { key: 'feedback_activity_id', value: '', description: 'Mã hoạt động app tự cộng khi góp ý được áp dụng' },
   { key: 'log_extra_activity_id', value: '', description: 'Mã hoạt động app tự cộng cho mỗi buổi log vượt khi chốt sự kiện' },
+  { key: 'log_template_url', value: '', description: 'Link file mẫu sheet đăng ký log (mẫu của tool cũ, có tab Đăng ký log). Để trống là app tự kẻ bảng' },
+  { key: 'log_folder_url', value: '', description: 'Link thư mục lưu sheet đăng ký log. Để trống là thư mục [ECO] Đăng ký log trong Drive của CLB' },
   { key: 'google_client_id', value: '', description: 'Mã ứng dụng Google (OAuth Client ID) để đăng nhập bằng Google. Để trống là tắt đăng nhập bằng Google' }
 ];
 
