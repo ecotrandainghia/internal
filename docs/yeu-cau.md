@@ -6,7 +6,7 @@ Chốt lần đầu: 30/09/2026. Làm lại để dùng 10 năm: 14/10/2026. Đ�
 - Một app duy nhất: **app CLB ECO**, chạy trên Google Apps Script, mã nguồn lưu trên GitHub.
 - Dữ liệu lưu trên Google Sheets trong Google Drive của tài khoản Google chung của CLB, tách riêng khỏi mã.
 - Mọi người (thành viên, HR, UCV, BOD) dùng chung một app, phải đăng nhập. Mỗi người thấy chức năng theo quyền của mình.
-- Dùng được trên **web máy tính** và cài như **app trên điện thoại (PWA)** ở `ecotdn.github.io/app/`.
+- Dùng được trên **web máy tính** và cài như **app trên điện thoại (PWA)** ở `ecotrandainghia.github.io/internal/`.
 
 ## 2. Nguyên tắc thiết kế
 - Chạy được khoảng **10 năm** mà không cần bảo trì, vì sau này có thể không ai biết code hay dùng AI thành thạo (xem mục 11).
@@ -133,5 +133,5 @@ Menu của BOD: Trang chủ, Quản lý task, Quản lý log, Cộng điểm, H�
 
 ## 12. Còn để sau
 - Cấu trúc sheet danh sách UCV và cách tải lên.
-- Website của CLB ở trang gốc `ecotdn.github.io`.
+- Website của CLB ở trang gốc `ecotrandainghia.github.io` (kho riêng).
 - Các chức năng nhỏ của từng phần.

@@ -802,7 +802,7 @@ var SUB = {
   },
   ucv: function () { SUB.hr('UCV'); },
   google: function () {
-    $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản app CLB ECO có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở app CLB ECO qua trang ecotdn.github.io/app hoặc app đã cài.</p>' +
+    $('#subbody').innerHTML = '<form class="card form" id="gg"><p style="margin:0">Khi bật, ai có tài khoản app CLB ECO có thể bấm “Đăng nhập bằng Google” thay vì gõ mật khẩu, với điều kiện email Google trùng email tài khoản. Nút này hiện khi mở app CLB ECO qua trang ecotrandainghia.github.io/internal hoặc app đã cài.</p>' +
       '<label class="f">Google Client ID <small>Tạo một lần trên Google Cloud bằng tài khoản CLB (xem hướng dẫn bên dưới). Bỏ trống để tắt.</small><input type="text" id="gg-i" value="' + esc(CD.googleClientId) + '" placeholder="1234567890-abc….apps.googleusercontent.com"></label>' +
       '<div class="row"><button class="btn sm" id="gg-b">Lưu</button><span id="m"></span></div></form>' +
       '<details class="card"' + (CD.googleClientId ? '' : ' open') + '><summary style="cursor:pointer;font-weight:500">Hướng dẫn lấy Google Client ID (làm một lần)</summary><ol style="margin:10px 0 0;padding-left:20px;display:grid;gap:6px">' +
@@ -811,7 +811,7 @@ var SUB = {
       '<li>Mở menu, vào <b>APIs &amp; Services</b> rồi <b>OAuth consent screen</b> (có thể tên là Google Auth Platform). Bấm <b>Get started</b>, điền tên app “eco”, email hỗ trợ là email CLB, chọn <b>External</b>, điền email liên hệ, đồng ý rồi bấm <b>Create</b>.</li>' +
       '<li>Vào mục <b>Audience</b>, bấm <b>Publish app</b> để ai cũng đăng nhập được (chỉ xin email và tên nên Google không cần duyệt).</li>' +
       '<li>Vào mục <b>Clients</b> (hoặc Credentials), bấm <b>Create client</b>, chọn loại <b>Web application</b>, tên “eco”.</li>' +
-      '<li>Ở <b>Authorized JavaScript origins</b>, bấm Add URI và dán đúng: <code>https://ecotdn.github.io</code>. Bấm <b>Create</b>.</li>' +
+      '<li>Ở <b>Authorized JavaScript origins</b>, bấm Add URI và dán đúng: <code>https://ecotrandainghia.github.io</code>. Bấm <b>Create</b>.</li>' +
       '<li>Sao chép <b>Client ID</b> (đuôi .apps.googleusercontent.com), dán vào ô ở trên, bấm Lưu.</li></ol></details>';
     $('#gg').onsubmit = function (e) { e.preventDefault(); luuVa($('#gg-b'), $('#m'), 'luuGoogleClientId', [$('#gg-i').value]); };
   },

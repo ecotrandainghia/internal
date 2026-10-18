@@ -483,7 +483,7 @@ function diToi(k, s, khongBao) {
 }
 
 /*
- * Đường dẫn: mỗi trang có địa chỉ riêng (ví dụ ecotdn.github.io/app/#/task) để nút quay lại của trình duyệt
+ * Đường dẫn: mỗi trang có địa chỉ riêng (ví dụ ecotrandainghia.github.io/internal/#/task) để nút quay lại của trình duyệt
  * và điện thoại dùng được. Trang vỏ giữ địa chỉ; app báo trang vỏ mỗi khi đổi trang, trang vỏ báo lại khi người dùng bấm quay lại.
  */
 var TRANG_DAU = '', DA_BAO = '';
@@ -499,7 +499,7 @@ function baoDuong(thay) {
 function moTrangTuDuong(d, thay) {
   var t = tachDuong(d);
   if (!NGUOI) { DA_BAO = ''; baoDuong(true); return; }
-  if (!t.k) t = { k: flat()[0][0], s: null }; // địa chỉ gốc (/home/) là trang đầu tiên
+  if (!t.k) t = { k: flat()[0][0], s: null }; // địa chỉ gốc (/internal/) là trang đầu tiên
   if (!trangHopLe(t.k)) { DA_BAO = ''; baoDuong(true); return; }
   // Đang mở hộp thoại thì nút quay lại chỉ đóng hộp thoại, ở lại trang hiện tại.
   if ($('#hop')) { dongHop(); DA_BAO = ''; baoDuong(false); return; }

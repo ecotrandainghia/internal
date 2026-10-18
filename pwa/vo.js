@@ -125,7 +125,7 @@
     return Notification.requestPermission().then(function (q) {
       if (q !== 'granted') throw new Error('Bạn chưa cho phép thông báo. Mở cài đặt của máy, cho phép thông báo với CLB ECO rồi thử lại.');
       // Đăng ký (hoặc cập nhật) service worker ngay lúc này, không chờ trang tải xong.
-      return henGio(navigator.serviceWorker.register('../sw.js', { scope: './' }).then(function (reg) {
+      return henGio(navigator.serviceWorker.register('sw.js', { scope: './' }).then(function (reg) {
         return reg.update().catch(function () {}).then(function () { return navigator.serviceWorker.ready; });
       }), 25000, 'Máy chưa sẵn sàng nhận thông báo. Đóng hẳn app, mở lại rồi bật lại nhé.');
     }).then(function (reg) {
@@ -182,6 +182,6 @@
   document.getElementById('google-dong').onclick = function () { document.getElementById('google').hidden = true; };
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('../sw.js', { scope: './' }).catch(function () {}); });
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function () {}); });
   }
 })();

@@ -232,8 +232,8 @@ Tên cột viết tiếng Việt không dấu, không cách. Danh sách đầy �
 
 ## Trang vỏ (`pwa/`) và đăng nhập Google
 
-- `pwa/app/` là trang có manifest để cài app. Trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`. `pwa/home/`, `pwa/board/`, `pwa/desk/` chỉ chuyển sang `app/`. Trang gốc để dành cho website của CLB sau này, hiện chỉ chuyển sang `app/`.
-- Địa chỉ từng trang: app báo trang vỏ mỗi lần đổi trang, trang vỏ ghi vào địa chỉ dạng `app/#/task`; bấm quay lại thì trang vỏ báo app mở lại trang đó. Mở app thẳng trên script.google.com thì dùng `google.script.history`.
+- `pwa/index.html` là trang có manifest để cài app, đăng ở `ecotrandainghia.github.io/internal/` bằng workflow `dang-trang-vo.yml`. Trang mở ứng dụng web Apps Script toàn màn hình trong một khung (iframe); link ứng dụng web ở `pwa/config.js`. Trang gốc `ecotrandainghia.github.io` là website công khai, nằm ở kho khác.
+- Địa chỉ từng trang: app báo trang vỏ mỗi lần đổi trang, trang vỏ ghi vào địa chỉ dạng `internal/#/task`; bấm quay lại thì trang vỏ báo app mở lại trang đó. Mở app thẳng trên script.google.com thì dùng `google.script.history`.
 - `pwa/sw.js` giữ sẵn file của trang vỏ (cần cho việc cài app); dữ liệu luôn lấy trực tiếp từ Apps Script.
 - Đăng nhập Google: app (trong khung) chào trang vỏ bằng `postMessage`; nếu CLB đã nhập Client ID (CaiDat `GoogleClientId`), màn hình đăng nhập có nút Google. Trang vỏ hiện nút đăng nhập chính thức của Google, nhận ID token rồi gửi vào app. Máy chủ hỏi lại Google (`oauth2.googleapis.com/tokeninfo`), kiểm tra đúng Client ID, email đã xác minh, còn hạn, rồi tìm tài khoản theo email.
 - Ghi nhớ đăng nhập: phiên lưu cả trong khung lẫn ở trang vỏ (`eco_phien_vo`), vì điện thoại hay xoá bộ nhớ của khung bên trong; trang vỏ gửi lại phiên khi app mở.

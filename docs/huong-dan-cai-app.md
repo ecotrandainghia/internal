@@ -4,16 +4,15 @@ App CLB ECO chạy trên Google Apps Script. Để cài được lên màn hình
 
 ## 1. Bật GitHub Pages (làm một lần)
 
-1. Kho mã phải để **công khai** thì GitHub Pages mới miễn phí: vào kho trên GitHub → **Settings** → kéo xuống cuối **Danger Zone** → **Change visibility** → **Make public**. Trong kho chỉ có mã, không có dữ liệu thành viên hay mật khẩu (dữ liệu nằm trong Google Drive của CLB).
-2. Trang vỏ nằm ở nhánh `gh-pages` (bản sao của thư mục `pwa/`). Vào **Settings → Pages**, mục **Build and deployment** chọn **Deploy from a branch**, nhánh `gh-pages`, thư mục `/ (root)`, bấm **Save**.
-3. Sau vài phút, trang vỏ chạy trên GitHub Pages. App nằm ở thư mục `app/` của trang.
-4. Trong file `config.js` của trang vỏ, dán link ứng dụng web (dạng `https://script.google.com/macros/s/…/exec`) vào `webAppUrl`. Khi chuyển sang dự án Apps Script mới, nhớ đổi link này.
+1. Kho `ecotrandainghia/internal` để **công khai** (gói GitHub miễn phí chỉ đăng trang từ kho công khai). Trong kho chỉ có mã, không có dữ liệu thành viên hay mật khẩu (dữ liệu nằm trong Google Drive của CLB, mã đăng nhập nằm trong Secrets).
+2. Vào **Settings → Pages**, mục **Build and deployment → Source** chọn **GitHub Actions**.
+3. Từ đó mỗi lần gộp thay đổi trong `pwa/` vào `main`, GitHub tự đăng trang vỏ (workflow `dang-trang-vo.yml`). Không ai phải chép tay.
+4. Trong `pwa/config.js`, `webAppUrl` là link ứng dụng web (dạng `https://script.google.com/macros/s/…/exec`). Khi chuyển sang dự án Apps Script mới, nhớ đổi link này.
 
 Link cho mọi người:
 
-- App CLB ECO: `https://ecotdn.github.io/app/`
-- Link cũ `/home/`, `/board/`, `/desk/` tự chuyển sang `/app/`. Ai đã cài app từ link cũ thì nên cài lại từ link mới (và bật lại thông báo nếu có dùng).
-- Trang gốc `https://ecotdn.github.io/` để dành cho website của CLB sau này. Hiện trang gốc chỉ chuyển sang `/app/`.
+- App CLB ECO: `https://ecotrandainghia.github.io/internal/`
+- Trang gốc `https://ecotrandainghia.github.io/` là website công khai của CLB, nằm ở kho riêng `ecotrandainghia.github.io`.
 
 ## 2. Cài lên điện thoại
 
@@ -28,10 +27,10 @@ Link cho mọi người:
 1. Đăng nhập tài khoản Google của CLB, mở https://console.cloud.google.com
 2. Tạo dự án mới, đặt tên `ECO`.
 3. Vào **APIs & Services → OAuth consent screen** (Màn hình xin phép OAuth): chọn **External**, điền tên app `CLB ECO`, email hỗ trợ là email CLB, lưu. Ở mục **Publishing status** bấm **Publish app** để mọi tài khoản Google đều đăng nhập được (chỉ dùng thông tin cơ bản là email nên không cần Google xét duyệt).
-4. Vào **APIs & Services → Credentials → Create credentials → OAuth client ID**: loại **Web application**, mục **Authorized JavaScript origins** thêm `https://ecotdn.github.io`, bấm **Create**.
+4. Vào **APIs & Services → Credentials → Create credentials → OAuth client ID**: loại **Web application**, mục **Authorized JavaScript origins** thêm `https://ecotrandainghia.github.io`, bấm **Create**.
 5. Chép **Client ID** (kết thúc bằng `.apps.googleusercontent.com`), mở app CLB ECO → **Cài đặt → Tài khoản → Đăng nhập bằng Google**, dán vào và **Lưu**.
 
-Từ đó, khi mở app qua trang vỏ (`ecotdn.github.io/app/`, hoặc app đã cài), màn hình đăng nhập có thêm nút **Đăng nhập bằng Google**. Email Google phải trùng email tài khoản trong app (email trong danh sách thành viên).
+Từ đó, khi mở app qua trang vỏ (`ecotrandainghia.github.io/internal/`, hoặc app đã cài), màn hình đăng nhập có thêm nút **Đăng nhập bằng Google**. Email Google phải trùng email tài khoản trong app (email trong danh sách thành viên).
 
 ## Khi chuyển trang vỏ sang tài khoản GitHub khác
 
