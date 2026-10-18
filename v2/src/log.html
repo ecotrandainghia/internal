@@ -1,0 +1,270 @@
+<script>
+/* Trang Quản lý log (BOD) và pop-up Kế hoạch năm. Chọn sự kiện, chọn buổi bên trái, điểm danh bên phải.
+   Mỗi thao tác máy chủ trả lại cả dữ liệu của sự kiện để vẽ lại. */
+var LG = { data: null, eventId: '', sid: '', outcome: '', sel: {}, dept: '', q: '' };
+var LG_PILLS = { pending: ['Chưa điểm danh', ''], held: ['Đã diễn ra', 'good'], no_work: ['Huỷ: hết việc', ''], other_reason: ['Huỷ: lý do khác', 'info'] };
+var LG_OUTCOMES = [['held', 'Diễn ra'], ['no_work', 'Huỷ: hết việc'], ['other_reason', 'Huỷ: lý do khác']];
+
+PAGES.log = function (main) {
+  LG.data = null; LG.sid = '';
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Quản lý log</h1>' +
+    '<p class="lead">Buổi log tạo sẵn theo sự kiện. Điểm danh bằng cách tick người có mặt; một buổi điểm danh nhiều lần được để thêm người còn sót.</p></div>' +
+    '<button type="button" class="btn" data-lg="new">' + icon('plus') + 'Buổi log mới</button></div><div id="lgBody">' + loadingHtml() + '</div></div>';
+  loadLog(LG.eventId);
+};
+
+function loadLog(eventId) {
+  call('logBoard', TOKEN, eventId || '').then(setLog)
+    .catch(function (err) { if ($('lgBody')) $('lgBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+
+/** Nhận dữ liệu mới từ máy chủ rồi vẽ lại; giữ buổi đang chọn nếu còn. */
+function setLog(d) {
+  if (currentPage() !== 'log') return;
+  var changed = !LG.data || !d.event || !LG.data.event || LG.data.event.id !== d.event.id;
+  LG.data = d; LG.eventId = d.event ? d.event.id : '';
+  var ev = d.event;
+  if (changed || !ev || !ev.sessions.some(function (s) { return s.id === LG.sid; })) LG.sid = ev && ev.sessions.length ? (ev.sessions.filter(function (s) { return s.outcome === 'pending'; })[0] || ev.sessions[0]).id : '';
+  pickSession(LG.sid);
+  renderLog();
+}
+
+function curSession() { return LG.data && LG.data.event ? LG.data.event.sessions.filter(function (s) { return s.id === LG.sid; })[0] : null; }
+function pickSession(id) {
+  LG.sid = id; LG.sel = {}; LG.q = '';
+  var s = curSession();
+  LG.outcome = s ? (s.outcome === 'pending' ? 'held' : s.outcome) : '';
+  if (s) s.attendees.forEach(function (m) { LG.sel[m] = true; });
+}
+
+function renderLog() {
+  var d = LG.data, body = $('lgBody');
+  if (!body) return;
+  if (!d.events.length) {
+    body.innerHTML = '<div class="note plain"><span>Nhiệm kỳ này chưa có sự kiện nào. Mọi buổi log và task đều thuộc một sự kiện.</span><button type="button" class="btn sm" data-lg="plan">Mở Kế hoạch năm</button></div>';
+    return;
+  }
+  var ev = d.event, sum = ev.summary;
+  var html = '<div class="toolbar"><select id="lgEvent" class="pick" aria-label="Sự kiện">' + d.events.map(function (e) {
+    return '<option value="' + esc(e.id) + '"' + (e.id === ev.id ? ' selected' : '') + '>' + esc(e.name + (e.closed ? ' · Đã chốt' : '')) + '</option>';
+  }).join('') + '</select>' + pill(ev.closed ? 'Đã chốt' : 'Đang mở', ev.closed ? 'good' : 'info') +
+    '<span class="hint lg-sum">' + ev.sessions.length + ' buổi · đã diễn ra ' + sum.held + ' · huỷ ' + sum.cancelled + ' · dự kiến ' + fmtNum(sum.planned) + ' buổi 90 phút</span>' +
+    '<span class="grow"></span><button type="button" class="btn ghost sm" data-lg="plan">Kế hoạch năm</button>' +
+    (ev.closed ? '<button type="button" class="btn ghost sm" data-lg="reopen">Mở chốt</button>' :
+      '<button type="button" class="btn ghost sm" data-lg="quota">Chỉ tiêu</button><button type="button" class="btn sm" data-lg="close">Chốt sự kiện</button>') + '</div>' +
+    '<span class="msg" id="lgMsg" role="status"></span>';
+  if (ev.closed) html += closedView(ev);
+  else if (!ev.sessions.length) html += '<div class="empty">Sự kiện này chưa có buổi log nào. Bấm Buổi log mới để tạo các buổi dự kiến.</div>';
+  else html += '<div class="lg-grid"><div class="lg-sessions" role="list">' + ev.sessions.map(sessionButton).join('') + '</div><section class="lg-panel" id="lgPanel"></section></div>';
+  body.innerHTML = html;
+  $('lgEvent').onchange = function () { $('lgBody').innerHTML = loadingHtml(); loadLog(this.value); };
+  if ($('lgPanel')) renderPanel();
+}
+
+function sessionButton(s) {
+  var p = LG_PILLS[s.outcome], meta = s.duration + ' phút';
+  if (s.outcome === 'held') meta += ' · ' + s.attendees.length + ' người';
+  if (s.outcome === 'other_reason') meta += ' · ' + s.attendees.length + ' người đã đăng ký';
+  if (!s.counted) meta += ' · tạo trong giao thoa, không tính';
+  return '<button type="button" class="lg-s" role="listitem" data-lg-s="' + esc(s.id) + '" aria-pressed="' + (s.id === LG.sid) + '"><span class="t"><b>' + esc(s.name) + '</b><small>' + esc(meta) + '</small></span>' + pill(p[0], p[1]) + '</button>';
+}
+
+function closedView(ev) {
+  var r = ev.results || [];
+  return '<div class="note plain"><span>Đã chốt' + (ev.closedAt ? ' lúc ' + fmtTime(ev.closedAt) + ' ' + fmtDay(ev.closedAt) : '') + (ev.closedBy ? ' bởi ' + esc(ev.closedBy) : '') +
+    '. Thực diễn ra ' + fmtNum(ev.summary.actual) + ' trên ' + fmtNum(ev.summary.planned) + ' buổi dự kiến. Muốn sửa buổi, chỉ tiêu hay điểm danh thì bấm Mở chốt; chốt lại app tính lại điểm log vượt.</span></div>' +
+    '<section class="sec"><h2>Kết quả log</h2>' + (r.length ? '<div class="tbl" role="table"><div class="tr th" role="row"><span>Thành viên</span><span>Giao ban đầu</span><span>Giao cuối</span><span>Đã tham gia</span><span>Vượt</span></div>' +
+      r.map(function (x) {
+        return '<div class="tr" role="row"><span>' + esc(x.name) + '</span><span>' + fmtNum(x.initial) + '</span><span>' + fmtNum(x.final) + '</span><span>' + fmtNum(x.attended) + '</span><span>' +
+          (x.extra ? '<b class="c-good">' + x.extra + ' buổi</b>' : '–') + '</span></div>';
+      }).join('') + '</div>' : '<div class="empty">Không ai có chỉ tiêu hay đi log ở sự kiện này.</div>') + '</section>';
+}
+
+function renderPanel() {
+  var s = curSession(), ev = LG.data.event;
+  if (!s) { $('lgPanel').innerHTML = ''; return; }
+  var html = '<div class="lg-head"><div><h2>' + esc(s.name) + '</h2><small>' + s.duration + ' phút · tính là ' + s.units + ' buổi 90 phút</small></div>' +
+    '<button type="button" class="btn ghost sm" data-lg="edit">Sửa</button>' + (s.outcome === 'pending' ? '<button type="button" class="btn ghost sm danger" data-lg="delete">Xoá</button>' : '') + '</div>' +
+    '<div class="lg-row"><span>Kết quả</span><span class="seg">' + LG_OUTCOMES.map(function (o) {
+      return '<button type="button" data-lg-out="' + o[0] + '" aria-pressed="' + (LG.outcome === o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</span></div>';
+  if (LG.outcome === 'no_work') {
+    html += '<div class="note plain"><span>Buổi không diễn ra vì hết việc: vẫn tính vào số buổi dự kiến, không tính vào số buổi thực diễn ra, không ai được tính có mặt.</span></div>';
+  } else {
+    html += '<div class="note plain"><span>' + (LG.outcome === 'other_reason'
+      ? 'Huỷ vì lý do khác: tick những bạn đã đăng ký buổi này. Các bạn được tính là đã tham gia, buổi được tính là đã diễn ra. Nhớ báo huỷ trên Messenger.'
+      : 'Tick những bạn có mặt. Bấm lưu nhiều lần được: thêm người còn sót hoặc bỏ người tick nhầm.') + '</span></div>' +
+      '<div class="sec-head"><div class="chips">' + [''].concat(ev.depts).map(function (x) {
+        return '<button type="button" class="chip sm" data-lg-dept="' + esc(x) + '" aria-pressed="' + (LG.dept === x) + '">' + esc(x || 'Tất cả') + '</button>';
+      }).join('') + '</div></div>' +
+      '<div class="pts-tools"><label class="search">' + icon('search') + '<input type="search" id="lgFind" placeholder="Tìm tên" aria-label="Tìm người" value="' + esc(LG.q) + '"></label>' +
+      '<button type="button" class="btn ghost sm" data-lg="all">Chọn hết</button><button type="button" class="btn ghost sm" data-lg="none">Bỏ chọn</button></div>' +
+      '<div class="lg-people" id="lgPeople"></div>';
+  }
+  html += '<div class="dr-actions"><span class="msg" id="lgSaveMsg" role="status"></span><button type="button" class="btn" data-lg="save" id="lgSave"></button></div>';
+  $('lgPanel').innerHTML = html;
+  if ($('lgFind')) $('lgFind').oninput = function () { LG.q = this.value; renderLgPeople(); };
+  renderLgPeople();
+}
+
+function lgShown() {
+  var q = LG.q.trim().toLowerCase();
+  return LG.data.event.members.filter(function (m) { return (!LG.dept || m.dept === LG.dept) && (!q || m.name.toLowerCase().indexOf(q) >= 0); });
+}
+
+function renderLgPeople() {
+  var n = Object.keys(LG.sel).filter(function (k) { return LG.sel[k]; }).length;
+  if ($('lgPeople')) {
+    var list = lgShown();
+    $('lgPeople').innerHTML = list.length ? list.map(function (m) {
+      var note = m.quota ? 'Đã đi ' + fmtNum(m.attended) + '/' + fmtNum(m.quota) + ' buổi' + (m.attended > m.quota ? ', đi dư' : '') : (m.attended ? 'Đã đi ' + fmtNum(m.attended) + ' buổi, không có chỉ tiêu' : 'Không có chỉ tiêu');
+      return '<label class="check pts-person"><input type="checkbox" data-lg-person="' + esc(m.id) + '"' + (LG.sel[m.id] ? ' checked' : '') + '>' +
+        '<span class="n">' + esc(m.name) + '</span><span class="d">' + esc([m.dept, m.subTeam].filter(String).join(' ')) + '</span><span class="p">' + esc(note) + '</span></label>';
+    }).join('') : '<p class="hint">Không có ai khớp.</p>';
+  }
+  $('lgSave').textContent = LG.outcome === 'no_work' ? 'Lưu: buổi bị huỷ' : (LG.outcome === 'other_reason' ? 'Lưu (' + n + ' người đã đăng ký)' : 'Lưu điểm danh (' + n + ' người)');
+}
+
+function lgCall(btn, fn, args, msgId) {
+  if (btn) btn.disabled = true;
+  setMsg(msgId || 'lgMsg', '', 'Đang lưu…');
+  return call.apply(null, [fn, TOKEN].concat(args)).then(function (d) { closeModal(); setLog(d); }).catch(function (err) {
+    if (btn) btn.disabled = false;
+    setMsg(msgId || 'lgMsg', 'bad', err.message);
+  });
+}
+
+/* ---------- Buổi log: tạo, sửa ---------- */
+function openSessionBox(s) {
+  var dur = s ? s.duration : 90;
+  openModal('<h2 id="boxTitle">' + (s ? 'Sửa buổi log' : 'Buổi log mới') + '</h2><form id="ssForm" class="form">' +
+    '<label class="field">Tên buổi<input id="ssName" required maxlength="100" placeholder="Ví dụ: Thứ 7 sáng" value="' + esc(s ? s.name : '') + '"></label>' +
+    '<p class="hint">Tên buổi cũng là tên cột trong sheet đăng ký. Ngày giờ, kế hoạch của buổi ghi trong sheet đăng ký.</p>' +
+    '<div class="field"><span>Thời lượng</span><span class="seg" style="margin-left:0;align-self:flex-start">' + [90, 180].map(function (m) {
+      return '<button type="button" data-ss-dur="' + m + '" aria-pressed="' + (dur === m) + '">' + m + ' phút</button>';
+    }).join('') + '</span></div>' +
+    '<span class="msg" id="ssMsg" role="status"></span><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="ssBtn">' + (s ? 'Lưu' : 'Tạo buổi') + '</button></div></form>');
+  $('ssName').focus();
+  $('modal').querySelectorAll('[data-ss-dur]').forEach(function (b) {
+    b.onclick = function () { dur = Number(b.dataset.ssDur); $('modal').querySelectorAll('[data-ss-dur]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
+  });
+  $('ssForm').onsubmit = function (e) {
+    e.preventDefault();
+    lgCall($('ssBtn'), 'saveSession', [{ sessionId: s ? s.id : '', eventId: LG.eventId, name: $('ssName').value, duration: dur }], 'ssMsg')
+      .then(function () { if (!s && LG.data && LG.data.event) { var all = LG.data.event.sessions; if (all.length) { pickSession(all[all.length - 1].id); renderLog(); } } });
+  };
+}
+
+/* ---------- Chỉ tiêu ---------- */
+function openQuotaBox() {
+  var ev = LG.data.event, q = {};
+  ev.quotas.forEach(function (x) { q[x.type + ':' + x.value] = x.sessions; });
+  var grades = [];
+  ev.members.forEach(function (m) { if (m.grade && grades.indexOf(m.grade) < 0) grades.push(m.grade); });
+  grades.sort(function (a, b) { return a - b; });
+  var people = ev.quotas.filter(function (x) { return x.type === 'member'; }).map(function (x) { return x.value; });
+  var input = function (type, value, label) {
+    var v = q[type + ':' + value];
+    return '<label class="q-row"><span>' + esc(label) + '</span><input type="number" min="0" step="0.5" inputmode="decimal" data-q-type="' + type + '" data-q-value="' + esc(value) + '" value="' + (v === undefined ? '' : v) + '" aria-label="' + esc(label) + '"></label>';
+  };
+  var name = function (id) { var m = ev.members.filter(function (x) { return x.id === id; })[0]; return m ? m.name : id; };
+  var draw = function () {
+    openModal('<h2 id="boxTitle">Chỉ tiêu log · ' + esc(ev.name) + '</h2>' +
+      '<p class="hint" style="font-size:14px">Số buổi 90 phút mỗi người được giao. Một người khớp nhiều dòng thì dòng riêng người đó thắng, rồi đến khối, rồi đến ban. Để trống là không giao. BOD không có chỉ tiêu.</p>' +
+      '<form id="qForm" class="form"><b class="q-title">Theo ban</b><div class="q-grid">' + ev.depts.map(function (x) { return input('dept', x, 'Ban ' + x); }).join('') + '</div>' +
+      (grades.length ? '<b class="q-title">Theo khối</b><div class="q-grid">' + grades.map(function (g) { return input('grade', g, 'Khối ' + g); }).join('') + '</div>' : '') +
+      '<b class="q-title">Riêng từng người</b><div class="q-grid" id="qPeople">' + people.map(function (id) { return input('member', id, name(id)); }).join('') + '</div>' +
+      '<div class="pts-tools"><select id="qAdd" class="pick"><option value="">Thêm người…</option>' + ev.members.filter(function (m) { return people.indexOf(m.id) < 0; }).map(function (m) {
+        return '<option value="' + esc(m.id) + '">' + esc(m.name + ' · ' + m.dept) + '</option>';
+      }).join('') + '</select></div>' +
+      '<span class="msg" id="qMsg" role="status"></span><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="qBtn">Lưu chỉ tiêu</button></div></form>');
+    $('qAdd').onchange = function () { if (this.value) { keep(); people.push(this.value); draw(); } };
+    $('qForm').onsubmit = function (e) {
+      e.preventDefault();
+      var rows = [];
+      $('qForm').querySelectorAll('[data-q-type]').forEach(function (i) { rows.push({ type: i.dataset.qType, value: i.dataset.qValue, sessions: i.value === '' ? '' : Number(i.value) }); });
+      lgCall($('qBtn'), 'saveQuotas', [ev.id, rows], 'qMsg');
+    };
+  };
+  var keep = function () { $('qForm').querySelectorAll('[data-q-type]').forEach(function (i) { q[i.dataset.qType + ':' + i.dataset.qValue] = i.value === '' ? undefined : Number(i.value); }); };
+  draw();
+}
+
+/* ---------- Kế hoạch năm ---------- */
+function toDateInput(ms) { var d = new Date(ms); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+function fromDateInput(s) { var m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ''); return m ? new Date(+m[1], m[2] - 1, +m[3]).getTime() : ''; }
+
+function openPlan() {
+  closeSettings();
+  openModal('<h2 id="boxTitle">Kế hoạch năm</h2>' + loadingHtml());
+  call('eventPlan', TOKEN).then(function (p) { drawPlan(p, null); }).catch(function (err) { openModal('<h2 id="boxTitle">Kế hoạch năm</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
+}
+
+function drawPlan(p, editing) {
+  var e = editing ? p.events.filter(function (x) { return x.id === editing; })[0] : null;
+  openModal('<h2 id="boxTitle">Kế hoạch năm' + (p.termLabel ? ' ' + esc(p.termLabel) : '') + '</h2>' +
+    '<p class="hint" style="font-size:14px">Các sự kiện trong năm. Mọi task và buổi log đều thuộc một sự kiện. Thường chỉ tạo vài lần mỗi nhiệm kỳ.</p>' +
+    '<div class="list">' + (p.events.length ? p.events.map(function (x) {
+      return item(x.name, [x.plannedDate ? 'Bắt đầu ' + fmtDay(x.plannedDate) + '/' + new Date(x.plannedDate).getFullYear() : '', x.description].filter(String).join(' · '),
+        (x.closed ? pill('Đã chốt', 'good') : '') + '<button type="button" class="btn ghost sm" data-plan-edit="' + esc(x.id) + '">Sửa</button>');
+    }).join('') : '<div class="empty">Chưa có sự kiện nào.</div>') + '</div>' +
+    '<form id="evForm" class="form"><b class="q-title">' + (e ? 'Sửa sự kiện' : 'Thêm sự kiện') + '</b>' +
+    '<label class="field">Tên sự kiện<input id="evName" required maxlength="150" value="' + esc(e ? e.name : '') + '"></label>' +
+    '<label class="field">Ngày bắt đầu dự kiến<input type="date" id="evDate" required value="' + (e && e.plannedDate ? toDateInput(e.plannedDate) : '') + '"></label>' +
+    '<label class="field">Mô tả ngắn (không bắt buộc)<input id="evDesc" maxlength="300" value="' + esc(e ? e.description : '') + '"></label>' +
+    '<span class="msg" id="evMsg" role="status"></span><div class="actions">' + (e ? '<button type="button" class="btn ghost" data-plan-edit="">Huỷ sửa</button>' : '') +
+    '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="evBtn">' + (e ? 'Lưu' : 'Thêm sự kiện') + '</button></div></form>');
+  $('modal').querySelectorAll('[data-plan-edit]').forEach(function (b) { b.onclick = function () { drawPlan(p, b.dataset.planEdit || null); }; });
+  $('evForm').onsubmit = function (ev) {
+    ev.preventDefault();
+    $('evBtn').disabled = true; setMsg('evMsg', '', 'Đang lưu…');
+    call('saveEvent', TOKEN, { eventId: e ? e.id : '', name: $('evName').value, plannedDate: fromDateInput($('evDate').value), description: $('evDesc').value })
+      .then(function (np) { drawPlan(np, null); setMsg('evMsg', 'ok', 'Đã lưu.'); if (currentPage() === 'log' || currentPage() === 'task') renderPage(); })
+      .catch(function (err) { $('evBtn').disabled = false; setMsg('evMsg', 'bad', err.message); });
+  };
+}
+
+document.addEventListener('click', function (e) {
+  if (currentPage() !== 'log' || !LG.data) return;
+  var b = e.target.closest('[data-lg],[data-lg-s],[data-lg-out],[data-lg-dept]');
+  if (!b) return;
+  if (b.dataset.lgS) {
+    pickSession(b.dataset.lgS);
+    document.querySelectorAll('[data-lg-s]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.lgS === LG.sid); });
+    renderPanel();
+    if (window.matchMedia('(max-width: 860px)').matches) $('lgPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+  if (b.dataset.lgOut) { LG.outcome = b.dataset.lgOut; return renderPanel(); }
+  if (b.dataset.lgDept !== undefined) {
+    LG.dept = b.dataset.lgDept;
+    document.querySelectorAll('[data-lg-dept]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.lgDept === LG.dept); });
+    return renderLgPeople();
+  }
+  var act = b.dataset.lg, s = curSession(), ev = LG.data.event;
+  if (act === 'plan') openPlan();
+  else if (act === 'new') { if (!ev) openPlan(); else if (ev.closed) alert('Sự kiện này đã chốt. Mở chốt trước rồi hãy thêm buổi.'); else openSessionBox(null); }
+  else if (act === 'edit' && s) openSessionBox(s);
+  else if (act === 'delete' && s) { if (confirm('Xoá buổi “' + s.name + '”? Chỉ xoá buổi tạo nhầm.')) lgCall(b, 'deleteSession', [s.id]); }
+  else if (act === 'quota') openQuotaBox();
+  else if (act === 'all') { lgShown().forEach(function (m) { LG.sel[m.id] = true; }); renderLgPeople(); }
+  else if (act === 'none') { LG.sel = {}; renderLgPeople(); }
+  else if (act === 'save' && s) {
+    var ids = Object.keys(LG.sel).filter(function (k) { return LG.sel[k]; });
+    if (LG.outcome === 'no_work' && s.attendees.length && !confirm('Buổi này đang có ' + s.attendees.length + ' người được điểm danh. Huỷ buổi sẽ bỏ hết. Tiếp tục?')) return;
+    lgCall(b, 'saveAttendance', [s.id, { outcome: LG.outcome, memberIds: ids }], 'lgSaveMsg');
+  }
+  else if (act === 'close') {
+    if (confirm('Chốt sự kiện “' + ev.name + '”? App tính số buổi giao cuối cho từng người và cộng điểm log vượt ngay.')) lgCall(b, 'closeEvent', [ev.id]);
+  }
+  else if (act === 'reopen') {
+    if (confirm('Mở chốt “' + ev.name + '” để sửa? Điểm log vượt của lần chốt trước bị huỷ, chốt lại app tính lại.')) lgCall(b, 'reopenEvent', [ev.id]);
+  }
+});
+document.addEventListener('change', function (e) {
+  var c = e.target.closest('[data-lg-person]');
+  if (!c) return;
+  LG.sel[c.dataset.lgPerson] = c.checked;
+  renderLgPeople();
+});
+</script>

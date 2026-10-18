@@ -200,6 +200,44 @@ function kpiLog_(memberId, memberTerm, c) {
   return out;
 }
 
+/** Buổi đã ra sao: pending (chưa điểm danh), held (đã điểm danh), no_work (huỷ vì hết việc), other_reason (huỷ vì lý do khác). */
+function sessionOutcome_(s, attendanceCount) {
+  if (s.cancelled_no_work) return 'no_work';
+  if (s.cancelled_other_reason) return 'other_reason';
+  return attendanceCount ? 'held' : 'pending';
+}
+
+/**
+ * Kết quả log của một sự kiện lúc chốt (LOG-06, LOG-07). Chỉ tính buổi được tính (không tạo trong giao thoa).
+ * Dự kiến = mọi buổi đã tạo; thực diễn ra = buổi đã điểm danh và buổi huỷ vì lý do khác; đều quy ra buổi 90 phút.
+ * Giao cuối = thực diễn ra × giao ban đầu ÷ dự kiến, giữ 2 số lẻ. Buổi vượt = đã tham gia − giao cuối làm tròn xuống, không âm.
+ * people: { Mã TV: dòng Thành viên theo nhiệm kỳ } của những người có thể có chỉ tiêu (không có BOD).
+ * Người không có chỉ tiêu mà vẫn đi log thì cũng có dòng (đi bao nhiêu buổi là vượt bấy nhiêu).
+ */
+function logResults_(eventId, sessions, attendance, quotas, people) {
+  var mine = sessions.filter(function (s) { return s.event_id === eventId && s.is_counted; });
+  var count = {}, units = {};
+  attendance.forEach(function (a) { count[a.session_id] = (count[a.session_id] || 0) + 1; });
+  var planned = 0, actual = 0;
+  mine.forEach(function (s) {
+    units[s.session_id] = sessionUnits_(s.duration_min);
+    planned += units[s.session_id];
+    var o = sessionOutcome_(s, count[s.session_id]);
+    if (o === 'held' || o === 'other_reason') actual += units[s.session_id];
+  });
+  var attended = {};
+  attendance.forEach(function (a) { if (units[a.session_id]) attended[a.member_id] = (attended[a.member_id] || 0) + units[a.session_id]; });
+  var ids = Object.keys(people).filter(function (id) { return initialQuota_(quotas, eventId, id, people[id]) > 0; });
+  Object.keys(attended).forEach(function (id) { if (people[id] && ids.indexOf(id) < 0) ids.push(id); });
+  var rows = ids.map(function (id) {
+    var initial = initialQuota_(quotas, eventId, id, people[id]);
+    var fin = planned ? Math.round(actual * initial / planned * 100) / 100 : 0;
+    var att = attended[id] || 0;
+    return { member_id: id, initial_quota: initial, final_quota: fin, attended: att, extra_sessions: Math.max(0, att - Math.floor(fin + 1e-9)) };
+  });
+  return { planned: planned, actual: actual, rows: rows };
+}
+
 /* ===================== Điểm và hạng ===================== */
 
 /** Tổng điểm từng người trong khoảng [from, to). Bỏ dòng đã huỷ. */
