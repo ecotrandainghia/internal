@@ -173,6 +173,63 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .goto a { height: 76px; border-radius: var(--r-card); background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / .08); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--ink); text-decoration: none; }
 .goto a:hover { background: var(--sunken); }
 
+/* Trang danh sách (Quản lý task...) */
+.page { display: flex; flex-direction: column; gap: 20px; }
+.page-head { display: flex; align-items: flex-start; gap: 16px; }
+.page-head > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.page-head h1 { margin: 0; }
+.page-head .btn { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; }
+.chip { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: none; cursor: pointer; white-space: nowrap; }
+.chip span { opacity: .7; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.search { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); color: var(--ink-3); }
+.toolbar .search { width: 240px; }
+.search input { border: 0; outline: 0; background: none; font: inherit; color: var(--ink); width: 100%; min-width: 0; }
+.pick { padding: 7px 12px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; color: var(--ink); max-width: 220px; }
+.tlist { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.trow { display: grid; grid-template-columns: minmax(0, 1fr) 210px 130px 110px 90px; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.trow:hover .link-btn { text-decoration: underline; text-underline-offset: 3px; }
+.trow .t { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trow .t small { font-size: 12px; color: var(--ink-2); }
+.trow .who, .trow .due { color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.trow .acts { display: flex; justify-content: flex-end; }
+.link-btn { padding: 0; border: 0; background: none; font-weight: 500; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.pill.good { background: var(--accent-soft); color: var(--good); }
+.btn.ghost.danger { color: var(--bad); }
+
+/* Khung bên phải: chi tiết, tạo, sửa task */
+.drawer-wrap { position: fixed; inset: 0; z-index: 38; }
+.drawer-scrim { position: absolute; inset: 0; background: rgb(28 27 23 / .2); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--surface); box-shadow: var(--shadow-pop); padding: 24px; overflow: auto; display: flex; flex-direction: column; gap: 20px; }
+.drawer .close { position: absolute; top: 12px; right: 12px; }
+.dr-head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-right: 40px; }
+.dr-head h2 { margin: 0; font-size: 18px; font-weight: 500; overflow-wrap: anywhere; }
+.dr-head small { color: var(--ink-2); }
+.dr-row { display: flex; align-items: center; gap: 12px; }
+.dr-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dr-row b { font-weight: 500; }
+.dr-row small { font-size: 12px; color: var(--ink-2); }
+.dr-desc { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; border-radius: var(--r-in); background: var(--sunken); }
+.drawer h3 { margin: 0; font-size: 14px; font-weight: 500; }
+.dr-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.item.person { flex-wrap: wrap; }
+.item .acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.grade { flex-basis: 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.grade .seg { margin-left: 0; }
+.grade.ask { padding: 8px 10px; border-radius: var(--r-in); background: var(--info-soft); color: var(--info); }
+.grade small { font-size: 12px; }
+.history { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.history li { display: flex; flex-direction: column; }
+.history small { font-size: 12px; color: var(--ink-2); }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.field select, .field textarea { padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; font-size: 16px; color: var(--ink); }
+.field textarea { resize: vertical; }
+.field > span { display: flex; gap: 6px; }
+.pick-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow: auto; padding: 4px 2px; font-weight: 400; color: var(--ink); }
+.pick-list small { color: var(--ink-2); font-size: 12px; }
+
 @media (max-width: 860px) {
   .hello { padding: 16px; }
   .stats button { padding: 12px 8px; }
@@ -184,6 +241,17 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .item .t { flex-basis: 100%; }
   .item.link { flex-wrap: nowrap; }
   .item.link .t { flex-basis: auto; }
+  .page-head { flex-direction: column; align-items: stretch; }
+  .page-head .btn { align-self: flex-start; }
+  .toolbar .search { width: 100%; }
+  .pick { flex: 1 1 140px; max-width: none; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px 2px; scrollbar-width: none; }
+  .trow { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+  .trow .t { grid-column: 1 / -1; }
+  .trow .who, .trow .due { grid-column: 1; font-size: 13px; }
+  .trow > span:nth-child(4) { grid-column: 2; grid-row: 2; justify-self: end; }
+  .trow .acts { grid-column: 2; grid-row: 3; }
+  .drawer { top: 24px; width: 100%; border-radius: var(--r-card) var(--r-card) 0 0; padding: 20px 16px; }
 }
 
 @media (max-width: 860px) {

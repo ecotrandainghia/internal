@@ -14,7 +14,7 @@ App mới viết lại theo wireframe Van duyệt ngày 18/10/2026. App cũ ở 
 - `v2/src/setup.gs`, `v2/src/setup.html`: trang cài đặt lần đầu.
 - `v2/src/stats.gs`: cách tính dùng chung (nhiệm kỳ và giai đoạn hiện tại, kết quả task, KPI task, KPI log, điểm, hạng). Không gọi gì của Google nên chạy thử được bằng Node.
 - `v2/src/home.gs`, `v2/src/home.html`: trang chủ BOD và thành viên.
-- `v2/src/tasks.gs`: thành viên bấm Đã xong hoặc Huỷ xác nhận task.
+- `v2/src/tasks.gs`, `v2/src/taskboard.html`: task. Thành viên bấm Đã xong hoặc Huỷ xác nhận; BOD và NS phụ trách ban nhập task, sửa hạn, huỷ task, xác nhận thay, bấm Nộp đúng hạn; BOD chấm.
 
 Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng tiếng Việt có dấu.
 
@@ -42,6 +42,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Thành viên thấy điểm và hạng trong giai đoạn (cả CLB, BOD không xếp hạng), KPI task, KPI log và số buổi cần thêm. Giai đoạn giao thoa không có điểm và KPI.
 - KPI task chỉ tính task đã chấm hoặc Không làm. KPI log của sự kiện chưa chốt dùng chỉ tiêu ban đầu.
 - Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
+
+## Task
+
+- BOD vào trang Quản lý task, thấy task mọi ban. NS phụ trách ban vào trang Ban phụ trách, chỉ thấy và nhập task của ban mình. Chỉ BOD chấm.
+- Người được giao phải đang ở CLB và ở đúng ban của task. Task tạo trong giai đoạn giao thoa không tính KPI (cột Được tính là Không).
+- Sửa hạn, chấm, xác nhận thay, Nộp đúng hạn, huỷ task, bỏ người khỏi task đều ghi Nhật ký; khung chi tiết task hiện lại thành câu dễ đọc.
+- BOD xác nhận thay thì app mở ngay phần chấm. Bỏ một người khỏi task chỉ được khi người đó chưa xác nhận.
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
