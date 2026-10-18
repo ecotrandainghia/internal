@@ -146,6 +146,25 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       MimeType: { JSON: 'json' },
       createTextOutput: (text) => { const o = { text, setMimeType: () => o }; return o; }
     },
+    // Google Calendar: mỗi lịch là { id, name, series: [...] }; sự kiện lặp hằng năm nên getEvents trả về mọi chuỗi còn lại.
+    CalendarApp: {
+      getCalendarById: (id) => ctx.__calendars[id] || null,
+      newRecurrence: () => ({ addYearlyRule() { return this; } })
+    },
+    __calendars: {},
+    __makeCalendar: (id, name) => {
+      const cal = { id, name, series: [], seq: 0, getId: () => id, getName: () => name };
+      cal.createAllDayEventSeries = (title, date, _rec, opts) => {
+        const s = { id: id + '-ev' + ++cal.seq, title, date, description: (opts || {}).description || '', tags: {}, reminders: true };
+        cal.series.push(s);
+        return seriesOf(s);
+      };
+      const seriesOf = (s) => ({ getId: () => s.id, removeAllReminders: () => { s.reminders = false; }, setTag: (k, v) => { s.tags[k] = String(v); },
+        deleteEventSeries: () => { cal.series = cal.series.filter((x) => x !== s); } });
+      cal.getEvents = () => cal.series.slice().map((s) => ({ getTag: (k) => (k in s.tags ? s.tags[k] : null), getEventSeries: () => seriesOf(s) }));
+      ctx.__calendars[id] = cal;
+      return cal;
+    },
     __quota: 100,
     __triggers: [],
     UrlFetchApp: { fetch: (url, opts) => ctx.__fetch(url, opts) },

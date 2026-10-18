@@ -99,9 +99,10 @@ function notifyQuietly_(items) {
   try { return notifyMembers_(items); } catch (e) { return { sent: 0, failed: [{ why: String(e.message || e) }] }; }
 }
 
-/** Lịch nhắc hằng ngày (nhắc task, đọc tin Zalo, xoá tin cũ) phải có sẵn khi đã có người cài nhận tin. */
+/** Lịch nhắc hằng ngày (nhắc task, nhắc sinh nhật, đọc tin Zalo, xoá tin cũ) phải có sẵn khi đã có người cài nhận tin. */
 function ensureRemindersQuietly_() {
   try { ensureReminderTriggers_(); } catch (e) { /* lần sau cài lại */ }
+  ensureBirthdayTrigger_();
 }
 
 /** Mã TV của BOD đang ở CLB (theo nhiệm kỳ mới nhất của từng người). */
@@ -162,7 +163,7 @@ function noticesForDevice_(key) {
 /* ===================== Thông báo của tôi ===================== */
 
 function mustNotify_(user, account) {
-  return user.isBod || user.labels.indexOf('dept_lead') >= 0 || user.labels.indexOf('seeding_lead') >= 0 || !!(account && account.self_remind);
+  return user.isBod || user.labels.indexOf('dept_lead') >= 0 || user.labels.indexOf('seeding_lead') >= 0 || user.labels.indexOf('birthday_lead') >= 0 || !!(account && account.self_remind);
 }
 
 function myNotifyFor_(me) {
