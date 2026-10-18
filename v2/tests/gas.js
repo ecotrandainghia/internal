@@ -1,5 +1,6 @@
 // Nạp các file .gs của app mới vào một môi trường giả lập Google Apps Script để chạy thử bằng Node.
-// Giả lập chỉ đủ những gì tầng dữ liệu dùng: file Sheets, thuộc tính dự án, khoá ghi.
+// Giả lập chỉ đủ những gì app dùng: file Sheets, thuộc tính dự án, khoá ghi, băm SHA-256, bộ nhớ tạm, gửi mail, gọi web.
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -86,6 +87,8 @@ class FakeSpreadsheet {
 /** Tạo một môi trường mới (file dữ liệu trống) và nạp các file .gs vào. */
 function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
   const props = {};
+  const cache = {};
+  const mails = [];
   const files_ = {};
   let nextId = 1;
   const lockCalls = { taken: 0, released: 0 };
@@ -96,8 +99,33 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       getScriptProperties: () => ({
         getProperty: (k) => (k in props ? props[k] : null),
         setProperty: (k, v) => { props[k] = String(v); },
-        deleteProperty: (k) => { delete props[k]; }
+        deleteProperty: (k) => { delete props[k]; },
+        getProperties: () => Object.assign({}, props)
       })
+    },
+    CacheService: {
+      getScriptCache: () => ({
+        get: (k) => (k in cache ? cache[k] : null),
+        put: (k, v) => { cache[k] = String(v); },
+        remove: (k) => { delete cache[k]; }
+      })
+    },
+    MailApp: { sendEmail: (to, subject, body) => { mails.push({ to, subject, body }); } },
+    ScriptApp: { getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/app/exec' }) },
+    UrlFetchApp: { fetch: (url, opts) => ctx.__fetch(url, opts) },
+    HtmlService: {
+      XFrameOptionsMode: { ALLOWALL: 'ALLOWALL' },
+      createTemplateFromFile: (name) => {
+        const t = {
+          evaluate: () => {
+            const out = { name, vars: Object.assign({}, t), setTitle: () => out, addMetaTag: () => out, setXFrameOptionsMode: () => out };
+            delete out.vars.evaluate;
+            return out;
+          }
+        };
+        return t;
+      },
+      createHtmlOutputFromFile: (name) => ({ getContent: () => fs.readFileSync(path.join(SRC, name + '.html'), 'utf8') })
     },
     SpreadsheetApp: {
       create: () => { const ss = new FakeSpreadsheet('file' + nextId++); files_[ss.id] = ss; return ss; },
@@ -106,14 +134,28 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       newDataValidation: () => ({ requireCheckbox() { return this; }, build: () => ({}) })
     },
     LockService: { getScriptLock: () => ({ tryLock: () => { lockCalls.taken++; return true; }, releaseLock: () => { lockCalls.released++; } }) },
-    Session: { getEffectiveUser: () => ({ getEmail: () => 'clb@example.com' }), getScriptTimeZone: () => 'Asia/Ho_Chi_Minh' },
+    Session: {
+      getEffectiveUser: () => ({ getEmail: () => 'clb@example.com' }),
+      getActiveUser: () => ({ getEmail: () => ctx.__viewer }),
+      getScriptTimeZone: () => 'Asia/Ho_Chi_Minh'
+    },
     Utilities: {
+      DigestAlgorithm: { SHA_256: 'sha256' },
+      Charset: { UTF_8: 'utf8' },
+      // Giống Google: trả về mảng byte có dấu (-128..127)
+      computeDigest: (alg, s, charset) => Array.from(crypto.createHash(alg).update(String(s), charset || 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
+      base64Encode: (bytes) => Buffer.from(bytes.map((b) => b & 255)).toString('base64'),
+      getUuid: () => crypto.randomUUID(),
       formatDate: (d) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     },
     Logger: { log: () => {} }
   };
   vm.createContext(ctx);
   files.forEach((f) => vm.runInContext(fs.readFileSync(path.join(SRC, f), 'utf8'), ctx, { filename: f }));
+  ctx.__viewer = '';
+  ctx.__fetch = () => { throw new Error('Chưa giả lập gọi web.'); };
+  ctx.__cache = cache;
+  ctx.__mails = mails;
   ctx.__files = files_;
   ctx.__props = props;
   ctx.__lock = lockCalls;

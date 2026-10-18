@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500&display=swap" rel="stylesheet">
+  <?!= include('styles') ?>
+</head>
+<body>
+  <div class="login">
+    <form class="login-card" id="setupForm">
+      <div class="brand"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l8-8"/></svg></span><b>CLB ECO</b></div>
+      <div>
+        <h1>Cài đặt app lần đầu</h1>
+        <p class="hint">App sẽ tạo file dữ liệu "[ECO] Dữ liệu app" trên Drive của tài khoản CLB (<?= ownerEmail ?>), tài khoản BOD đầu tiên là bạn, và mật khẩu chung của CLB.</p>
+      </div>
+      <? if (!isOwner) { ?>
+      <div class="field">Mã xác nhận
+        <p class="hint">Chỉ người đọc được hộp thư <?= ownerEmail ?> mới cài đặt được. Bấm gửi mã rồi xem hộp thư đó.</p>
+        <div style="display:flex;gap:8px"><input id="code" inputmode="numeric" autocomplete="one-time-code" style="flex:1;min-width:0"><button type="button" class="btn ghost" id="sendCode">Gửi mã</button></div>
+      </div>
+      <? } ?>
+      <label class="field">Họ và tên của bạn<input id="name" required autocomplete="name"></label>
+      <label class="field">Email của bạn (dùng để đăng nhập)<input id="email" type="email" required autocomplete="email"></label>
+      <label class="field">Chức vụ (không bắt buộc)<input id="position" placeholder="Ví dụ: Head HR"></label>
+      <label class="field">Mật khẩu của bạn (ít nhất 6 ký tự)<input id="password" type="password" required autocomplete="new-password"></label>
+      <label class="field">Mật khẩu chung của CLB<input id="clubPassword" type="password" required autocomplete="off"></label>
+      <p class="hint">Mật khẩu chung dùng cho người chưa tự đổi mật khẩu riêng. BOD đổi được sau trong Cài đặt.</p>
+      <button class="btn" id="setupBtn">Cài đặt</button>
+      <span class="msg" id="setupMsg" role="status"></span>
+    </form>
+  </div>
+  <script>
+    function $(id) { return document.getElementById(id); }
+    function msg(kind, text) { $('setupMsg').className = 'msg ' + kind; $('setupMsg').textContent = text; }
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.setAttribute('data-theme', 'dark');
+    if ($('sendCode')) $('sendCode').onclick = function () {
+      var b = this; b.disabled = true;
+      google.script.run.withSuccessHandler(function (to) { b.disabled = false; msg('ok', 'Đã gửi mã tới ' + to + '.'); })
+        .withFailureHandler(function (e) { b.disabled = false; msg('bad', e.message); }).sendSetupCode();
+    };
+    $('setupForm').onsubmit = function (e) {
+      e.preventDefault();
+      $('setupBtn').disabled = true; msg('', 'Đang cài đặt, có thể mất một phút…');
+      google.script.run.withSuccessHandler(function (url) { msg('ok', 'Xong. Đang mở app…'); window.top.location.href = url; })
+        .withFailureHandler(function (err) { $('setupBtn').disabled = false; msg('bad', err.message); })
+        .setupApp({ code: $('code') ? $('code').value : '', name: $('name').value, email: $('email').value, position: $('position').value,
+          password: $('password').value, clubPassword: $('clubPassword').value });
+    };
+  </script>
+</body>
+</html>
