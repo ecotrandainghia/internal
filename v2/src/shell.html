@@ -68,7 +68,7 @@ var SETTINGS = [
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở', 'contacts'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa', 'mail-signature'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem', 'mail-quota']]],
     ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển; Kết thúc nhiệm kỳ', 'Tải lên', 'roster'], ['Phân quyền nhân sự', 'NS phụ trách ban, seeding, sinh nhật; BOD gán tay từng người', 'Sửa', 'staff-roles'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên', 'label-sheet'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai, đổi mật khẩu chung', 'Mở', 'reset-password'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Sửa', 'google-login'], ['Lịch sinh nhật', 'Nhắc sinh nhật và Google Lịch ghi sinh nhật', 'Mở', 'birthday-page']]],
     ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', seasonRowText, 'Đổi', 'season'], ['Ảnh nền đăng nhập', loginBgRowText, 'Đổi ảnh', 'login-bg']]],
-    ['system', 'Hệ thống', 'chart', '', [['Tình trạng hệ thống', 'Việc tự chạy lúc 2 giờ sáng, lỗi báo qua Zalo hoặc app', 'Xem', 'system-status'], ['Sao lưu và khôi phục', 'Tự sao lưu mỗi đêm, giữ 30 bản', 'Khôi phục', 'backups'], ['Nhật ký', 'Ai sửa gì, lúc nào', 'Xem'], ['Tab dữ liệu', 'Các tab đã khoá và tab chỉ để xem', 'Xem']]]]]
+    ['system', 'Hệ thống', 'chart', '', [['Tình trạng hệ thống', 'Việc tự chạy lúc 2 giờ sáng, lỗi báo qua Zalo hoặc app', 'Xem', 'system-status'], ['Sao lưu và khôi phục', 'Tự sao lưu mỗi đêm, giữ 30 bản', 'Khôi phục', 'backups'], ['Nhật ký', 'Ai sửa gì, lúc nào', 'Xem', 'audit-log'], ['Tab dữ liệu', 'Các tab đã khoá và tab chỉ để xem', 'Xem', 'data-tabs']]]]]
 ];
 
 /* ---------- Gọi máy chủ ---------- */
@@ -460,6 +460,8 @@ document.addEventListener('click', function (e) {
   else if (act === 'login-bg') openLoginBgBox();
   else if (act === 'system-status') openSystemStatus();
   else if (act === 'backups') openBackups();
+  else if (act === 'audit-log') openAuditLog();
+  else if (act === 'data-tabs') openDataTabs();
   else if (act === 'close-modal') closeModal();
   else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); openMyNotify(); }
   else if (act === 'my-notify') openMyNotify();

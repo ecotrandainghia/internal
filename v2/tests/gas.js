@@ -137,7 +137,7 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       newTrigger: (h) => {
         const spec = { handler: h, id: 'trg' + (ctx.__trgSeq = (ctx.__trgSeq || 0) + 1) };
         const b = { timeBased: () => b, everyMinutes: (n) => { spec.everyMinutes = n; return b; }, everyDays: (n) => { spec.everyDays = n; return b; },
-          atHour: (n) => { spec.hour = n; return b; }, nearMinute: (n) => { spec.minute = n; return b; }, inTimezone: () => b,
+          atHour: (n) => { spec.hour = n; return b; }, forSpreadsheet: () => b, onOpen: () => b, nearMinute: (n) => { spec.minute = n; return b; }, inTimezone: () => b,
           create: () => { ctx.__triggers.push(spec.everyMinutes || spec.hour === undefined ? h : spec); return { getUniqueId: () => spec.id }; } };
         return b;
       }

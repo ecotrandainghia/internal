@@ -20,7 +20,7 @@ var SIZE_ALERT_RATIO = 0.7;
 
 /** Các việc tự chạy, theo thứ tự hiện ở trang Tình trạng hệ thống. onDemand: tự cài khi có người cần, chưa cài là bình thường. */
 var JOBS = [
-  { id: 'nightly', handler: NIGHTLY_HANDLER, name: 'Việc ban đêm', when: '2 giờ sáng mỗi ngày', what: 'Sao lưu, lưu trữ nhiệm kỳ cũ, dọn phiên đăng nhập, kiểm tra dung lượng' },
+  { id: 'nightly', handler: NIGHTLY_HANDLER, name: 'Việc ban đêm', when: '2 giờ sáng mỗi ngày', what: 'Sao lưu, lưu trữ nhiệm kỳ cũ, làm mới tab xem, dọn phiên đăng nhập, kiểm tra dung lượng' },
   { id: 'task_reminders', handler: 'runTaskReminders', name: 'Nhắc hạn task', when: 'Theo Lịch nhắc task', what: 'Nhắc người sắp đến hạn và trễ hạn, xoá thông báo cũ' },
   { id: 'birthday', handler: 'runBirthdayReminders', name: 'Nhắc sinh nhật', when: 'Mỗi ngày theo giờ nhắc sinh nhật', what: 'Báo NS phụ trách sinh nhật' },
   { id: 'seeding', handler: 'runSeedingReminders', name: 'Nhắc seeding', when: 'Mỗi 15 phút', what: 'Nhắc người đặt hẹn ghi nhận seeding', onDemand: true },
@@ -96,6 +96,7 @@ function nightlyWork_() {
   };
   step('Sao lưu', function () { return 'Sao lưu ' + backupNow_().name; });
   step('Lưu trữ', function () { var t = archiveOldTerms_(new Date()); return t.length ? 'Lưu trữ nhiệm kỳ ' + t.map(termLabel_).join(', ') : ''; });
+  step('Tab xem', function () { refreshViews_(true); return ''; });
   step('Phiên đăng nhập', function () { dropExpiredSessions_(); return ''; });
   step('Dung lượng', function () { return 'File dùng ' + checkSize_().percent + '% sức chứa'; });
   if (errors.length) throw new Error(errors.join(' | '));
@@ -250,7 +251,7 @@ function systemPageFor_() {
 /** Tình trạng hệ thống, Sao lưu và khôi phục. Mở trang thì cài lại lịch chạy còn thiếu. */
 function systemPage(token) {
   requireUser_(token, 'bod');
-  try { ensureNightlyTrigger_(); ensureRemindersQuietly_(); } catch (e) { /* trang vẫn hiện, ghi chưa cài */ }
+  try { ensureNightlyTrigger_(); ensureViewTrigger_(); ensureRemindersQuietly_(); } catch (e) { /* trang vẫn hiện, ghi chưa cài */ }
   return systemPageFor_();
 }
 
@@ -276,6 +277,7 @@ function restoreBackup(token, backupId) {
     var fresh = src.makeCopy(DATA_FILE_NAME, DriveApp.getRootFolder());
     old.setName(DATA_FILE_NAME + ' (trước khôi phục ' + stamp + ')');
     useDataFile_(fresh.getId());
+    try { ensureViewTrigger_(); } catch (e) { /* mở trang Hệ thống thì cài lại */ }
     writeAudit_({ actorId: me.memberId, action: 'backup_restore', table: 'settings', rowId: 'backup' },
       [{ column: 'value', oldValue: old.getName(), newValue: 'Khôi phục từ ' + b.name }]);
     return b.name;

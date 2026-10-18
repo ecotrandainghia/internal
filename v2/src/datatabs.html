@@ -1,0 +1,88 @@
+<style>
+.al-filters { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; }
+.al-filters .pick { max-width: none; min-width: 0; }
+.al-filters input { min-width: 0; padding: 7px 12px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; color: var(--ink); }
+.al-list { max-height: 440px; overflow: auto; }
+.al-row { padding: 8px 0; border-bottom: 1px solid var(--line-soft); display: grid; gap: 2px; font-size: 13px; }
+.al-row small { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; }
+.al-row .chg { overflow-wrap: anywhere; }
+.al-row del { color: var(--ink-3); }
+.dt-group { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-weight: 500; font-size: 13px; }
+.dt-group i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+@media (max-width: 720px) {
+  .al-filters { grid-template-columns: 1fr; }
+  .al-list { max-height: none; }
+}
+</style>
+<script>
+/* Cài đặt > Hệ thống: Nhật ký và Tab dữ liệu (datatabs.gs). */
+var AL = { f: {}, rows: [], data: null };
+
+function openAuditLog() {
+  AL = { f: {}, rows: [], data: null };
+  wideModal('<h2 id="boxTitle">Nhật ký</h2>' + loadingHtml());
+  loadAuditLog(false);
+}
+
+function loadAuditLog(more) {
+  var f = Object.assign({}, AL.f, { before: more ? AL.data.next : 0 });
+  return call('auditLog', TOKEN, f).then(function (d) {
+    AL.rows = more ? AL.rows.concat(d.rows) : d.rows;
+    AL.data = d;
+    drawAuditLog();
+  }).catch(function (err) { failBox('Nhật ký', err); });
+}
+
+function drawAuditLog() {
+  var d = AL.data, opt = function (list, cur, all) {
+    return '<option value="">' + all + '</option>' + list.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === cur ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');
+  };
+  var row = function (r) {
+    var where = [r.table, r.rowId, r.column].filter(Boolean).join(' · ');
+    var chg = r.oldValue && r.newValue ? '<del>' + esc(r.oldValue) + '</del> → ' + esc(r.newValue) : r.newValue ? esc(r.newValue) : r.oldValue ? 'Bỏ: <del>' + esc(r.oldValue) + '</del>' : '';
+    return '<div class="al-row"><b>' + esc(r.action) + ' · ' + esc(r.actor) + '</b><small>' + (r.at ? sysWhen(r.at) + ' · ' : '') + esc(where) + '</small>' + (chg ? '<span class="chg">' + chg + '</span>' : '') + '</div>';
+  };
+  var focus = document.activeElement && document.activeElement.id === 'alQ';
+  wideModal('<h2 id="boxTitle">Nhật ký</h2>' +
+    '<p class="hint">Ai sửa gì, lúc nào: chấm task, sửa hạn, cộng và huỷ điểm, điểm danh, chốt sự kiện, duyệt mail, tải sheet, sửa Cài đặt... Nhật ký chỉ thêm dòng, không ai sửa được. Mật khẩu không bao giờ được ghi.</p>' +
+    '<div class="al-filters"><select class="pick" id="alAction" aria-label="Việc">' + opt(d.actions, AL.f.action, 'Mọi việc') + '</select>' +
+    '<select class="pick" id="alActor" aria-label="Người làm">' + opt(d.actors, AL.f.actor, 'Mọi người') + '</select>' +
+    '<input id="alQ" placeholder="Tìm mã dòng, tên cột, giá trị" aria-label="Tìm" value="' + esc(AL.f.q || '') + '"></div>' +
+    '<p class="hint">' + d.total + ' dòng' + (d.total > AL.rows.length ? ', đang hiện ' + AL.rows.length + ' dòng mới nhất' : '') + '.</p>' +
+    '<div class="al-list">' + (AL.rows.length ? AL.rows.map(row).join('') : '<p class="hint">Không có dòng nào khớp.</p>') + '</div>' +
+    '<div class="actions">' + (d.next !== null ? '<button type="button" class="btn ghost" id="alMore">Xem thêm</button>' : '') + '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+  var reload = function () { AL.f = { action: $('alAction').value, actor: $('alActor').value, q: $('alQ').value.trim() }; loadAuditLog(false); };
+  $('alAction').onchange = reload;
+  $('alActor').onchange = reload;
+  var timer = null;
+  $('alQ').oninput = function () { clearTimeout(timer); timer = setTimeout(reload, 400); };
+  if (focus) { var q = $('alQ'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  if ($('alMore')) $('alMore').onclick = function () { this.disabled = true; loadAuditLog(true); };
+}
+
+function openDataTabs() {
+  wideModal('<h2 id="boxTitle">Tab dữ liệu</h2>' + loadingHtml());
+  call('dataTabs', TOKEN).then(function (d) { drawDataTabs(d); }).catch(function (err) { failBox('Tab dữ liệu', err); });
+}
+
+function drawDataTabs(d, flash) {
+  var tab = function (t) {
+    return '<div class="fp-row"><div><b>' + esc(t.label) + '</b><small>' + esc(t.name + (t.rows === null ? ' · chưa có' : ' · ' + t.rows + ' dòng')) + '</small></div>' +
+      (t.handEditable ? pill('Sửa tay được', 'warn') : pill('Đã khoá', '')) + '</div>';
+  };
+  wideModal('<h2 id="boxTitle">Tab dữ liệu</h2>' +
+    '<p class="hint">File dữ liệu có 5 tab xem (đứng đầu, màu xám) để mở ra đọc, và các tab dữ liệu chỉ app ghi được. Riêng tab Cài đặt BOD sửa tay được; sửa sai có thể làm app chạy sai, nên ưu tiên sửa trong app.</p>' +
+    '<span class="msg" id="dtMsg" role="status"></span>' +
+    '<section class="sec"><h2>Tab xem</h2><p class="hint">App tính lại và ghi đè mỗi đêm, mỗi lần có người mở file trên máy tính, hoặc khi bấm Làm mới (mở bằng app Google Sheets trên điện thoại thì không tự làm mới). ' +
+    (d.refreshedAt ? 'Làm mới lần cuối lúc ' + sysWhen(d.refreshedAt) + '.' : 'Chưa làm mới lần nào.') + '</p>' +
+    '<div>' + d.views.map(function (v) { return '<div class="fp-row"><div><b>' + esc(v.name) + '</b></div>' + (v.exists ? pill('Chỉ để xem', 'info') : pill('Chưa có', '')) + '</div>'; }).join('') + '</div></section>' +
+    d.groups.map(function (g) { return '<div class="dt-group"><i style="background:' + esc(g.color) + '"></i>' + esc(g.label) + '</div><div>' + g.tabs.map(tab).join('') + '</div>'; }).join('') +
+    '<div class="actions"><a class="btn ghost" href="' + esc(d.dataUrl) + '" target="_blank" rel="noopener">Mở file dữ liệu</a><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="dtRefresh">Làm mới tab xem</button></div>');
+  if (flash) setMsg('dtMsg', 'ok', flash);
+  $('dtRefresh').onclick = function () {
+    this.disabled = true; setMsg('dtMsg', '', 'Đang làm mới…');
+    call('refreshViewsNow', TOKEN).then(function (x) { drawDataTabs(x, 'Đã làm mới tab xem.'); })
+      .catch(function (err) { $('dtRefresh').disabled = false; setMsg('dtMsg', 'bad', err.message); });
+  };
+}
+</script>

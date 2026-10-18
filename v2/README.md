@@ -175,6 +175,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Mọi việc tự chạy (việc ban đêm, nhắc task, nhắc sinh nhật, nhắc seeding, gửi thư hẹn giờ) ghi lần chạy cuối vào Script Properties `JOB_STATUS`. Chạy lỗi thì báo mọi BOD qua Zalo hoặc app, mỗi việc tối đa một tin mỗi ngày.
 - Cài đặt, Hệ thống: Tình trạng hệ thống (các việc tự chạy, dung lượng, file lưu trữ); Sao lưu và khôi phục (Sao lưu ngay, Khôi phục). Khôi phục chép bản sao lưu thành file dữ liệu mới; file đang dùng đổi tên `(trước khôi phục ...)` và giữ lại. Sao lưu tay và khôi phục ghi Nhật ký (việc `backup_restore`).
 
+## Nhật ký, Tab dữ liệu và 5 tab xem
+
+- 5 tab xem đứng đầu file dữ liệu (màu xám, đã khoá): Xem - Thành viên, Xem - Task, Xem - Log, Xem - Điểm và KPI, Xem - Sự kiện, của nhiệm kỳ đang chạy. App tính từ các tab dữ liệu rồi ghi đè cả tab (`datatabs.gs`), chữ tiếng Việt, có tên người.
+- Làm mới mỗi đêm (việc ban đêm), mỗi lần có người mở file trên máy tính (lịch tự chạy `onDataFileOpen`, cài lúc cài đặt và cài lại khi khôi phục), và nút Làm mới tab xem trong Cài đặt, Hệ thống, Tab dữ liệu. Vừa làm mới trong 5 phút hoặc đang có người làm mới thì lần mở file bỏ qua.
+- Cài đặt, Hệ thống, Nhật ký: mới nhất trước, lọc theo việc, người làm, tìm chữ (không cần dấu), mỗi lần 100 dòng.
+- Cài đặt, Hệ thống, Tab dữ liệu: các tab theo nhóm màu, số dòng, tab nào đã khoá, tab Cài đặt sửa tay được.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
