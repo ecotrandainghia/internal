@@ -42,6 +42,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Thành viên thấy điểm và hạng trong giai đoạn (cả CLB, BOD không xếp hạng), KPI task, KPI log và số buổi cần thêm. Giai đoạn giao thoa không có điểm và KPI.
 - KPI task chỉ tính task đã chấm hoặc Không làm. KPI log của sự kiện chưa chốt dùng chỉ tiêu ban đầu.
 - Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
+- `v2/src/points.gs`, `v2/src/points.html`: trang Cộng điểm và Thang điểm (chỉ BOD).
 
 ## Task
 
@@ -49,6 +50,12 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Người được giao phải đang ở CLB và ở đúng ban của task. Task tạo trong giai đoạn giao thoa không tính KPI (cột Được tính là Không).
 - Sửa hạn, chấm, xác nhận thay, Nộp đúng hạn, huỷ task, bỏ người khỏi task đều ghi Nhật ký; khung chi tiết task hiện lại thành câu dễ đọc.
 - BOD xác nhận thay thì app mở ngay phần chấm. Bỏ một người khỏi task chỉ được khi người đó chưa xác nhận.
+
+## Cộng điểm
+
+- File dữ liệu mới có sẵn thang điểm theo quy chế (tab Hoạt động). React, comment, góp ý và log vượt do app tự cộng; mã của chúng nằm ở Cài đặt (`react_activity_id`...), trang Cộng điểm không cho chọn tay.
+- BOD chọn hoạt động, tick người (không có BOD), gắn sự kiện nếu muốn. Mỗi người một dòng Cộng điểm, mức điểm chép từ thang điểm lúc cộng. Giai đoạn giao thoa không cộng được.
+- Cộng nhầm thì huỷ cả lần hoặc từng người; dòng vẫn còn, đánh dấu Đã huỷ, ghi Nhật ký. Hoạt động chỉ có một lần thì chọn Hoạt động khác.
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 

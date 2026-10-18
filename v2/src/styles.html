@@ -199,6 +199,34 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .pill.good { background: var(--accent-soft); color: var(--good); }
 .btn.ghost.danger { color: var(--bad); }
 
+/* Cộng điểm */
+.pts-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
+.pts-main { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.chips.wrap { flex-wrap: wrap; }
+.chip.sm { padding: 3px 10px; font-size: 12px; }
+.sec-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pts-other { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; }
+.pts-tools { display: flex; gap: 8px; align-items: center; }
+.pts-tools .search { flex: 1; }
+.pts-people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; border-top: 1px solid var(--line); }
+.pts-person { align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.pts-person .n { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pts-person .d { font-size: 12px; color: var(--ink-2); }
+.pts-person .p { font-size: 12px; color: var(--ink-3); min-width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+.pts-side { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 24px; }
+.pts-sum { display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: var(--r-card); background: var(--sunken); }
+.pts-sum small { font-size: 12px; color: var(--ink-2); }
+.pts-sum b { font-weight: 500; overflow-wrap: anywhere; }
+.pts-sum > span { color: var(--ink-2); }
+.pts-big { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 10px; color: var(--ink-2); }
+.pts-big b { font-size: 20px; color: var(--ink); }
+.item.off .t b { color: var(--ink-3); text-decoration: line-through; }
+.batch-list { flex-basis: 100%; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.batch-list li { display: flex; justify-content: space-between; gap: 8px; }
+.batch-list li.off { color: var(--ink-3); }
+.item.batch { flex-wrap: wrap; }
+.link-btn.danger { color: var(--bad); font-weight: 400; font-size: 13px; }
+
 /* Khung bên phải: chi tiết, tạo, sửa task */
 .drawer-wrap { position: fixed; inset: 0; z-index: 38; }
 .drawer-scrim { position: absolute; inset: 0; background: rgb(28 27 23 / .2); }
@@ -251,6 +279,10 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .trow .who, .trow .due { grid-column: 1; font-size: 13px; }
   .trow > span:nth-child(4) { grid-column: 2; grid-row: 2; justify-self: end; }
   .trow .acts { grid-column: 2; grid-row: 3; }
+  .pts-grid { grid-template-columns: 1fr; gap: 24px; }
+  .pts-side { position: static; }
+  .pts-people { grid-template-columns: 1fr; }
+  .pts-other { grid-template-columns: 1fr; }
   .drawer { top: 24px; width: 100%; border-radius: var(--r-card) var(--r-card) 0 0; padding: 20px 16px; }
 }
 
