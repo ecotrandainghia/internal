@@ -599,6 +599,16 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .sd-row { grid-template-columns: minmax(0, 1fr) auto; }
   .sd-row .acts { grid-column: 1 / -1; flex-wrap: wrap; }
 }
+/* Tải danh sách thành viên */
+.rs-form { display: flex; flex-direction: column; gap: 12px; }
+.rs-kinds { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 16px; }
+.rs-kinds legend { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; padding: 0; }
+.rs-kinds .check.off { opacity: .6; }
+.rs-prev { padding-top: 4px; }
+.rs-list { margin: 0; padding-left: 20px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.rs-list.bad { color: var(--bad); font-size: 13px; }
+.rs-ask { display: flex; flex-direction: column; gap: 10px; }
+.rs-ask select { max-width: 100%; }
 /* Sinh nhật */
 .bd-row { display: flex; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
 .bd-date { font-variant-numeric: tabular-nums; font-weight: 500; width: 48px; flex: none; }

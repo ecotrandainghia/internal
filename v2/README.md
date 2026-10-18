@@ -132,11 +132,22 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 
 ## Cài đặt: Quy tắc CLB, link ghim, ảnh đại diện
 
-- Cơ cấu ban: sửa tên ban, các mảng, tắt Đang dùng, thêm ban mới (mã viết hoa, đúng chữ ở cột Ban của sheet). Ban không xoá được; BOD luôn bật. Đổi mã ban làm ở bước tải danh sách thành viên.
+- Cơ cấu ban: sửa tên ban, các mảng, tắt Đang dùng, thêm ban mới (mã viết hoa, đúng chữ ở cột Ban của sheet). Ban không xoá được; BOD luôn bật. Muốn đổi mã ban thì thêm ban mã mới, tắt ban cũ, rồi tải danh sách Cập nhật với mã mới.
 - Khen thưởng và hạn task, Ngưỡng cảnh báo: các số `top_reward_percent`, `offset_top_percent`, `due_soon_days`, `not_done_after_hours`, `kpi_threshold`, `offset_threshold`, có giới hạn hợp lệ; ngưỡng bù trừ không cao hơn ngưỡng KPI. Thang điểm dùng chung hộp ở trang Cộng điểm.
 - Link ghim: tối đa 8 link https, mỗi link một dòng `pinned_link_N` ở tab Cài đặt (Ý nghĩa là tên link).
 - Mọi lần sửa ghi Nhật ký (`change_setting`).
 - Ảnh đại diện: app cắt ảnh thành hình vuông 256 px trên máy, lưu JPEG vào thư mục Ảnh đại diện trên Drive CLB (ai có link xem được), ghi link vào cột `avatar_url`; ảnh cũ vào thùng rác.
+
+## Tải danh sách thành viên, chuyển giai đoạn, kết thúc nhiệm kỳ
+
+- BOD mở từ Cài đặt, Tài khoản và phân quyền, Tải danh sách thành viên (hoặc nút Mở cạnh dòng Bước tiếp ở trang chủ). Chọn loại đợt, dán link Google Sheets (đã chia sẻ cho tài khoản CLB), bấm Xem trước, rồi Tải lên. Link lần tải gần nhất nhớ ở Cài đặt `roster_sheet_url`.
+- Sheet cần cột Họ và tên và Ban (mã ban phải có trong Cơ cấu ban và đang dùng); đọc thêm Ngày sinh, Email, Số điện thoại, Tên Facebook, Link Facebook, Mảng, Lớp, Chức vụ nếu có. Ô trống hay thiếu cột thì giữ thông tin cũ.
+- Nhận ra người cũ theo Họ và tên (trùng tên thì so ngày sinh). Tên gần giống (bỏ dấu giống nhau, hoặc khác 1 đến 2 chữ) thì hỏi BOD chọn đúng người hay người mới. Người mới được mã `nhiệm kỳ-đợt-số` theo loại đợt (Cập nhật thì theo giai đoạn đang chạy) và tài khoản chưa có mật khẩu riêng.
+- Không xoá ai: người đang ở nhiệm kỳ mà không còn trong sheet thì thành Đã rời (mất tài khoản). Tải Oday, đợt 1 thì người của nhiệm kỳ trước không có trong sheet cũng thành Đã rời; riêng lúc Oday, BOD cũ giữ tới đợt 1. Người tải phải còn ở ban BOD trong sheet.
+- Loại đợt: Oday (chỉ ở giai đoạn giao thoa), Đợt 1 (mở GD1), Đợt 2 (chặn khi GD1 còn sự kiện chưa chốt, task chưa có kết quả, bài seeding Chờ dán; chụp kết quả GD1 bằng `snapshotRound_('round_1')` rồi mở GD2), Cập nhật (không đổi giai đoạn).
+- Mỗi lần tải: chép sheet vào thư mục Bản sao sheet đã tải trên Drive CLB, thêm tab `_undo` ghi trạng thái trước khi tải, ghi một dòng Lần tải sheet và Nhật ký `upload_sheet`, rồi đồng bộ lịch sinh nhật.
+- Hoàn tác: chỉ lần tải danh sách thành viên mới nhất, trong 7 ngày, khi người mới chưa có task, điểm danh, điểm hay nhãn. Hoàn tác đợt 2 bỏ ảnh chụp GD1 (`dropRound_`) và GD1 mở lại.
+- Kết thúc nhiệm kỳ (chỉ ở GD2, chặn khi GD2 còn việc như trên): chụp GD2 và cả nhiệm kỳ (`snapshotRound_('round_2')`), file bằng chứng seeding của nhiệm kỳ vào thùng rác, mở nhiệm kỳ mới ở giai đoạn giao thoa. Mọi người vẫn vào app tới lần tải Oday.
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
