@@ -1,0 +1,150 @@
+<script>
+/* Cài đặt > Quy tắc CLB (Cơ cấu ban, Khen thưởng và hạn task, Ngưỡng cảnh báo), Hoạt động CLB > Link ghim,
+   Tài khoản của tôi > Ảnh đại diện. */
+var RULES = { data: null };
+
+function loadRules(draw, title) {
+  if (RULES.data) return draw(RULES.data);
+  openModal('<h2 id="boxTitle">' + esc(title) + '</h2>' + loadingHtml());
+  call('clubRules', TOKEN).then(function (d) { RULES.data = d; draw(d); }).catch(function (err) { failBox(title, err); });
+}
+
+function rulesCall(btn, msgId, fn, args, redraw, okText) {
+  btn.disabled = true; setMsg(msgId, '', 'Đang lưu…');
+  call.apply(null, [fn, TOKEN].concat(args)).then(function (d) { RULES.data = d; redraw(d, okText); })
+    .catch(function (err) { btn.disabled = false; setMsg(msgId, 'bad', err.message); });
+}
+
+/* ---------- Cơ cấu ban ---------- */
+function openDepartments() { RULES.data = null; loadRules(drawDepartments, 'Cơ cấu ban'); }
+
+function drawDepartments(d, flash) {
+  var row = function (x, i) {
+    var fresh = !x.used && x.isNew;
+    return '<tr data-dp-row="' + i + '"><td>' + (fresh ? '<input class="dp-code" maxlength="10" value="' + esc(x.code) + '" aria-label="Mã ban" placeholder="MKT">' : '<b>' + esc(x.code) + '</b>') + '</td>' +
+      '<td><input class="dp-name" maxlength="60" value="' + esc(x.name) + '" aria-label="Tên ban"></td>' +
+      '<td><input class="dp-subs" value="' + esc(x.subTeams) + '" aria-label="Các mảng" placeholder="Trống nếu không có"></td>' +
+      '<td class="r num">' + (x.isNew ? '' : x.people) + '</td>' +
+      '<td><input type="checkbox" class="dp-on"' + (x.active ? ' checked' : '') + (x.code === 'BOD' ? ' disabled' : '') + ' aria-label="Đang dùng"></td></tr>';
+  };
+  wideModal('<h2 id="boxTitle">Cơ cấu ban</h2>' +
+    '<p class="hint">Mã ban phải đúng chữ ghi ở cột Ban của sheet tải lên. Mảng ghi cách nhau dấu phẩy. Ban đã có dữ liệu không xoá được, chỉ bỏ tick Đang dùng để dữ liệu năm cũ vẫn đọc được. NS phụ trách ban gán ở Phân quyền nhân sự, ban nào cũng được.</p>' +
+    '<div class="table-wrap"><table class="mtable dp-table"><thead><tr><th>Mã</th><th>Tên ban</th><th>Mảng</th><th class="r">Đang có</th><th>Dùng</th></tr></thead><tbody>' +
+    d.depts.map(row).join('') + '</tbody></table></div>' +
+    '<div><button type="button" class="btn ghost sm" id="dpAdd">' + icon('plus') + 'Thêm ban</button></div>' +
+    '<span class="msg" id="dpMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="dpSave">Lưu</button></div>');
+  if (flash) setMsg('dpMsg', 'ok', flash);
+  var read = function () {
+    return Array.prototype.map.call(document.querySelectorAll('[data-dp-row]'), function (tr) {
+      var x = d.depts[Number(tr.dataset.dpRow)], code = tr.querySelector('.dp-code');
+      return { code: code ? code.value.trim().toUpperCase() : x.code, name: tr.querySelector('.dp-name').value, subTeams: tr.querySelector('.dp-subs').value,
+        active: tr.querySelector('.dp-on').checked, people: x.people, used: x.used, isNew: x.isNew };
+    });
+  };
+  $('dpAdd').onclick = function () {
+    var list = read();
+    list.push({ code: '', name: '', subTeams: '', active: true, people: 0, used: false, isNew: true });
+    drawDepartments({ depts: list, numbers: d.numbers, limits: d.limits, links: d.links });
+    var codes = document.querySelectorAll('.dp-code');
+    if (codes.length) codes[codes.length - 1].focus();
+  };
+  $('dpSave').onclick = function () {
+    rulesCall(this, 'dpMsg', 'saveDepartments', [read()], drawDepartments, 'Đã lưu cơ cấu ban.');
+  };
+}
+
+/* ---------- Các số trong quy chế ---------- */
+var RULE_BOXES = {
+  reward: ['Khen thưởng và hạn task', [['top_reward_percent', 'Khen thưởng top', '% mỗi giai đoạn'], ['offset_top_percent', 'Certificate bù trừ cho top', '% bảng bù trừ'],
+    ['due_soon_days', 'Task hiện Sắp đến hạn khi còn', 'ngày'], ['not_done_after_hours', 'Quá hạn mà chưa xác nhận thì tính Không làm sau', 'giờ']]],
+  warn: ['Ngưỡng cảnh báo', [['kpi_threshold', 'Đạt KPI log và task từ', '%'], ['offset_threshold', 'Mỗi phần tối thiểu để được xét bù trừ', '%']]]
+};
+
+function openRuleNumbers(kind) { RULES.data = null; loadRules(function (d) { drawRuleNumbers(kind, d); }, RULE_BOXES[kind][0]); }
+
+function drawRuleNumbers(kind, d, flash) {
+  var box = RULE_BOXES[kind];
+  openModal('<h2 id="boxTitle">' + esc(box[0]) + '</h2><p class="hint">Theo quy chế, có sẵn số mặc định. Mỗi lần sửa được ghi vào Nhật ký nên tra được mức đã dùng ở bất kỳ lúc nào.</p>' +
+    '<form id="rnForm" style="display:flex;flex-direction:column;gap:12px">' + box[1].map(function (f) {
+      var lim = d.limits[f[0]];
+      return '<label class="field">' + esc(f[1]) + ' (' + esc(f[2]) + ')<input type="number" data-rn="' + f[0] + '" min="' + lim[0] + '" max="' + lim[1] + '" step="1" value="' + d.numbers[f[0]] + '" required></label>';
+    }).join('') + '<span class="msg" id="rnMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="rnSave">Lưu</button></div></form>');
+  if (flash) setMsg('rnMsg', 'ok', flash);
+  $('rnForm').onsubmit = function (e) {
+    e.preventDefault();
+    var v = {};
+    document.querySelectorAll('[data-rn]').forEach(function (i) { v[i.dataset.rn] = Number(i.value); });
+    rulesCall($('rnSave'), 'rnMsg', 'saveRuleNumbers', [v], function (x, t) { drawRuleNumbers(kind, x, t); }, 'Đã lưu.');
+  };
+}
+
+/* ---------- Link ghim ---------- */
+function openPinnedLinks() { RULES.data = null; loadRules(drawPinnedLinks, 'Link ghim'); }
+
+function drawPinnedLinks(d, flash) {
+  var links = d.links.length ? d.links : [{ label: '', url: '' }];
+  openModal('<h2 id="boxTitle">Link ghim</h2><p class="hint">Hiện ở trang chủ, mọi người kể cả BOD thấy giống nhau. Tối đa 8 link.</p>' +
+    '<div id="plRows">' + links.map(function (l, i) {
+      return '<div class="pl-row" data-pl-row="' + i + '"><input class="pl-label" maxlength="60" value="' + esc(l.label) + '" placeholder="Tên link" aria-label="Tên link">' +
+        '<input class="pl-url" type="url" value="' + esc(l.url) + '" placeholder="https://..." aria-label="Link">' +
+        '<button type="button" class="icon-btn" data-pl-del="' + i + '" aria-label="Bỏ link này">' + icon('close') + '</button></div>';
+    }).join('') + '</div>' +
+    (links.length < 8 ? '<div><button type="button" class="btn ghost sm" id="plAdd">' + icon('plus') + 'Thêm link</button></div>' : '') +
+    '<span class="msg" id="plMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="plSave">Lưu</button></div>');
+  if (flash) setMsg('plMsg', 'ok', flash);
+  var read = function () {
+    return Array.prototype.map.call(document.querySelectorAll('[data-pl-row]'), function (r) { return { label: r.querySelector('.pl-label').value, url: r.querySelector('.pl-url').value }; });
+  };
+  var redraw = function (list) { drawPinnedLinks({ depts: d.depts, numbers: d.numbers, limits: d.limits, links: list }); };
+  if ($('plAdd')) $('plAdd').onclick = function () { var l = read(); l.push({ label: '', url: '' }); redraw(l); };
+  document.querySelectorAll('[data-pl-del]').forEach(function (b) {
+    b.onclick = function () { var l = read(); l.splice(Number(b.dataset.plDel), 1); redraw(l); };
+  });
+  $('plSave').onclick = function () { rulesCall(this, 'plMsg', 'savePinnedLinks', [read()], drawPinnedLinks, 'Đã lưu link ghim.'); };
+}
+
+/* ---------- Ảnh đại diện ---------- */
+function openAvatarBox(flash) {
+  var cur = USER.avatarUrl ? '<img class="av-big" src="' + esc(USER.avatarUrl) + '" alt="">' : '<span class="av-big">' + esc(USER.name.split(' ').pop().charAt(0)) + '</span>';
+  openModal('<h2 id="boxTitle">Ảnh đại diện</h2><p class="hint">Hiện ở thanh bên và bảng điểm. App thu nhỏ và cắt ảnh thành hình vuông trước khi lưu lên Drive CLB.</p>' +
+    '<div class="av-pick"><span id="avShow">' + cur + '</span><label class="btn ghost">Chọn ảnh<input type="file" id="avFile" accept="image/*" hidden></label></div>' +
+    '<span class="msg" id="avMsg" role="status"></span>' +
+    '<div class="actions">' + (USER.avatarUrl ? '<button type="button" class="btn ghost" id="avDel">Bỏ ảnh</button>' : '') +
+    '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="avSave" disabled>Lưu</button></div>');
+  if (flash) setMsg('avMsg', 'ok', flash);
+  var picked = '';
+  var save = function (img, btn, done) {
+    btn.disabled = true; setMsg('avMsg', '', 'Đang lưu…');
+    call('saveAvatar', TOKEN, img).then(function (url) { USER.avatarUrl = url; renderNav(); openAvatarBox(done); })
+      .catch(function (err) { btn.disabled = false; setMsg('avMsg', 'bad', err.message); });
+  };
+  $('avFile').onchange = function () {
+    var f = this.files[0];
+    if (!f) return;
+    squareJpeg(f, 256).then(function (url) {
+      picked = url; $('avShow').innerHTML = '<img class="av-big" src="' + url + '" alt="">'; $('avSave').disabled = false; setMsg('avMsg', '', '');
+    }).catch(function () { setMsg('avMsg', 'bad', 'Không đọc được ảnh này. Bạn chọn ảnh JPG hoặc PNG khác nhé.'); });
+  };
+  $('avSave').onclick = function () { if (picked) save(picked, this, 'Đã đổi ảnh.'); };
+  if ($('avDel')) $('avDel').onclick = function () { if (confirm('Bỏ ảnh đại diện?')) save('', this, 'Đã bỏ ảnh.'); };
+}
+
+/** Cắt giữa ảnh thành hình vuông size px, trả về data URL JPEG. */
+function squareJpeg(file, size) {
+  return new Promise(function (ok, fail) {
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function () {
+      var s = Math.min(img.width, img.height), c = document.createElement('canvas');
+      c.width = c.height = size;
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); fail(); };
+    img.src = url;
+  });
+}
+</script>
