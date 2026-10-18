@@ -48,7 +48,7 @@ var SETTINGS = [
     ['account', 'Tài khoản của tôi', 'user', 'Ai cũng thấy phần này.', [['Ảnh đại diện', 'Hiện ở thanh bên và bảng điểm', 'Đổi ảnh'], ['Mật khẩu', 'Đổi mật khẩu đăng nhập của bạn', 'Đổi mật khẩu', 'password'], ['Giao diện', 'Sáng, tối hoặc theo cài đặt của máy', 'theme'], ['Dữ liệu ẩn danh', 'Cho CLB dùng dữ liệu của bạn ở dạng ẩn danh, không bắt buộc', 'consent'], ['Hướng dẫn', 'Xem lại hướng dẫn cài app và tour giới thiệu', 'Xem lại', 'guide']]],
     ['my-notify', 'Thông báo của tôi', 'bell', 'Phải bật ít nhất kênh Zalo.', [['Zalo', 'Bot Zalo của CLB', 'Kết nối'], ['App trên điện thoại', 'Khi đã thêm app vào màn hình chính', 'Bật'], ['Gửi thử', 'Gửi một tin thử tới các kênh đang bật', 'Gửi thử'], ['Thông báo 30 ngày qua', 'Xem lại những tin app đã gửi bạn', 'Xem']]]]],
   ['Câu lạc bộ (chỉ BOD)', true, [
-    ['rules', 'Quy tắc CLB', 'book', 'Mỗi lần sửa được ghi vào Nhật ký.', [['Cơ cấu ban', 'Tên ban, viết tắt, ban nào có NS phụ trách', 'Sửa'], ['Thang điểm', 'Các loại hoạt động và số điểm mỗi loại', 'Sửa'], ['Khen thưởng và hạn task', 'Top khen thưởng, số ngày tính là sắp đến hạn', 'Sửa'], ['Ngưỡng cảnh báo', 'Có số mặc định, sửa được khi cần', 'Sửa'], ['Kế hoạch năm', 'Các sự kiện trong năm để gom task và log', 'Mở']]],
+    ['rules', 'Quy tắc CLB', 'book', 'Mỗi lần sửa được ghi vào Nhật ký.', [['Cơ cấu ban', 'Tên ban, viết tắt, ban nào có NS phụ trách', 'Sửa'], ['Thang điểm', 'Các loại hoạt động và số điểm mỗi loại', 'Sửa'], ['Khen thưởng và hạn task', 'Top khen thưởng, số ngày tính là sắp đến hạn', 'Sửa'], ['Ngưỡng cảnh báo', 'Có số mặc định, sửa được khi cần', 'Sửa'], ['Kế hoạch năm', 'Các sự kiện trong năm để gom task và log', 'Mở', 'plan']]],
     ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua kênh nào, gửi thử', 'Xem'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, báo cáo seeding', 'Sửa'], ['Bot Zalo', 'Mã kết nối và số người đã kết nối', 'Mở']]],
     ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu file log', 'Sửa'], ['Sheet đăng ký log', 'App đọc sheet này khi BOD điểm danh', 'Đổi link'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa']]],
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem']]],
@@ -409,6 +409,7 @@ document.addEventListener('click', function (e) {
   else if (act === 'tour' || act === 'guide') openGuide(false);
   else if (act === 'logout') logOut();
   else if (act === 'password') openPasswordBox();
+  else if (act === 'plan') openPlan();
   else if (act === 'close-modal') closeModal();
   else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); }
   else if (act === 'todo') alert('Phần này làm ở các bước sau của kế hoạch.');

@@ -43,6 +43,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - KPI task chỉ tính task đã chấm hoặc Không làm. KPI log của sự kiện chưa chốt dùng chỉ tiêu ban đầu.
 - Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
 - `v2/src/points.gs`, `v2/src/points.html`: trang Cộng điểm và Thang điểm (chỉ BOD).
+- `v2/src/log.gs`, `v2/src/log.html`: Kế hoạch năm (sự kiện) và trang Quản lý log: buổi log, chỉ tiêu, điểm danh, chốt và mở chốt.
 
 ## Task
 
@@ -56,6 +57,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - File dữ liệu mới có sẵn thang điểm theo quy chế (tab Hoạt động). React, comment, góp ý và log vượt do app tự cộng; mã của chúng nằm ở Cài đặt (`react_activity_id`...), trang Cộng điểm không cho chọn tay.
 - BOD chọn hoạt động, tick người (không có BOD), gắn sự kiện nếu muốn. Mỗi người một dòng Cộng điểm, mức điểm chép từ thang điểm lúc cộng. Giai đoạn giao thoa không cộng được.
 - Cộng nhầm thì huỷ cả lần hoặc từng người; dòng vẫn còn, đánh dấu Đã huỷ, ghi Nhật ký. Hoạt động chỉ có một lần thì chọn Hoạt động khác.
+
+## Log
+
+- BOD tạo sự kiện ở Cài đặt, Kế hoạch năm (hoặc nút Kế hoạch năm trong Quản lý log). Mọi task và buổi log thuộc một sự kiện.
+- Trong Quản lý log: tạo buổi (90 hoặc 180 phút), đặt chỉ tiêu theo ban, khối, từng người (người thắng khối, khối thắng ban), rồi mỗi buổi chọn Diễn ra (tick người có mặt), Huỷ: hết việc, hoặc Huỷ: lý do khác (tick người đã đăng ký, tính như có mặt). Lưu lại nhiều lần được.
+- Chốt khi mọi buổi đã có kết quả và mọi task của sự kiện đã có kết quả. App ghi Kết quả log (giao cuối = thực diễn ra × giao ban đầu ÷ dự kiến) và cộng +20 mỗi buổi vượt. Mở chốt thì huỷ điểm log vượt, chốt lại tính lại.
+- Sheet đăng ký log (tạo từ file mẫu, đọc lại khi điểm danh) làm ở PR sau.
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 

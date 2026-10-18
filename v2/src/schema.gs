@@ -55,7 +55,7 @@ var TABLES = [
 
   // Nhóm Log
   { name: 'log_sessions', label: 'Buổi log', group: 'log', key: ['session_id'], id: { prefix: 'B', perTerm: true, width: 4 },
-    columns: ['session_id', 'event_id', 'name', 'duration_min:num', 'cancelled_other_reason:bool', 'is_counted:bool'] },
+    columns: ['session_id', 'event_id', 'name', 'duration_min:num', 'cancelled_other_reason:bool', 'is_counted:bool', 'cancelled_no_work:bool'] },
   { name: 'log_quotas', label: 'Chỉ tiêu log', group: 'log', key: ['event_id', 'scope_type', 'scope_value'],
     columns: ['event_id', 'scope_type', 'scope_value', 'initial_sessions:num'] },
   { name: 'attendance', label: 'Điểm danh', group: 'log', key: ['session_id', 'member_id'],
