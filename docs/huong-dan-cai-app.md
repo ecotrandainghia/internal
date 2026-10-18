@@ -7,7 +7,7 @@ App CLB ECO chạy trên Google Apps Script. Để cài được lên màn hình
 1. Kho `ecotrandainghia/internal` để **công khai** (gói GitHub miễn phí chỉ đăng trang từ kho công khai). Trong kho chỉ có mã, không có dữ liệu thành viên hay mật khẩu (dữ liệu nằm trong Google Drive của CLB, mã đăng nhập nằm trong Secrets).
 2. Vào **Settings → Pages**, mục **Build and deployment → Source** chọn **GitHub Actions**.
 3. Từ đó mỗi lần gộp thay đổi trong `pwa/` vào `main`, GitHub tự đăng trang vỏ (workflow `dang-trang-vo.yml`). Không ai phải chép tay.
-4. Trong `pwa/config.js`, `webAppUrl` là link ứng dụng web (dạng `https://script.google.com/macros/s/…/exec`). Khi chuyển sang dự án Apps Script mới, nhớ đổi link này.
+4. Trong `pwa/config.js`, `webAppUrl` là link ứng dụng web (dạng `https://script.google.com/macros/s/…/exec`). Link này giữ nguyên mỗi lần cập nhật mã, chỉ đổi khi tạo lần triển khai mới hoặc dự án Apps Script khác.
 
 Link cho mọi người:
 
@@ -28,7 +28,7 @@ Link cho mọi người:
 2. Tạo dự án mới, đặt tên `ECO`.
 3. Vào **APIs & Services → OAuth consent screen** (Màn hình xin phép OAuth): chọn **External**, điền tên app `CLB ECO`, email hỗ trợ là email CLB, lưu. Ở mục **Publishing status** bấm **Publish app** để mọi tài khoản Google đều đăng nhập được (chỉ dùng thông tin cơ bản là email nên không cần Google xét duyệt).
 4. Vào **APIs & Services → Credentials → Create credentials → OAuth client ID**: loại **Web application**, mục **Authorized JavaScript origins** thêm `https://ecotrandainghia.github.io`, bấm **Create**.
-5. Chép **Client ID** (kết thúc bằng `.apps.googleusercontent.com`), mở app CLB ECO → **Cài đặt → Tài khoản → Đăng nhập bằng Google**, dán vào và **Lưu**.
+5. Chép **Client ID** (kết thúc bằng `.apps.googleusercontent.com`), mở app CLB ECO → **Cài đặt → Tài khoản và phân quyền → Đăng nhập bằng Google**, dán vào và **Lưu**.
 
 Từ đó, khi mở app qua trang vỏ (`ecotrandainghia.github.io/internal/`, hoặc app đã cài), màn hình đăng nhập có thêm nút **Đăng nhập bằng Google**. Email Google phải trùng email tài khoản trong app (email trong danh sách thành viên).
 
