@@ -12,6 +12,9 @@ App mới viết lại theo wireframe Van duyệt ngày 18/10/2026. App cũ ở 
 - `v2/src/access.gs`: quy tắc đăng nhập và quyền (ai được vào, BOD hay thành viên, nhãn nào còn hạn, nhiệm kỳ của một ngày). Chạy thử được bằng Node.
 - `v2/src/auth.gs`: đăng nhập bằng email và mật khẩu hoặc Google, phiên ghi nhớ 60 ngày, đổi mật khẩu, lưu giao diện, đồng ý dùng dữ liệu.
 - `v2/src/setup.gs`, `v2/src/setup.html`: trang cài đặt lần đầu.
+- `v2/src/stats.gs`: cách tính dùng chung (nhiệm kỳ và giai đoạn hiện tại, kết quả task, KPI task, KPI log, điểm, hạng). Không gọi gì của Google nên chạy thử được bằng Node.
+- `v2/src/home.gs`, `v2/src/home.html`: trang chủ BOD và thành viên.
+- `v2/src/tasks.gs`: thành viên bấm Đã xong hoặc Huỷ xác nhận task.
 
 Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng tiếng Việt có dấu.
 
@@ -32,6 +35,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Đăng nhập bằng Google chỉ hiện khi mở app qua trang vỏ (`pwa/`) và đã điền `google_client_id` trong tab Cài đặt.
 - Lần đăng nhập đầu (cột Lần đăng nhập cuối còn trống) hiện ba bước: đồng ý dùng dữ liệu (không bắt buộc), hướng dẫn cài app theo máy, tour.
 - Hàm cần đăng nhập nhận mã phiên làm tham số đầu và gọi `requireUser_(token)` (hoặc `requireUser_(token, 'bod')`). Phiên hết hạn thì báo `SESSION_EXPIRED`, trang web tự về màn đăng nhập.
+
+## Trang chủ
+
+- BOD thấy số task, mail chờ xử lý, góp ý chưa đọc, danh sách cần làm hôm nay và gợi ý bước tiếp theo theo giai đoạn.
+- Thành viên thấy điểm và hạng trong giai đoạn (cả CLB, BOD không xếp hạng), KPI task, KPI log và số buổi cần thêm. Giai đoạn giao thoa không có điểm và KPI.
+- KPI task chỉ tính task đã chấm hoặc Không làm. KPI log của sự kiện chưa chốt dùng chỉ tiêu ban đầu.
+- Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
 
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 

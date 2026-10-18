@@ -153,5 +153,6 @@ var DEFAULT_SETTINGS = [
   { key: 'top_reward_percent', value: '15', description: 'Khen thưởng top bao nhiêu % mỗi giai đoạn' },
   { key: 'offset_top_percent', value: '40', description: 'Lọt top bao nhiêu % bảng bù trừ thì được cấp certificate' },
   { key: 'not_done_after_hours', value: '24', description: 'Quá hạn bao nhiêu giờ mà chưa xác nhận thì task tính là Không làm' },
+  { key: 'due_soon_days', value: '2', description: 'Còn bao nhiêu ngày tới hạn chót thì task hiện Sắp đến hạn' },
   { key: 'google_client_id', value: '', description: 'Mã ứng dụng Google (OAuth Client ID) để đăng nhập bằng Google. Để trống là tắt đăng nhập bằng Google' }
 ];
