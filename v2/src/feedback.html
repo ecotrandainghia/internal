@@ -1,0 +1,95 @@
+<script>
+/* Trang Góp ý. Thành viên: viết góp ý (có tên hoặc ẩn danh) và xem góp ý có tên của mình.
+   BOD: hộp góp ý; mở trang là các góp ý mới chuyển sang đã đọc, góp ý có tên đánh dấu được là đã áp dụng (+10). */
+var FB = { data: null, tab: 'all', flash: '' };
+var FB_TABS = [['all', 'Tất cả'], ['new', 'Mới'], ['named', 'Có tên'], ['applied', 'Đã áp dụng']];
+
+PAGES.feedback = function (main) {
+  FB.data = null; FB.flash = '';
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Góp ý</h1><p class="lead" id="fbLead"></p></div></div><div id="fbBody">' + loadingHtml() + '</div></div>';
+  call('feedbackPage', TOKEN).then(setFeedback)
+    .catch(function (err) { if ($('fbBody')) $('fbBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+};
+
+function setFeedback(d) {
+  if (currentPage() !== 'feedback') return;
+  FB.data = d;
+  if (d.isBod) renderInbox(); else renderMyFeedback();
+}
+
+/* ---------- Thành viên ---------- */
+function renderMyFeedback() {
+  var d = FB.data;
+  $('fbLead').textContent = 'Chỉ BOD đọc được. Mặc định không ghi tên người gửi.';
+  $('fbBody').innerHTML = '<form class="sec form fb-form" id="fbForm"><label class="field">Bạn muốn góp ý điều gì cho CLB?<textarea id="fbText" rows="7" maxlength="2000"></textarea></label>' +
+    '<label class="check fb-named"><input type="checkbox" id="fbNamed"><span>Ghi tên tôi<small>Góp ý có tên được CLB áp dụng thì bạn được cộng điểm, tối đa ' + d.limit + ' lần mỗi giai đoạn' +
+    (d.canEarn ? '' : ' (giai đoạn giao thoa chưa cộng điểm)') + '. <b>Góp ý ẩn danh không được cộng điểm</b>, và app không lưu gì về người gửi.</small></span></label>' +
+    '<div class="actions" style="justify-content:flex-start"><button class="btn" id="fbBtn">' + icon('chat') + 'Gửi góp ý</button><span class="msg" id="fbMsg" role="status"></span></div></form>' +
+    (d.mine.length ? '<section class="sec"><h2>Góp ý có tên của bạn</h2><div class="fb-list">' + d.mine.map(function (f) {
+      return '<div class="fb-item mine"><p>' + esc(f.content) + '</p><div class="fb-meta"><span class="hint">' + (f.date ? fmtDay(f.date) : '') + '</span>' +
+        (f.applied ? pill('Đã áp dụng', 'good') : f.read ? pill('BOD đã đọc', '') : pill('Chưa đọc', 'info')) + '</div></div>';
+    }).join('') + '</div></section>' : '');
+  if (FB.flash) { setMsg('fbMsg', 'ok', FB.flash); FB.flash = ''; }
+  $('fbForm').onsubmit = function (e) {
+    e.preventDefault();
+    var b = $('fbBtn'), text = $('fbText').value.trim();
+    if (!text) return setMsg('fbMsg', 'bad', 'Bạn chưa viết gì.');
+    b.disabled = true; setMsg('fbMsg', '', 'Đang gửi…');
+    call('sendFeedback', TOKEN, { content: text, named: $('fbNamed').checked }).then(function (d) { FB.flash = 'Đã gửi góp ý. Cảm ơn bạn!'; setFeedback(d); })
+      .catch(function (err) { b.disabled = false; setMsg('fbMsg', 'bad', err.message); });
+  };
+}
+
+/* ---------- BOD ---------- */
+function fbShown(tab) {
+  return FB.data.items.filter(function (f) {
+    return tab === 'all' || (tab === 'new' && f.isNew) || (tab === 'named' && f.name) || (tab === 'applied' && f.applied);
+  });
+}
+
+function renderInbox() {
+  var d = FB.data;
+  $('fbLead').textContent = 'Góp ý ẩn danh: app không lưu gì về người gửi. Một BOD mở trang này là góp ý mới chuyển sang đã đọc.';
+  var list = fbShown(FB.tab);
+  $('fbBody').innerHTML = '<div class="chips">' + FB_TABS.map(function (t) {
+    return '<button type="button" class="chip" data-fb-tab="' + t[0] + '" aria-pressed="' + (FB.tab === t[0]) + '">' + t[1] + ' <span>' + fbShown(t[0]).length + '</span></button>';
+  }).join('') + '</div><span class="msg" id="fbMsg" role="status"></span>' +
+    (list.length ? '<div class="fb-list">' + list.map(inboxRow).join('') + '</div>' : '<div class="empty">' + (d.items.length ? 'Không có góp ý nào ở mục này.' : 'Chưa có góp ý nào.') + '</div>') +
+    '<p class="hint">Góp ý có tên được áp dụng thì người gửi được +' + d.points + ' điểm, tối đa ' + d.limit + ' lần mỗi giai đoạn.' +
+    (d.canApply ? '' : ' Đang ở giai đoạn giao thoa nên chưa đánh dấu áp dụng được.') + '</p>';
+}
+
+function inboxRow(f) {
+  var right = '';
+  if (f.applied) {
+    right = pill('Đã áp dụng', 'good') + '<button type="button" class="link-btn danger" data-fb-undo="' + esc(f.id) + '">Bỏ đánh dấu</button>';
+  } else if (f.name) {
+    var full = f.used >= FB.data.limit;
+    right = FB.data.canApply && f.inClub && !full ? '<button type="button" class="btn ghost sm" data-fb-apply="' + esc(f.id) + '">Đánh dấu đã áp dụng</button>'
+      : '<span class="hint">' + (!f.inClub ? 'Người gửi không còn ở CLB' : full ? 'Đã đủ ' + FB.data.limit + ' lần trong ' + FB.data.phaseLabel : '') + '</span>';
+  }
+  var meta = (f.name ? '<b>' + esc(f.name) + '</b>' : 'Ẩn danh') + (f.date ? ' · ' + fmtDay(f.date) : '') +
+    (f.applied && f.markedBy ? ' · ' + esc(f.markedBy) + ' đánh dấu áp dụng' : '');
+  return '<div class="fb-item' + (f.isNew ? ' new' : '') + '"><span class="fb-dot" aria-hidden="true"></span><div class="fb-text"><p>' + esc(f.content) + '</p>' +
+    '<span class="hint">' + meta + (f.isNew ? ' · ' + pill('Mới', 'info') : '') + '</span></div><div class="fb-act">' + right + '</div></div>';
+}
+
+document.addEventListener('click', function (e) {
+  if (currentPage() !== 'feedback' || !FB.data || !FB.data.isBod) return;
+  var b = e.target.closest('[data-fb-tab],[data-fb-apply],[data-fb-undo]');
+  if (!b) return;
+  if (b.dataset.fbTab) { FB.tab = b.dataset.fbTab; return renderInbox(); }
+  var keepNew = FB.data.items.filter(function (f) { return f.isNew; }).map(function (f) { return f.id; });
+  var done = function (d) { d.items.forEach(function (f) { if (keepNew.indexOf(f.id) >= 0) f.isNew = true; }); setFeedback(d); };
+  var fail = function (err) { b.disabled = false; setMsg('fbMsg', 'bad', err.message); };
+  if (b.dataset.fbApply) {
+    if (!confirm('Đánh dấu góp ý này đã áp dụng? Người gửi được cộng +' + FB.data.points + ' điểm ngay.')) return;
+    b.disabled = true;
+    call('applyFeedback', TOKEN, b.dataset.fbApply).then(done).catch(fail);
+  } else if (b.dataset.fbUndo) {
+    if (!confirm('Bỏ đánh dấu áp dụng? Điểm đã cộng cho người gửi sẽ bị huỷ.')) return;
+    b.disabled = true;
+    call('unapplyFeedback', TOKEN, b.dataset.fbUndo).then(done).catch(fail);
+  }
+});
+</script>
