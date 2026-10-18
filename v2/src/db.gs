@@ -261,6 +261,33 @@ function updateRecord_(name, key, patch, opts) {
   });
 }
 
+/**
+ * Xoá một dòng theo khoá. Chỉ dùng cho dòng nối nhập nhầm (ví dụ giao task nhầm người); bảng chính không xoá dòng.
+ * opts.action và opts.actorId: ghi Nhật ký các cột của dòng bị xoá (giá trị mới để trống).
+ */
+function deleteRecord_(name, key, opts) {
+  opts = opts || {};
+  return withLock_(function () {
+    var def = tableDef_(name), sh = sheet_(name);
+    var values = sh.getDataRange().getValues();
+    var header = values[0];
+    var want = keyString_(def, normalizeKey_(def, key));
+    for (var r = 1; r < values.length; r++) {
+      var one = rowsToRecords_(def, [header, values[r]])[0];
+      if (!one || keyString_(def, one) !== want) continue;
+      sh.deleteRow(r + 1);
+      delete memo_[name];
+      if (opts.action) {
+        var changes = def.names.filter(function (n) { return one[n] !== '' && one[n] !== null && one[n] !== false; })
+          .map(function (n) { return { column: n, oldValue: one[n], newValue: '' }; });
+        writeAudit_({ actorId: opts.actorId, action: opts.action, table: name, rowId: rowLabel_(def, one) }, changes);
+      }
+      return one;
+    }
+    throw new Error('Không tìm thấy dòng ' + want.split('\u0001').join(' / ') + ' trong tab ' + def.name + '.');
+  });
+}
+
 function pick_(rec, names) {
   var o = {};
   names.forEach(function (n) { o[n] = rec[n]; });

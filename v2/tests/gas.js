@@ -58,6 +58,7 @@ class FakeSheet {
   getMaxRows() { return this.maxRows; }
   getMaxColumns() { return this.maxCols; }
   insertRowsAfter(_after, n) { this.maxRows += n; }
+  deleteRow(row) { this.data.splice(row - 1, 1); }
   insertColumnsAfter(_after, n) { this.maxCols += n; }
   getRange(row, col, rows = 1, cols = 1) { return new FakeRange(this, row, col, rows, cols); }
   getDataRange() { return this.getRange(1, 1, Math.max(1, this.getLastRow()), Math.max(1, this.getLastColumn())); }
