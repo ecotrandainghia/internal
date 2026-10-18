@@ -1,0 +1,166 @@
+<script>
+/* Trang Cộng điểm (BOD): chọn hoạt động, tick người, bấm Cộng điểm. Cột bên phải tóm tắt và các lần vừa cộng (huỷ được). */
+var PT = { flash: '', data: null, act: '', other: false, otherName: '', otherPts: '', event: '', dept: '', q: '', sel: {}, open: {} };
+
+PAGES.points = function (main) {
+  PT.data = null; PT.sel = {}; PT.open = {};
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Cộng điểm</h1><p class="lead" id="ptLead">Chọn hoạt động rồi tick những người được cộng.</p></div>' +
+    '<button type="button" class="btn ghost" data-pt="scale">Thang điểm</button></div><div id="ptBody">' + loadingHtml() + '</div></div>';
+  call('pointsPage', TOKEN).then(function (d) { if (currentPage() === 'points') { PT.data = d; renderPoints(); } })
+    .catch(function (err) { if ($('ptBody')) $('ptBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+};
+
+function manualActs() { return PT.data.activities.filter(function (a) { return !a.auto; }); }
+function chosenAct() { return manualActs().filter(function (a) { return a.id === PT.act; })[0] || null; }
+function chosenIds() { return Object.keys(PT.sel).filter(function (id) { return PT.sel[id]; }); }
+
+function renderPoints() {
+  var d = PT.data;
+  if (!$('ptBody')) return;
+  if (d.term) $('ptLead').textContent = 'Nhiệm kỳ ' + d.term.label + (d.term.phaseLabel ? ' · ' + d.term.phaseLabel : '') + '. Chọn hoạt động rồi tick những người được cộng.';
+  if (PT.act && !chosenAct()) PT.act = '';
+  var chips = manualActs().map(function (a) {
+    return '<button type="button" class="chip" data-pt-act="' + esc(a.id) + '" aria-pressed="' + (!PT.other && PT.act === a.id) + '" title="' + esc(a.limit) + '">' + esc(a.name) + ' <span>+' + a.points + '</span></button>';
+  }).join('') + '<button type="button" class="chip" data-pt-act="other" aria-pressed="' + PT.other + '">Hoạt động khác</button>';
+  $('ptBody').innerHTML = (d.canAdd ? '' : '<div class="note plain"><span>' + (d.term ? 'Đang ở giai đoạn giao thoa nên chưa cộng điểm. Điểm chỉ tính ở GD1 và GD2.' : 'Chưa có nhiệm kỳ nào.') + '</span></div>') +
+    '<div class="pts-grid"><div class="pts-main">' +
+    '<section class="sec"><h2>1. Hoạt động</h2><div class="chips wrap">' + chips + '</div>' +
+    (PT.other ? '<div class="pts-other"><label class="field">Tên hoạt động<input id="ptOtherName" maxlength="150" value="' + esc(PT.otherName) + '"></label>' +
+      '<label class="field">Điểm mỗi người<input id="ptOtherPts" type="number" min="1" step="1" inputmode="numeric" value="' + esc(PT.otherPts) + '"></label></div>' +
+      '<p class="hint">Chỉ dùng cho hoạt động có một lần trong nhiệm kỳ. Hoạt động lặp lại thì thêm vào Thang điểm.</p>' : '') +
+    '<label class="field">Thuộc sự kiện (không bắt buộc)<select id="ptEvent"><option value="">Không thuộc sự kiện nào</option>' + d.events.map(function (e) {
+      return '<option value="' + esc(e.id) + '"' + (PT.event === e.id ? ' selected' : '') + '>' + esc(e.name) + '</option>';
+    }).join('') + '</select></label>' +
+    '<p class="hint">React, comment (seeding), góp ý được áp dụng và log vượt do app tự cộng, không chọn ở đây.</p></section>' +
+    '<section class="sec"><div class="sec-head"><h2>2. Chọn người</h2><div class="chips">' + ['', ].concat(d.depts).map(function (x) {
+      return '<button type="button" class="chip sm" data-pt-dept="' + esc(x) + '" aria-pressed="' + (PT.dept === x) + '">' + esc(x || 'Tất cả') + '</button>';
+    }).join('') + '</div></div>' +
+    '<div class="pts-tools"><label class="search">' + icon('search') + '<input type="search" id="ptFind" placeholder="Tìm tên" aria-label="Tìm người" value="' + esc(PT.q) + '"></label>' +
+    '<button type="button" class="btn ghost sm" data-pt="all">Chọn hết</button><button type="button" class="btn ghost sm" data-pt="none">Bỏ chọn</button></div>' +
+    '<div class="pts-people" id="ptPeople"></div></section></div>' +
+    '<aside class="pts-side" aria-label="Tóm tắt"><div id="ptSummary"></div><div class="sec"><h2>Vừa cộng</h2><div id="ptRecent"></div></div></aside></div>';
+  renderPeople(); renderSummary(); renderRecent();
+  if ($('ptOtherName')) {
+    $('ptOtherName').oninput = function () { PT.otherName = this.value; renderSummary(); };
+    $('ptOtherPts').oninput = function () { PT.otherPts = this.value; renderSummary(); };
+  }
+  $('ptEvent').onchange = function () { PT.event = this.value; renderSummary(); };
+  $('ptFind').oninput = function () { PT.q = this.value; renderPeople(); };
+}
+
+function shownPeople() {
+  var q = PT.q.trim().toLowerCase();
+  return PT.data.members.filter(function (m) { return (!PT.dept || m.dept === PT.dept) && (!q || m.name.toLowerCase().indexOf(q) >= 0); });
+}
+
+function renderPeople() {
+  var list = shownPeople();
+  $('ptPeople').innerHTML = list.length ? list.map(function (m) {
+    return '<label class="check pts-person"><input type="checkbox" data-pt-person="' + esc(m.id) + '"' + (PT.sel[m.id] ? ' checked' : '') + '>' +
+      '<span class="n">' + esc(m.name) + '</span><span class="d">' + esc([m.dept, m.subTeam].filter(String).join(' ')) + '</span><span class="p">' + m.points + ' điểm</span></label>';
+  }).join('') : '<p class="hint">Không có ai khớp.</p>';
+}
+
+function renderSummary() {
+  var a = chosenAct(), n = chosenIds().length, d = PT.data;
+  var name = PT.other ? PT.otherName.trim() : a ? a.name : '';
+  var pts = PT.other ? Number(PT.otherPts) : a ? a.points : 0;
+  var ev = d.events.filter(function (e) { return e.id === PT.event; })[0];
+  var ready = d.canAdd && name && pts > 0 && n;
+  $('ptSummary').innerHTML = '<div class="pts-sum"><small>Tóm tắt</small><b>' + esc(name || 'Chưa chọn hoạt động') + '</b>' +
+    (ev ? '<span>' + esc(ev.name) + '</span>' : '') +
+    '<div class="pts-big"><span><b>' + n + '</b> người</span><span><b>+' + (pts > 0 ? pts : 0) + '</b> điểm mỗi người</span></div>' +
+    '<button type="button" class="btn" data-pt="add"' + (ready ? '' : ' disabled') + '>Cộng điểm</button><span class="msg' + (PT.flash ? ' ok' : '') + '" id="ptMsg" role="status">' + esc(PT.flash || '') + '</span></div>';
+  PT.flash = '';
+}
+
+function agoText(ms) {
+  var s = (Date.now() - ms) / 1000;
+  if (s < 60) return 'vừa xong';
+  if (s < 3600) return Math.floor(s / 60) + ' phút trước';
+  if (s < 86400) return Math.floor(s / 3600) + ' giờ trước';
+  return fmtTime(ms) + ' ' + fmtDay(ms);
+}
+
+function renderRecent() {
+  var r = PT.data.recent;
+  $('ptRecent').innerHTML = r.length ? '<div class="list">' + r.map(function (g) {
+    var open = PT.open[g.key];
+    return '<div class="item batch' + (g.active ? '' : ' off') + '"><div class="t"><b>' + esc(g.activity) + '</b><small>' +
+      esc([g.event, g.active + '/' + g.entries.length + ' người', '+' + g.points, g.by, agoText(g.at)].filter(String).join(' · ')) + (g.source && g.source !== 'Cộng tay' ? ' · ' + esc(g.source) : '') + '</small></div>' +
+      '<div class="acts"><button type="button" class="btn ghost sm" data-pt-toggle="' + esc(g.key) + '" aria-expanded="' + !!open + '">' + (open ? 'Thu gọn' : 'Xem') + '</button>' +
+      (g.active ? '<button type="button" class="btn ghost sm danger" data-pt-cancel="' + esc(g.key) + '">Huỷ</button>' : '') + '</div>' +
+      (open ? '<ul class="batch-list">' + g.entries.map(function (e) {
+        return '<li class="' + (e.cancelled ? 'off' : '') + '"><span>' + esc(e.name) + (e.cancelled ? ' · đã huỷ' : '') + '</span>' +
+          (e.cancelled ? '' : '<button type="button" class="link-btn danger" data-pt-cancel-one="' + esc(e.id) + '">Huỷ</button>') + '</li>';
+      }).join('') + '</ul>' : '') + '</div>';
+  }).join('') + '</div>' : '<p class="hint">Chưa cộng điểm lần nào trong nhiệm kỳ này.</p>';
+}
+
+function ptCall(btn, fn, args, done) {
+  if (btn) btn.disabled = true;
+  if ($('ptMsg')) setMsg('ptMsg', '', 'Đang lưu…');
+  return call.apply(null, [fn, TOKEN].concat(args)).then(function (d) {
+    PT.data = d; if (done) done(); if (currentPage() === 'points') renderPoints();
+    if (!$('modal').hidden && $('scaleList')) renderScale();
+  }).catch(function (err) {
+    if (btn) btn.disabled = false;
+    if (!$('modal').hidden && $('scMsg')) setMsg('scMsg', 'bad', err.message); else if ($('ptMsg')) setMsg('ptMsg', 'bad', err.message); else alert(err.message);
+  });
+}
+
+/* ---------- Thang điểm ---------- */
+function renderScale() {
+  var list = PT.data.activities;
+  openModal('<h2 id="boxTitle">Thang điểm</h2><p class="hint" style="font-size:14px">Theo quy chế. Hoạt động mới phải công bố mức điểm trước khi diễn ra.</p>' +
+    '<div class="list" id="scaleList">' + list.map(function (a) {
+      return item(a.name, [a.limit, a.auto ? 'App tự cộng' : ''].filter(String).join(' · '), pill('+' + a.points, 'good') +
+        (a.auto ? '' : '<button type="button" class="btn ghost sm" data-pt-hide="' + esc(a.id) + '">Ẩn</button>'));
+    }).join('') + '</div>' +
+    '<form id="scForm" style="display:flex;flex-direction:column;gap:10px"><b style="font-weight:500">Thêm hoạt động</b>' +
+    '<label class="field">Tên hoạt động<input id="scName" required maxlength="150"></label>' +
+    '<div class="pts-other" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr)"><label class="field">Điểm<input id="scPts" type="number" min="1" step="1" inputmode="numeric" required></label>' +
+    '<label class="field">Giới hạn (không bắt buộc)<input id="scLimit" maxlength="100" placeholder="Ví dụ: 2 lần mỗi giai đoạn"></label></div>' +
+    '<span class="msg" id="scMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="scBtn">Thêm</button></div></form>');
+  $('scForm').onsubmit = function (e) {
+    e.preventDefault();
+    ptCall($('scBtn'), 'addActivity', [{ name: $('scName').value, points: Number($('scPts').value), limitNote: $('scLimit').value }]);
+  };
+}
+
+document.addEventListener('click', function (e) {
+  if (currentPage() !== 'points' || !PT.data) return;
+  var b = e.target.closest('[data-pt],[data-pt-act],[data-pt-dept],[data-pt-toggle],[data-pt-cancel],[data-pt-cancel-one],[data-pt-hide]');
+  if (!b) return;
+  if (b.dataset.ptAct) {
+    PT.other = b.dataset.ptAct === 'other'; PT.act = PT.other ? '' : b.dataset.ptAct;
+    return renderPoints();
+  }
+  if (b.dataset.ptDept !== undefined) { PT.dept = b.dataset.ptDept; document.querySelectorAll('[data-pt-dept]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.ptDept === PT.dept); }); return renderPeople(); }
+  if (b.dataset.ptToggle) { PT.open[b.dataset.ptToggle] = !PT.open[b.dataset.ptToggle]; return renderRecent(); }
+  if (b.dataset.ptCancel) {
+    var g = PT.data.recent.filter(function (x) { return x.key === b.dataset.ptCancel; })[0];
+    if (!g || !confirm('Huỷ ' + g.active + ' dòng cộng điểm “' + g.activity + '”? Việc huỷ được ghi vào Nhật ký.')) return;
+    return ptCall(b, 'cancelPoints', [g.entries.filter(function (x) { return !x.cancelled; }).map(function (x) { return x.id; })]);
+  }
+  if (b.dataset.ptCancelOne) { if (confirm('Huỷ dòng cộng điểm này?')) ptCall(b, 'cancelPoints', [[b.dataset.ptCancelOne]]); return; }
+  if (b.dataset.ptHide) return ptCall(b, 'hideActivity', [b.dataset.ptHide]);
+  var act = b.dataset.pt;
+  if (act === 'scale') renderScale();
+  else if (act === 'all') { shownPeople().forEach(function (m) { PT.sel[m.id] = true; }); renderPeople(); renderSummary(); }
+  else if (act === 'none') { PT.sel = {}; renderPeople(); renderSummary(); }
+  else if (act === 'add') {
+    var f = { activityId: PT.act, eventId: PT.event, memberIds: chosenIds() };
+    if (PT.other) f = { other: { name: PT.otherName, points: Number(PT.otherPts) }, eventId: PT.event, memberIds: chosenIds() };
+    var n = f.memberIds.length;
+    ptCall(b, 'addPoints', [f], function () { PT.sel = {}; PT.otherName = ''; PT.otherPts = ''; PT.flash = 'Đã cộng điểm cho ' + n + ' người.'; });
+  }
+});
+document.addEventListener('change', function (e) {
+  var c = e.target.closest('[data-pt-person]');
+  if (!c) return;
+  PT.sel[c.dataset.ptPerson] = c.checked;
+  renderSummary();
+});
+</script>

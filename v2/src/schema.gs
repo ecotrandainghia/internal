@@ -155,5 +155,26 @@ var DEFAULT_SETTINGS = [
   { key: 'offset_top_percent', value: '40', description: 'Lọt top bao nhiêu % bảng bù trừ thì được cấp certificate' },
   { key: 'not_done_after_hours', value: '24', description: 'Quá hạn bao nhiêu giờ mà chưa xác nhận thì task tính là Không làm' },
   { key: 'due_soon_days', value: '2', description: 'Còn bao nhiêu ngày tới hạn chót thì task hiện Sắp đến hạn' },
+  { key: 'react_activity_id', value: '', description: 'Mã hoạt động app tự cộng khi seeding ghi nhận react (app tự điền khi tạo thang điểm)' },
+  { key: 'comment_activity_id', value: '', description: 'Mã hoạt động app tự cộng khi seeding ghi nhận comment' },
+  { key: 'feedback_activity_id', value: '', description: 'Mã hoạt động app tự cộng khi góp ý được áp dụng' },
+  { key: 'log_extra_activity_id', value: '', description: 'Mã hoạt động app tự cộng cho mỗi buổi log vượt khi chốt sự kiện' },
   { key: 'google_client_id', value: '', description: 'Mã ứng dụng Google (OAuth Client ID) để đăng nhập bằng Google. Để trống là tắt đăng nhập bằng Google' }
+];
+
+/**
+ * Thang điểm mặc định theo quy chế (mục 5.5 tài liệu yêu cầu), thêm vào tab Hoạt động khi tab còn trống.
+ * auto: hoạt động app tự cộng (seeding, góp ý, log vượt); mã của chúng ghi vào Cài đặt <auto>_activity_id,
+ * và trang Cộng điểm không cho chọn tay để khỏi cộng hai lần. Log vượt tính theo buổi 90 phút: buổi 180 phút là 2 buổi, +40.
+ */
+var DEFAULT_ACTIVITIES = [
+  { name: 'React bài đăng trong vòng 48 giờ', points: 1, limit_note: 'Mỗi bài một lần', auto: 'react' },
+  { name: 'Comment bài đăng trong vòng 48 giờ', points: 2, limit_note: 'Mỗi bài một lần', auto: 'comment' },
+  { name: 'Làm staff ca ngắn (giờ ra chơi)', points: 3, limit_note: '' },
+  { name: 'Tham gia bonding', points: 5, limit_note: '' },
+  { name: 'Góp ý được đưa vào sử dụng', points: 10, limit_note: 'Tối đa 2 lần mỗi giai đoạn', auto: 'feedback' },
+  { name: 'Làm log vượt số buổi được giao cuối (mỗi buổi 90 phút)', points: 20, limit_note: 'Buổi 180 phút tính là 2 buổi', auto: 'log_extra' },
+  { name: 'Đại diện CLB tham gia cuộc thi', points: 40, limit_note: '' },
+  { name: 'Tham dự sự kiện của CLB hoặc của đối tác', points: 40, limit_note: '' },
+  { name: 'Làm staff 1 buổi (sự kiện lớn)', points: 50, limit_note: '' }
 ];

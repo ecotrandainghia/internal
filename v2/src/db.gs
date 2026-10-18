@@ -70,7 +70,9 @@ function ensureSchema_(force) {
   if (schemaChecked_ && !force) return;
   schemaChecked_ = true;
   var props = PropertiesService.getScriptProperties();
-  var signature = JSON.stringify(TABLES.map(function (t) { return [t.name, t.columns]; }));
+  // Đổi cấu trúc tab hoặc thêm dòng mặc định mới thì chạy lại
+  var signature = JSON.stringify([TABLES.map(function (t) { return [t.name, t.columns]; }),
+    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; })]);
   if (!force && props.getProperty(SCHEMA_PROP) === signature) return;
 
   withLock_(function () {
@@ -125,12 +127,19 @@ function protectTab_(sh) {
   if (p.canDomainEdit()) p.setDomainEdit(false);
 }
 
-/** Dòng có sẵn: các ban, các mức trong quy chế. Không ghi đè dòng đã có. */
+/** Dòng có sẵn: các ban, các mức trong quy chế, thang điểm. Không ghi đè dòng đã có. */
 function seedDefaults_() {
   if (!readTable_('departments').length) insertRecords_('departments', DEFAULT_DEPARTMENTS);
   var have = readTable_('settings').map(function (s) { return s.key; });
   var add = DEFAULT_SETTINGS.filter(function (s) { return have.indexOf(s.key) < 0; });
   if (add.length) insertRecords_('settings', add);
+  if (readTable_('activities').length) return;
+  var added = insertRecords_('activities', DEFAULT_ACTIVITIES.map(function (a) {
+    return { name: a.name, points: a.points, limit_note: a.limit_note, added_date: new Date(), is_active: true };
+  }));
+  DEFAULT_ACTIVITIES.forEach(function (a, i) {
+    if (a.auto && !getSetting_(a.auto + '_activity_id')) updateRecord_('settings', a.auto + '_activity_id', { value: added[i].activity_id });
+  });
 }
 
 /* ===================== Đọc ===================== */
@@ -262,6 +271,45 @@ function updateRecord_(name, key, patch, opts) {
 }
 
 /**
+ * Sửa nhiều dòng cùng tab trong một lần đọc. items: [{ key, patch }]. opts như updateRecord_ (ghi Nhật ký từng cột đổi).
+ * Thiếu dòng nào thì báo lỗi và không ghi gì. Trả về các bản ghi sau khi sửa.
+ */
+function updateRecords_(name, items, opts) {
+  opts = opts || {};
+  if (!items.length) return [];
+  return withLock_(function () {
+    var def = tableDef_(name), sh = sheet_(name);
+    var values = sh.getDataRange().getValues();
+    var header = values[0], rowOf = {};
+    for (var r = 1; r < values.length; r++) {
+      var one = rowsToRecords_(def, [header, values[r]])[0];
+      if (one) rowOf[keyString_(def, one)] = { index: r, rec: one };
+    }
+    var plan = items.map(function (it) {
+      var want = keyString_(def, normalizeKey_(def, it.key));
+      if (!rowOf[want]) throw new Error('Không tìm thấy dòng ' + want.split('\u0001').join(' / ') + ' trong tab ' + def.name + '.');
+      return { at: rowOf[want], patch: it.patch };
+    });
+    var out = [], audit = [];
+    plan.forEach(function (p) {
+      var before = p.at.rec, changes = diffRecord_(def, before, p.patch);
+      if (!changes.length) { out.push(before); return; }
+      var after = {};
+      Object.keys(before).forEach(function (k) { after[k] = before[k]; });
+      changes.forEach(function (c) { after[c.column] = c.newValue; });
+      validateRecord_(def, pick_(after, def.names));
+      sh.getRange(p.at.index + 1, 1, 1, header.length).setValues([recordToRow_(def, header, after, values[p.at.index])]);
+      p.at.rec = after;
+      out.push(after);
+      if (opts.action) audit.push({ rowId: rowLabel_(def, after), changes: changes });
+    });
+    delete memo_[name];
+    if (audit.length) writeAuditMany_(opts.actorId, opts.action, name, audit);
+    return out;
+  });
+}
+
+/**
  * Xoá một dòng theo khoá. Chỉ dùng cho dòng nối nhập nhầm (ví dụ giao task nhầm người); bảng chính không xoá dòng.
  * opts.action và opts.actorId: ghi Nhật ký các cột của dòng bị xoá (giá trị mới để trống).
  */
@@ -302,6 +350,15 @@ function writeAudit_(info, changes) {
   var tz = Session.getScriptTimeZone();
   var rows = auditEntries_(info, changes, function (d) { return Utilities.formatDate(d, tz, 'dd/MM/yyyy HH:mm'); });
   if (rows.length) insertRecords_('audit_log', rows);
+}
+
+/** Ghi Nhật ký cho nhiều dòng một lần. rows: [{ rowId, changes }]. */
+function writeAuditMany_(actorId, action, table, rows) {
+  var at = new Date(), tz = Session.getScriptTimeZone();
+  var fmt = function (d) { return Utilities.formatDate(d, tz, 'dd/MM/yyyy HH:mm'); };
+  var all = [];
+  rows.forEach(function (r) { all = all.concat(auditEntries_({ at: at, actorId: actorId, action: action, table: table, rowId: r.rowId }, r.changes, fmt)); });
+  if (all.length) insertRecords_('audit_log', all);
 }
 
 /* ===================== Cài đặt ===================== */
