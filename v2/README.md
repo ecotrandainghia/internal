@@ -102,6 +102,14 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Tab Tổng kết: khen thưởng top GD1, GD2, cả nhiệm kỳ (tổng GD1 + GD2, chỉ chính thức) và certificate (cấp vì đạt KPI, cấp nhờ bù trừ, chưa cấp). Danh sách được cấp có nút copy Họ tên, Ngày sinh (dd/mm/yyyy), SĐT và Ngày sinh + SĐT để dán vào sheet Đoàn.
 - Chụp kết quả và khoá: `snapshotRound_('round_1')` ghi dòng GD1 vào tab Kết quả giai đoạn, `snapshotRound_('round_2')` ghi dòng GD2 và Cả nhiệm kỳ (bước tải sheet đợt 2 và nút Kết thúc nhiệm kỳ ở bước 9 sẽ gọi). Trước lúc chụp, tab Tổng kết hiện kết quả tạm tính. Sau khi chụp, app chặn mở chốt sự kiện, sửa hoặc chấm task, xác nhận task, huỷ điểm thuộc giai đoạn đó. Task thuộc giai đoạn chứa hạn chót; sự kiện thuộc giai đoạn chứa lúc chốt.
 
+## Thông báo (Zalo và app trên điện thoại)
+
+- Mỗi người chọn nhận tin qua Zalo, qua app trên điện thoại hoặc cả hai (cột `notify_zalo`, `notify_app` ở tab Tài khoản, phải giữ ít nhất một). Mọi tin đi theo lựa chọn này; đường này lỗi thì đường kia vẫn gửi. Mỗi tin gửi một người là một dòng ở tab Thông báo, kể cả người chưa cài xong đường nào, để ai cũng xem lại được ở trang Thông báo (menu avatar, hoặc Cài đặt, Thông báo của tôi). Dòng cũ hơn `notify_keep_days` ngày (mặc định 30) bị xoá khi lịch nhắc hằng ngày chạy.
+- Zalo: BOD dán mã bot ở Cài đặt, Thông báo của CLB, Bot Zalo. Mã bot cất trong thuộc tính dự án `ZALO_BOT_TOKEN`, không ghi vào sheet; tên bot ghi ở Cài đặt `zalo_bot_name`. Mỗi tài khoản có một mã kết nối 6 ký tự ở tab Kết nối Zalo; nhắn mã cho bot rồi bấm Kiểm tra kết nối là xong. Đổi bot thì mọi người kết nối lại.
+- App trên điện thoại: bấm Bật trên máy này trong app đã thêm vào màn hình chính. Trang vỏ (`pwa/`) đăng ký nhận tin rồi gửi địa chỉ máy về, app ghi vào tab Thiết bị và bật luôn đường app. Tin đẩy được mã hoá theo chuẩn Web Push (`webpush.gs`, khoá VAPID tự tạo, cất trong thuộc tính `VAPID_PRIVATE_KEY`). Máy tắt thông báo thì lần gửi sau bị từ chối và app tự gỡ máy đó. Máy bật từ bản cũ (không có khoá mã hoá) hỏi nội dung qua `?tb=<mã máy>`.
+- Báo BOD: góp ý mới, thư UCV chờ duyệt (mặc định bật), NS seeding ghi nhận một bài (mặc định tắt); bật tắt ở Cài đặt, Thông báo của CLB, Báo cho BOD (dòng `notify_bod_*`). UCV luôn được báo kết quả duyệt thư.
+- BOD xem ai nhận qua đường nào, ai đã kết nối Zalo, có máy nào; đổi đường nhận giúp, gỡ kết nối nhầm, gửi thử cho một người hoặc mọi người.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.

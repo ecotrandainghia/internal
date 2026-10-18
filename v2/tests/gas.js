@@ -131,8 +131,19 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
     MailApp: { sendEmail: (to, subject, body) => { mails.push({ to, subject, body }); }, getRemainingDailyQuota: () => ctx.__quota },
     ScriptApp: {
       getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/app/exec' }),
-      getProjectTriggers: () => ctx.__triggers.map((h) => ({ getHandlerFunction: () => h })),
-      newTrigger: (h) => { const b = { timeBased: () => b, everyMinutes: () => b, create: () => { ctx.__triggers.push(h); } }; return b; }
+      getProjectTriggers: () => ctx.__triggers.map((h, i) => ({ getHandlerFunction: () => (typeof h === 'string' ? h : h.handler), getUniqueId: () => 'trg' + i })),
+      deleteTrigger: (t) => { const i = Number(t.getUniqueId().slice(3)); ctx.__triggers.splice(i, 1); },
+      newTrigger: (h) => {
+        const spec = { handler: h };
+        const b = { timeBased: () => b, everyMinutes: (n) => { spec.everyMinutes = n; return b; }, everyDays: (n) => { spec.everyDays = n; return b; },
+          atHour: (n) => { spec.hour = n; return b; }, nearMinute: (n) => { spec.minute = n; return b; }, inTimezone: () => b,
+          create: () => { ctx.__triggers.push(spec.everyMinutes || spec.hour === undefined ? h : spec); return { getUniqueId: () => 'trg' + (ctx.__triggers.length - 1) }; } };
+        return b;
+      }
+    },
+    ContentService: {
+      MimeType: { JSON: 'json' },
+      createTextOutput: (text) => { const o = { text, setMimeType: () => o }; return o; }
     },
     __quota: 100,
     __triggers: [],
@@ -203,7 +214,13 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
       computeDigest: (alg, s, charset) => Array.from(crypto.createHash(alg).update(String(s), charset || 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)),
       base64Encode: (bytes) => Buffer.from(bytes.map((b) => b & 255)).toString('base64'),
       base64Decode: (s) => Array.from(Buffer.from(s, 'base64')),
+      base64DecodeWebSafe: (s) => Array.from(Buffer.from(s, 'base64url')).map((b) => (b > 127 ? b - 256 : b)),
+      computeHmacSha256Signature: (value, key) => {
+        const buf = (x) => (typeof x === 'string' ? Buffer.from(x, 'utf8') : Buffer.from(x.map((b) => b & 255)));
+        return Array.from(crypto.createHmac('sha256', buf(key)).update(buf(value)).digest()).map((b) => (b > 127 ? b - 256 : b));
+      },
       newBlob: (bytes, type, name) => {
+        if (typeof bytes === 'string') bytes = Array.from(Buffer.from(bytes, 'utf8')).map((x) => (x > 127 ? x - 256 : x));
         const b = { bytes: Array.from(bytes), type, name };
         const o = { getBytes: () => b.bytes, getContentType: () => b.type, getName: () => b.name, setName: (n) => { b.name = n; return o; }, getSize: () => b.bytes.length };
         return o;

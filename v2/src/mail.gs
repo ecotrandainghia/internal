@@ -399,6 +399,7 @@ function saveMailRequest(token, f, submit, id) {
     rec.created_at = new Date(); rec.drafted_by = me.memberId;
     saved = insertRecords_('mail_requests', [rec], { termId: requireTerm_().term_id })[0];
   }
+  if (submit) alertBod_('mail', 'Thư chờ duyệt', me.user.name + ' vừa gửi “' + mailTitle_(saved) + '” chờ BOD duyệt. Mở app, trang Hộp thư để xem.');
   return { id: saved.request_id, files: stored.attachments, status: saved.status };
 }
 
@@ -528,8 +529,24 @@ function decideMailRequest(token, id, decision, note, edits) {
     updateRecord_('mail_requests', r.request_id, { status: status, review_note: note, reviewed_by: me.memberId, reviewed_at: new Date(), gmail_thread_id: threadId },
       { actorId: me.memberId, action: 'approve_mail' });
   });
+  notifyReviewResult_(id, decision, note, me.user.name, failed);
   if (failed) throw new Error('Gmail báo lỗi nên chưa làm được: ' + failed + '. Yêu cầu chuyển sang Lỗi.');
   return mailReview(token);
+}
+
+function mailTitle_(r) {
+  return String(r.subject || r.thread_subject || '').trim() || '(chưa có tiêu đề)';
+}
+
+/** Báo UCV kết quả duyệt thư của mình. Tin hỏng thì bỏ qua. */
+function notifyReviewResult_(id, decision, note, bodName, failed) {
+  try {
+    var r = requestOf_(id), title = '“' + mailTitle_(r) + '”', text;
+    if (failed) text = 'Thư ' + title + ' đã được ' + bodName + ' duyệt nhưng Gmail báo lỗi nên chưa gửi được. BOD sẽ xem lại.';
+    else if (decision === 'approved') text = 'Thư ' + title + ' đã được ' + bodName + ' duyệt và gửi đi.';
+    else text = 'Thư ' + title + (decision === 'needs_changes' ? ' cần sửa lại.' : ' không được duyệt.') + (note ? ' Ghi chú của BOD: ' + note.slice(0, 500) : '');
+    notifyQuietly_([{ memberId: r.drafted_by, title: decision === 'approved' && !failed ? 'Thư đã được duyệt' : 'Kết quả duyệt thư', body: text }]);
+  } catch (e) { /* bỏ qua */ }
 }
 
 /** Cài đặt > Hộp thư > Chữ ký: { on, html, error, editLink }. refresh: đọc lại từ Gmail. */
