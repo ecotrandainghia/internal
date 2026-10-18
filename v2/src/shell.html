@@ -56,7 +56,7 @@ function navItems() {
 }
 var APP_LINK = 'https://ecotrandainghia.github.io/internal/';
 
-/* Nhóm Cài đặt. Người không phải BOD chỉ thấy nhóm Của tôi. [mã, tên, biểu tượng, mô tả, các dòng [tên, mô tả, nút, việc]] */
+/* Nhóm Cài đặt. Mô tả dòng có thể là hàm khi cần ghi giá trị đang dùng. Người không phải BOD chỉ thấy nhóm Của tôi. [mã, tên, biểu tượng, mô tả, các dòng [tên, mô tả, nút, việc]] */
 var SETTINGS = [
   ['Của tôi', false, [
     ['account', 'Tài khoản của tôi', 'user', 'Ai cũng thấy phần này.', [['Ảnh đại diện', 'Hiện ở thanh bên và bảng điểm', 'Đổi ảnh', 'avatar'], ['Mật khẩu', 'Đổi mật khẩu đăng nhập của bạn', 'Đổi mật khẩu', 'password'], ['Giao diện', 'Sáng, tối hoặc theo cài đặt của máy', 'theme'], ['Dữ liệu ẩn danh', 'Cho CLB dùng dữ liệu của bạn ở dạng ẩn danh, không bắt buộc', 'consent'], ['Fanpage để seeding', 'Page bạn dùng để react, comment vẫn được cộng điểm', 'Sửa', 'fanpages'], ['Hướng dẫn', 'Xem lại hướng dẫn cài app và tour giới thiệu', 'Xem lại', 'guide']]],
@@ -67,7 +67,7 @@ var SETTINGS = [
     ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu sheet đăng ký log', 'Sửa', 'log-files'], ['Sheet đăng ký log', 'Mỗi sự kiện một sheet, tạo hoặc đổi ở trang Quản lý log', 'Mở', 'log-page'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở', 'seeding-page'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa', 'pinned-links']]],
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở', 'contacts'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa', 'mail-signature'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem', 'mail-quota']]],
     ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển; Kết thúc nhiệm kỳ', 'Tải lên', 'roster'], ['Phân quyền nhân sự', 'NS phụ trách ban, seeding, sinh nhật; BOD gán tay từng người', 'Sửa', 'staff-roles'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên', 'label-sheet'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai, đổi mật khẩu chung', 'Mở', 'reset-password'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Sửa', 'google-login'], ['Lịch sinh nhật', 'Nhắc sinh nhật và Google Lịch ghi sinh nhật', 'Mở', 'birthday-page']]],
-    ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', 'Hình trang trí ở trang chủ và màn đăng nhập', 'Đổi'], ['Ảnh nền đăng nhập', 'Đang dùng nền xanh mặc định', 'Đổi ảnh']]],
+    ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', seasonRowText, 'Đổi', 'season'], ['Ảnh nền đăng nhập', loginBgRowText, 'Đổi ảnh', 'login-bg']]],
     ['system', 'Hệ thống', 'chart', '', [['Tình trạng hệ thống', 'Việc tự chạy lúc 2 giờ sáng, lỗi báo qua Zalo hoặc app', 'Xem'], ['Sao lưu và khôi phục', 'Tự sao lưu mỗi đêm, giữ 30 bản', 'Khôi phục'], ['Nhật ký', 'Ai sửa gì, lúc nào', 'Xem'], ['Tab dữ liệu', 'Các tab đã khoá và tab chỉ để xem', 'Xem']]]]]
 ];
 
@@ -161,7 +161,7 @@ function showLogin() {
   $('app').hidden = true;
   var google = wrapper && GOOGLE_CLIENT_ID;
   $('screen').hidden = false;
-  $('screen').innerHTML = '<div class="login"><form class="login-card" id="loginForm">' +
+  $('screen').innerHTML = '<div class="login"><div class="login-art">' + seasonDecor() + '<span class="logo" aria-hidden="true">' + icon('leaf') + '</span></div><div class="login-side"><form class="login-card" id="loginForm">' +
     '<div class="brand"><span class="logo" aria-hidden="true">' + icon('leaf') + '</span><b>CLB ECO</b></div>' +
     '<div><h1>Đăng nhập</h1><p class="hint">Mọi thành viên CLB đều đăng nhập được, bằng email đã ghi trong danh sách thành viên.</p></div>' +
     (google ? '<button type="button" class="gbtn" id="googleBtn">' + G_LOGO + 'Đăng nhập bằng Google</button><div class="or">hoặc dùng mật khẩu</div>' : '') +
@@ -170,7 +170,8 @@ function showLogin() {
     '<button class="btn" id="loginBtn">Đăng nhập</button><span class="msg" id="loginMsg" role="status"></span>' +
     '<p class="hint">Lần đầu đăng nhập, dùng mật khẩu chung của CLB (hỏi ban nhân sự), rồi đổi mật khẩu riêng trong Cài đặt nếu muốn.</p>' +
     '<p class="hint">App ghi nhớ đăng nhập trên máy này. Dùng máy chung thì nhớ bấm Đăng xuất. Quên mật khẩu thì nhờ một BOD đặt lại.</p>' +
-    '</form></div>';
+    '</form></div></div>';
+  loadLoginBg();
   if ($('googleBtn')) $('googleBtn').onclick = function () { toWrapper({ eco: 'dang-nhap-google', clientId: GOOGLE_CLIENT_ID }); };
   $('loginForm').onsubmit = function (e) {
     e.preventDefault();
@@ -374,6 +375,7 @@ function closeMenu() { $('meMenu').hidden = true; $('menuScrim').hidden = true; 
 
 /* ---------- Pop-up Cài đặt ---------- */
 var openSection = null;
+function rowText(r) { return typeof r[1] === 'function' ? r[1]() : r[1]; }
 function visibleGroups() { return SETTINGS.filter(function (g) { return !g[1] || USER.isBod; }); }
 function settingControl(r) {
   if (r[2] === 'theme') return themeSeg();
@@ -385,7 +387,7 @@ function renderSettings(query) {
   var all = [].concat.apply([], groups.map(function (g) { return g[2]; }));
   var sec = all.filter(function (s) { return s[0] === openSection; })[0] || all[0];
   var nav = groups.map(function (g) {
-    var items = g[2].filter(function (s) { return !q || (s[1] + ' ' + s[4].map(function (r) { return r[0] + ' ' + r[1]; }).join(' ')).toLowerCase().indexOf(q) >= 0; });
+    var items = g[2].filter(function (s) { return !q || (s[1] + ' ' + s[4].map(function (r) { return r[0] + ' ' + rowText(r); }).join(' ')).toLowerCase().indexOf(q) >= 0; });
     if (!items.length) return '';
     return '<div class="set-group">' + esc(g[0]) + '</div>' + items.map(function (s) {
       return '<button class="set-item" type="button" data-sec="' + s[0] + '"' + (s === sec ? ' aria-current="true"' : '') + '>' + icon(s[2]) + '<span>' + esc(s[1]) + '</span></button>';
@@ -394,7 +396,7 @@ function renderSettings(query) {
   var body = '<button class="icon-btn only-phone" type="button" data-act="back" aria-label="Quay lại">' + icon('back') + '</button>' +
     '<h2 id="setTitle">' + esc(sec[1]) + '</h2>' + (sec[3] ? '<p class="lead">' + esc(sec[3]) + '</p>' : '') +
     sec[4].map(function (r) {
-      return '<div class="row"><div><b>' + esc(r[0]) + '</b><small>' + esc(r[1]) + '</small></div>' + settingControl(r) + '</div>';
+      return '<div class="row"><div><b>' + esc(r[0]) + '</b><small>' + esc(rowText(r)) + '</small></div>' + settingControl(r) + '</div>';
     }).join('');
   var box = $('settings').querySelector('.dialog');
   if (!box) {
@@ -454,6 +456,8 @@ document.addEventListener('click', function (e) {
   else if (act === 'label-sheet') openLabelSheet();
   else if (act === 'reset-password') openResetPassword();
   else if (act === 'google-login') openGoogleLogin();
+  else if (act === 'season') openSeasonBox();
+  else if (act === 'login-bg') openLoginBgBox();
   else if (act === 'close-modal') closeModal();
   else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); openMyNotify(); }
   else if (act === 'my-notify') openMyNotify();

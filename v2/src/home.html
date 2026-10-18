@@ -49,7 +49,7 @@ function item(title, meta, right) {
 function goButton(pageId, text) { return '<button type="button" class="btn ghost sm" data-page="' + pageId + '">' + esc(text) + '</button>'; }
 
 PAGES.home = function (main) {
-  main.innerHTML = '<div class="home"><section class="hello" aria-label="Lời chào"><small>Chào ' + dayPart() + ',</small><h1>' + esc(USER.name.split(' ').pop()) + ' ơi!</h1></section>' +
+  main.innerHTML = '<div class="home"><section class="hello" aria-label="Lời chào">' + seasonDecor() + '<small>Chào ' + dayPart() + ',</small><h1>' + esc(USER.name.split(' ').pop()) + ' ơi!</h1></section>' +
     '<div id="homeBody">' + loadingHtml() + '</div></div>';
   call('homeData', TOKEN).then(function (d) { if (currentPage() === 'home' && $('homeBody')) renderHome(d); })
     .catch(function (err) { if ($('homeBody')) $('homeBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });

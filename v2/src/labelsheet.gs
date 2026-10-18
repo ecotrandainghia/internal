@@ -92,7 +92,7 @@ function applyLabelSheet(token, req) {
     var copy = SpreadsheetApp.openById(DriveApp.getFileById(plan.src.ss.getId()).makeCopy('[ECO] Bản sao ' + v.typeName + ' ' + plan.termId, rosterFolder_()).getId());
     var added = ch.adds.length ? insertRecords_('member_labels', ch.adds, { termId: plan.termId }) : [];
     writeUndo_(copy, { labels: { added: added.map(function (l) { return l.label_id; }), ended: ch.ends, edits: ch.edits.map(function (e) { return { id: e.key, detail: e.old }; }) } });
-    if (ch.ends.length) updateRecords_('member_labels', ch.ends.map(function (id) { return { key: id, patch: { end_date: now } }; }), { actorId: me.memberId, action: 'upload_sheet' });
+    if (ch.ends.length) updateRecords_('member_labels', ch.ends.map(function (id) { return { key: id, patch: { end_date: new Date(now.getTime() - 1) } }; }), { actorId: me.memberId, action: 'upload_sheet' });
     if (ch.edits.length) updateRecords_('member_labels', ch.edits.map(function (e) { return { key: e.key, patch: e.patch }; }), { actorId: me.memberId, action: 'upload_sheet' });
     var text = v.added.length + ' mới vào, ' + v.left.length + ' rời ' + v.typeName + ', ' + v.kept + ' giữ nguyên';
     var up = insertRecords_('roster_uploads', [{ term_id: plan.termId, sheet_type: plan.type, batch_type: '', uploaded_at: now, uploaded_by: me.memberId,

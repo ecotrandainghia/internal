@@ -163,6 +163,12 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Nối người bằng Email của thành viên đang ở CLB; Họ và tên phải khớp (bỏ dấu giống nhau cũng được), không thì báo dòng lỗi.
 - Như sheet thành viên: chép bản sheet kèm tab `_undo`, ghi Lần tải sheet và Nhật ký; hoàn tác lần tải mới nhất của mỗi loại sheet trong 7 ngày.
 
+## Giao diện theo mùa và ảnh nền đăng nhập
+
+- BOD mở từ Cài đặt, Giao diện theo mùa. Chọn một trong 12 chủ đề (4 mùa, 8 ngày lễ, chuyển từ app cũ) hoặc Không dùng; hình trang trí hiện ở khung chào trang chủ và màn đăng nhập, cả CLB thấy giống nhau. Không đổi màu app.
+- Ảnh nền đăng nhập: BOD chọn ảnh, app thu nhỏ còn rộng 1600 px và lưu JPEG vào thư mục Drive `Ảnh nền đăng nhập`; đổi ảnh thì ảnh cũ vào thùng rác. Máy giữ ảnh và chỉ tải lại khi BOD đổi ảnh.
+- Cài đặt dùng: `season_theme`, `login_bg_file_id`, `login_bg_version`. Mỗi lần đổi ghi Nhật ký.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
