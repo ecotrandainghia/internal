@@ -319,7 +319,8 @@ function renderNav() {
 function renderPage() {
   var cur = currentPage(), item = navItems().filter(function (x) { return x[0] === cur; })[0];
   $('topTitle').textContent = item[1];
-  $('main').innerHTML = '<h1>' + esc(item[1]) + '</h1><p class="lead">Khung app mới. Nội dung trang này làm ở bước ' + item[3] + ' của kế hoạch.</p><div class="todo">Chưa có nội dung</div>';
+  if (PAGES[cur]) PAGES[cur]($('main'));
+  else $('main').innerHTML = '<h1>' + esc(item[1]) + '</h1><p class="lead">Khung app mới. Nội dung trang này làm ở bước ' + item[3] + ' của kế hoạch.</p><div class="todo">Chưa có nội dung</div>';
   renderNav();
   closeSide();
 }
@@ -408,6 +409,7 @@ document.addEventListener('click', function (e) {
   else if (act === 'logout') logOut();
   else if (act === 'password') openPasswordBox();
   else if (act === 'close-modal') closeModal();
+  else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); }
   else if (act === 'todo') alert('Phần này làm ở các bước sau của kế hoạch.');
 });
 $('meBtn').addEventListener('click', function () { $('meMenu').hidden ? openMenu(this) : closeMenu(); });
@@ -424,6 +426,7 @@ applyTheme(getTheme());
 
 /* Mở app: máy đã nhớ phiên thì vào thẳng, không thì hiện màn đăng nhập. Mở trong trang vỏ thì chờ trang vỏ gửi phiên. */
 (function boot() {
+  $('screen').innerHTML = '<div class="splash">' + loadingHtml() + '</div>';
   var t = savedToken();
   if (t) return openSession(t);
   if (window.top === window) return showLogin();
