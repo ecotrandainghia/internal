@@ -8,7 +8,7 @@
 var SIGNUP_TAB = 'Đăng ký';
 var OLD_TOOL_TAB = 'Đăng ký log';
 var SIGNUP_PLAN_TAB = 'Kế hoạch';
-var SIGNUP_FOLDER = '[ECO] Đăng ký log';
+var SIGNUP_FOLDER = '[APP] Đăng ký log';
 var SIGNUP_PLAN_STATUS = ['Chưa có kế hoạch', 'Chưa làm', 'Dang dở', 'Hoàn thành', 'Đã hủy'];
 var SIGNUP_HEADERS = {
   name: ['hovaten', 'hoten', 'ten', 'tenthanhvien'], dept: ['ban'], className: ['lop'],
@@ -213,7 +213,7 @@ function signupTab_(ss) {
   return { sheet: tab || ss.getSheets()[0], oldTool: !!tab };
 }
 
-/** Thư mục lưu sheet: link ở Cài đặt, không có thì thư mục "[ECO] Đăng ký log" trong Drive của CLB (chưa có thì tạo). */
+/** Thư mục lưu sheet: link ở Cài đặt, không có thì thư mục "[APP] Đăng ký log" trong Drive của CLB (chưa có thì tạo). */
 function signupFolder_() {
   var url = String(getSetting_('log_folder_url', '')).trim();
   if (url) {
@@ -295,7 +295,7 @@ function logFiles(token) {
   return { templateUrl: String(getSetting_('log_template_url', '')), folderUrl: String(getSetting_('log_folder_url', '')) };
 }
 
-/** Lưu link file mẫu và thư mục. Để trống là dùng bảng app tự kẻ, lưu vào thư mục [ECO] Đăng ký log. */
+/** Lưu link file mẫu và thư mục. Để trống là dùng bảng app tự kẻ, lưu vào thư mục [APP] Đăng ký log. */
 function saveLogFiles(token, f) {
   var me = requireUser_(token, 'bod');
   f = f || {};
@@ -319,7 +319,7 @@ function createSignupSheet(token, eventId) {
   var names = eventSessionNames_(ev.event_id);
   if (!names.length) throw new Error('Sự kiện chưa có buổi log nào. Tạo các buổi dự kiến trước, mỗi buổi là một cột trong sheet.');
   var order = signupPeople_(me.data, x.term.term_id);
-  var title = '[ECO] Đăng ký log · ' + ev.name, folder = signupFolder_();
+  var title = '[APP] Đăng ký log · ' + ev.name, folder = signupFolder_();
   var tpl = String(getSetting_('log_template_url', '')).trim(), ss, file;
   if (tpl) {
     var src = openSheetByUrl_(tpl, 'file mẫu');

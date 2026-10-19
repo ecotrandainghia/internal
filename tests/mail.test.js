@@ -59,7 +59,7 @@ test('UCV soạn thư: lưu nháp, tệp và ảnh vào Drive, gửi duyệt; ch
   assert.deepEqual(r.files.map((f) => f.name), ['moi.pdf']);
   const rec = app.findRecord_('mail_requests', r.id);
   assert.match(rec.body, /src="drive:blob\w+"/);
-  assert.equal(Object.values(app.__blobs).filter((b) => b.folder === 'ECO - Đính kèm mail').length, 2);
+  assert.equal(Object.values(app.__blobs).filter((b) => b.folder === '[APP] Đính kèm mail').length, 2);
   // xem lại: ảnh hiện được
   assert.match(plain(app.mailRequest(ucv, r.id)).body, /data:image\/png;base64,/);
   assert.throws(() => app.saveMailRequest(ucv, { action: 'compose', to: '', subject: 'Thư mời', body: 'x' }, true, r.id), /người nhận/);

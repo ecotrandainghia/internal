@@ -370,7 +370,7 @@ function applyRoster(token, req) {
       addedMembers: ch.members.map(function (m) { return m.member_id; }), addedAccounts: ch.accounts.map(function (a) { return a.member_id; }),
       addedTerms: ch.termAdds.map(function (r) { return r.member_id; }), term: termRow, termCreated: !termRow
     };
-    var copy = SpreadsheetApp.openById(DriveApp.getFileById(plan.src.ss.getId()).makeCopy('[ECO] Bản sao danh sách ' + plan.termId + ' ' + plan.kind, rosterFolder_()).getId());
+    var copy = SpreadsheetApp.openById(DriveApp.getFileById(plan.src.ss.getId()).makeCopy('[APP] Bản sao danh sách ' + plan.termId + ' ' + plan.kind, rosterFolder_()).getId());
     writeUndo_(copy, undo);
     if (ch.members.length) insertRecords_('members', ch.members);
     if (ch.memberEdits.length) updateRecords_('members', ch.memberEdits, { actorId: me.memberId, action: 'edit_member' });

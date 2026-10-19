@@ -2,7 +2,7 @@
 
 Làm một lần duy nhất, khoảng 20 phút. Đăng nhập **tài khoản Google của CLB** trước khi bắt đầu. Mọi bước bên dưới đều làm bằng tài khoản này.
 
-Mã của app nằm ở một dự án Apps Script riêng. File dữ liệu "[ECO] Dữ liệu app" do app tự tạo ở lần cài đặt đầu tiên. Không cần tạo Google Sheet trước, và trong Google Sheet không có menu nào của app.
+Mã của app nằm ở một dự án Apps Script riêng. File dữ liệu "[APP] Dữ liệu app" do app tự tạo ở lần cài đặt đầu tiên. Không cần tạo Google Sheet trước, và trong Google Sheet không có menu nào của app.
 
 Nếu dự án Apps Script đã có sẵn và GitHub đã có secret `SCRIPT_ID`, `DEPLOYMENT_ID`, `CLASPRC_JSON` (ví dụ đang chạy bản trước của app), bỏ qua bước 1 đến 3 và xem mục **Chuyển từ bản trước** ở cuối.
 
@@ -43,7 +43,7 @@ Lưu ý: Apps Script giữ tối đa 200 phiên bản. Nếu GitHub báo lỗi �
 2. Chỉ người đọc được hộp thư của tài khoản CLB mới cài được. Nếu trang hiện ô mã, bấm **Gửi mã**, mở hộp thư của tài khoản CLB lấy mã 6 số rồi nhập vào.
 3. Điền họ tên, email, mật khẩu của bạn (tài khoản BOD đầu tiên). Dùng đúng email bạn sẽ ghi trong danh sách thành viên.
 4. Điền **mật khẩu chung của CLB**. Thành viên chưa tự đổi mật khẩu sẽ đăng nhập bằng mật khẩu này. Đổi được sau ở **Cài đặt → Tài khoản và phân quyền → Đặt lại mật khẩu**.
-5. Bấm **Cài đặt**. App tạo file dữ liệu "[ECO] Dữ liệu app" trên Drive và cài các việc tự chạy. Xong thì đăng nhập bằng email, mật khẩu vừa điền.
+5. Bấm **Cài đặt**. App tạo file dữ liệu "[APP] Dữ liệu app" trên Drive và cài các việc tự chạy. Xong thì đăng nhập bằng email, mật khẩu vừa điền.
 
 Nếu app báo cần cấp quyền (thường sau khi bản mới dùng thêm dịch vụ của Google, ví dụ Lịch, Gmail), mở dự án trong Apps Script, chọn hàm `sendSetupCode` ở thanh trên cùng, bấm **Chạy** rồi **Cho phép** như bước 3.4. Hàm này chỉ gửi một mã vào hộp thư CLB; app đã cài thì nó báo "đã được cài đặt rồi", không sao cả.
 

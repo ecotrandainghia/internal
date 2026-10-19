@@ -7,7 +7,7 @@
  */
 
 var SEEDING_FOLDER = 'Bằng chứng seeding';
-var SEEDING_FILE = '[ECO] Bằng chứng seeding ';
+var SEEDING_FILE = '[APP] Bằng chứng seeding ';
 var SEEDING_FILE_PROP = 'SEEDING_EVIDENCE_';
 var SEEDING_REMIND_HANDLER = 'runSeedingReminders';
 var SEEDING_REMIND_PROP = 'SEEDING_REMIND_UNTIL';
@@ -221,7 +221,7 @@ function previewSeeding(token, postId, reacts, comments) {
   return m;
 }
 
-/** Thư mục và file bằng chứng của nhiệm kỳ (chưa có thì tạo): "[ECO] Bằng chứng seeding 2627", hai tab phase_1, phase_2. */
+/** Thư mục và file bằng chứng của nhiệm kỳ (chưa có thì tạo): "[APP] Bằng chứng seeding 2627", hai tab phase_1, phase_2. */
 function evidenceFile_(termId) {
   var props = PropertiesService.getScriptProperties(), id = props.getProperty(SEEDING_FILE_PROP + termId);
   if (id) { try { return SpreadsheetApp.openById(id); } catch (e) { /* file bị xoá thì tạo lại */ } }
