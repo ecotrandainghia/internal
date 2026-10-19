@@ -131,13 +131,14 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
     MailApp: { sendEmail: (to, subject, body) => { mails.push({ to, subject, body }); }, getRemainingDailyQuota: () => ctx.__quota },
     ScriptApp: {
       getService: () => ({ getUrl: () => 'https://script.google.com/macros/s/app/exec' }),
-      getProjectTriggers: () => ctx.__triggers.map((h, i) => ({ getHandlerFunction: () => (typeof h === 'string' ? h : h.handler), getUniqueId: () => 'trg' + i })),
-      deleteTrigger: (t) => { const i = Number(t.getUniqueId().slice(3)); ctx.__triggers.splice(i, 1); },
+      getProjectTriggers: () => ctx.__triggers.map((h) => ({ getHandlerFunction: () => (typeof h === 'string' ? h : h.handler),
+        getUniqueId: () => (typeof h === 'string' ? 'trg-' + h : h.id), __ref: h })),
+      deleteTrigger: (t) => { const i = ctx.__triggers.indexOf(t.__ref); if (i >= 0) ctx.__triggers.splice(i, 1); },
       newTrigger: (h) => {
-        const spec = { handler: h };
+        const spec = { handler: h, id: 'trg' + (ctx.__trgSeq = (ctx.__trgSeq || 0) + 1) };
         const b = { timeBased: () => b, everyMinutes: (n) => { spec.everyMinutes = n; return b; }, everyDays: (n) => { spec.everyDays = n; return b; },
           atHour: (n) => { spec.hour = n; return b; }, nearMinute: (n) => { spec.minute = n; return b; }, inTimezone: () => b,
-          create: () => { ctx.__triggers.push(spec.everyMinutes || spec.hour === undefined ? h : spec); return { getUniqueId: () => 'trg' + (ctx.__triggers.length - 1) }; } };
+          create: () => { ctx.__triggers.push(spec.everyMinutes || spec.hour === undefined ? h : spec); return { getUniqueId: () => spec.id }; } };
         return b;
       }
     },

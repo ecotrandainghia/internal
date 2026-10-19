@@ -99,6 +99,11 @@ function notifyQuietly_(items) {
   try { return notifyMembers_(items); } catch (e) { return { sent: 0, failed: [{ why: String(e.message || e) }] }; }
 }
 
+/** Lịch nhắc hằng ngày (nhắc task, đọc tin Zalo, xoá tin cũ) phải có sẵn khi đã có người cài nhận tin. */
+function ensureRemindersQuietly_() {
+  try { ensureReminderTriggers_(); } catch (e) { /* lần sau cài lại */ }
+}
+
 /** Mã TV của BOD đang ở CLB (theo nhiệm kỳ mới nhất của từng người). */
 function bodIds_(data) {
   data = data || peopleData_();
@@ -183,6 +188,7 @@ function saveMyChannels(token, ch) {
   ch = ch || {};
   if (!ch.zalo && !ch.app) throw new Error('Bạn cần giữ ít nhất một đường nhận: Zalo hoặc app.');
   withLock_(function () { updateRecord_('accounts', me.memberId, { notify_zalo: !!ch.zalo, notify_app: !!ch.app }); });
+  ensureRemindersQuietly_();
   return myNotifyFor_(requireUser_(token));
 }
 
@@ -190,6 +196,7 @@ function saveMyChannels(token, ch) {
 function saveSelfRemind(token, on) {
   var me = requireUser_(token);
   withLock_(function () { updateRecord_('accounts', me.memberId, { self_remind: !!on }); });
+  ensureRemindersQuietly_();
   return myNotifyFor_(requireUser_(token));
 }
 
@@ -220,6 +227,7 @@ function saveDevice(token, info) {
     else { rec.endpoint = endpoint; insertRecords_('devices', [rec]); }
     updateRecord_('accounts', me.memberId, { notify_app: true });
   });
+  ensureRemindersQuietly_();
   return myNotifyFor_(requireUser_(token));
 }
 
@@ -281,6 +289,7 @@ function clubNotifyFor_() {
 /** Cài đặt > Thông báo của CLB: ai nhận qua đường nào, bot Zalo, tin báo BOD. */
 function clubNotify(token) {
   requireUser_(token, 'bod');
+  ensureRemindersQuietly_();
   return clubNotifyFor_();
 }
 
