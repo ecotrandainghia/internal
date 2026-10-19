@@ -708,4 +708,24 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .dp-table td:nth-child(5) { grid-row: 1; grid-column: 3; }
   .dp-table td:nth-child(2), .dp-table td:nth-child(3) { grid-column: 1 / -1; }
 }
+/* Cửa sổ Cài đặt giữ kiểu bản phác: chữ nhỏ, nét nhẹ. */
+#settings .dialog { font-size: 14px; }
+#settings svg { stroke-width: 1.75; }
+#settings .set-nav { border-right-color: var(--line-soft); }
+#settings .set-group { padding: 10px 12px 4px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+#settings .set-item { font-size: 14px; }
+#settings .set-item[aria-current="true"] { background: var(--sunken); color: var(--ink); font-weight: 500; }
+#settings .row { border-bottom-color: var(--line-soft); }
+#settings .row small { font-size: 12px; }
+#settings .btn-outline { font-size: 14px; }
+#settings .btn { font-size: 14px; }
+#settings .seg { display: inline-flex; flex-wrap: nowrap; gap: 2px; background: var(--sunken); border-radius: 999px; padding: 2px; margin-left: auto; }
+#settings .seg button { border: 0; background: none; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--ink-2); }
+#settings .seg button svg { display: none; }
+#settings .seg button:hover { color: var(--ink); }
+#settings .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+#settings .hint { font-size: 12px; }
+#settings .msg { font-size: 13px; }
+#settings .field { font-size: 13px; color: var(--ink-2); }
+#settings .lead { font-size: 14px; }
 </style>
