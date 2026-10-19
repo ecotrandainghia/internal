@@ -23,7 +23,21 @@ var ICONS = {
   close: 'M6 6l12 12M18 6L6 18',
   back: 'M15 6l-6 6 6 6',
   plus: 'M12 5v14M5 12h14',
-  cake: 'M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 5 0M12 12V8M12 5.5V5'
+  cake: 'M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 5 0M12 12V8M12 5.5V5',
+  inbox: 'M3 13l3-8h12l3 8M3 13v6h18v-6M3 13h5l1 2h6l1-2h5',
+  send: 'M4 12l16-8-6 16-3-7zM11 13l9-9',
+  archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  tag: 'M3 12V3h9l9 9-9 9zM7.5 7.5h.01',
+  attach: 'M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7',
+  reply: 'M10 8L4 13l6 5M4 13h11a5 5 0 0 1 5 5v1',
+  forward: 'M14 8l6 5-6 5M20 13H9a5 5 0 0 0-5 5v1',
+  edit: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
+  ext: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
+  spam: 'M12 3l9 4v5c0 5-4 8-9 9-5-1-9-4-9-9V7zM12 8v5M12 16h.01',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15 9.5h.01',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L12 6.3M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+  sheet: 'M4 3h16v18H4zM4 9h16M4 15h16M10 3v18'
 };
 function icon(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS[name] + '"/></svg>'; }
 function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -34,7 +48,7 @@ var NAV_BOD = [['home', 'Trang chủ', 'home', 4], ['task', 'Quản lý task', '
   ['mail', 'Hộp thư', 'mail', 6], ['feedback', 'Góp ý', 'chat', 6], ['members', 'Thành viên', 'users', 7]];
 var NAV_MEMBER = [['home', 'Trang chủ', 'home', 4], ['my-kpi', 'KPI của tôi', 'target', 7], ['ranking', 'Điểm và xếp hạng', 'chart', 7], ['feedback', 'Góp ý', 'chat', 6]];
 /* Trang riêng theo nhãn: NS phụ trách ban, NS phụ trách sinh nhật (bước 8). */
-var NAV_BY_LABEL = { dept_lead: ['my-team', 'Ban phụ trách', 'users', 8], birthday_lead: ['birthdays', 'Sinh nhật', 'cake', 8] };
+var NAV_BY_LABEL = { ucv: ['mailbox', 'Hộp thư', 'mail', 6], dept_lead: ['my-team', 'Ban phụ trách', 'users', 8], birthday_lead: ['birthdays', 'Sinh nhật', 'cake', 8] };
 function navItems() {
   if (!USER) return [];
   if (USER.isBod) return NAV_BOD;
@@ -51,7 +65,7 @@ var SETTINGS = [
     ['rules', 'Quy tắc CLB', 'book', 'Mỗi lần sửa được ghi vào Nhật ký.', [['Cơ cấu ban', 'Tên ban, viết tắt, ban nào có NS phụ trách', 'Sửa'], ['Thang điểm', 'Các loại hoạt động và số điểm mỗi loại', 'Sửa'], ['Khen thưởng và hạn task', 'Top khen thưởng, số ngày tính là sắp đến hạn', 'Sửa'], ['Ngưỡng cảnh báo', 'Có số mặc định, sửa được khi cần', 'Sửa'], ['Kế hoạch năm', 'Các sự kiện trong năm để gom task và log', 'Mở', 'plan']]],
     ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua kênh nào, gửi thử', 'Xem'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, báo cáo seeding', 'Sửa'], ['Bot Zalo', 'Mã kết nối và số người đã kết nối', 'Mở']]],
     ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu sheet đăng ký log', 'Sửa', 'log-files'], ['Sheet đăng ký log', 'Mỗi sự kiện một sheet, tạo hoặc đổi ở trang Quản lý log', 'Mở', 'log-page'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa']]],
-    ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem']]],
+    ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa', 'mail-signature'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem']]],
     ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển', 'Tải lên'], ['Phân quyền nhân sự', 'BOD gán tay từng người', 'Sửa'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai', 'Mở'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Bật'], ['Lịch sinh nhật', 'Google Lịch ghi sinh nhật thành viên', 'Mở']]],
     ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', 'Hình trang trí ở trang chủ và màn đăng nhập', 'Đổi'], ['Ảnh nền đăng nhập', 'Đang dùng nền xanh mặc định', 'Đổi ảnh']]],
     ['system', 'Hệ thống', 'chart', '', [['Tình trạng hệ thống', 'Việc tự chạy lúc 2 giờ sáng, lỗi báo qua Zalo hoặc app', 'Xem'], ['Sao lưu và khôi phục', 'Tự sao lưu mỗi đêm, giữ 30 bản', 'Khôi phục'], ['Nhật ký', 'Ai sửa gì, lúc nào', 'Xem'], ['Tab dữ liệu', 'Các tab đã khoá và tab chỉ để xem', 'Xem']]]]]
@@ -308,10 +322,13 @@ function themeSeg() {
 /* ---------- Thanh bên và chuyển trang ---------- */
 var page = 'home';
 function currentPage() { return page; }
+/** Số nhỏ cạnh mục menu (ví dụ thư chờ duyệt). Trang nào biết số mới thì gán rồi gọi renderNav(). */
+var BADGES = {};
 function renderNav() {
   var cur = currentPage();
   $('nav').innerHTML = navItems().map(function (x) {
-    return '<a class="nav-item" href="#" data-page="' + x[0] + '"' + (x[0] === cur ? ' aria-current="page"' : '') + '>' + icon(x[2]) + '<span>' + esc(x[1]) + '</span></a>';
+    return '<a class="nav-item" href="#" data-page="' + x[0] + '"' + (x[0] === cur ? ' aria-current="page"' : '') + '>' + icon(x[2]) + '<span>' + esc(x[1]) + '</span>' +
+      (BADGES[x[0]] ? '<span class="badge">' + BADGES[x[0]] + '</span>' : '') + '</a>';
   }).join('');
   var av = USER.avatarUrl ? '<img class="avatar" src="' + esc(USER.avatarUrl) + '" alt="">' : '<span class="avatar">' + esc(USER.name.split(' ').pop().charAt(0)) + '</span>';
   $('meBtn').innerHTML = av + '<span class="who"><b>' + esc(USER.name) + '</b><small>' + esc(userSubtitle()) + '</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>';
@@ -411,6 +428,7 @@ document.addEventListener('click', function (e) {
   else if (act === 'password') openPasswordBox();
   else if (act === 'plan') openPlan();
   else if (act === 'log-files') openLogFiles();
+  else if (act === 'mail-signature') openSignatureBox(false);
   else if (act === 'log-page') { closeSettings(); page = 'log'; renderPage(); }
   else if (act === 'close-modal') closeModal();
   else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); }

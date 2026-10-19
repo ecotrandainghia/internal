@@ -79,6 +79,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Một BOD mở trang Góp ý là các góp ý chưa đọc chuyển sang đã đọc; lần xem đó vẫn hiện chữ Mới.
 - BOD đánh dấu góp ý có tên là đã áp dụng thì người gửi được cộng điểm (hoạt động `feedback_activity_id`, +10), tối đa 2 lần mỗi giai đoạn; giai đoạn giao thoa không đánh dấu được. Bấm nhầm thì Bỏ đánh dấu, dòng điểm bị huỷ. Mọi lần đánh dấu ghi Nhật ký.
 
+## Hộp thư
+
+- Người có nhãn UCV có trang Hộp thư: đọc Gmail của CLB theo thư mục và nhãn, tìm thư, tải tệp đính kèm. UCV soạn thư mới, trả lời, trả lời tất cả, chuyển tiếp, hoặc xin lưu trữ, về hộp thư đến, gắn hay bỏ nhãn, xoá, báo thư rác. Mọi việc đều thành yêu cầu ở tab Yêu cầu mail và chỉ chạy khi BOD duyệt.
+- Khung soạn thư: ô người nhận gợi ý từ danh bạ (thành viên CLB theo ban và tab Danh bạ), lấy email từ một Google Sheet, chữ đậm, nghiêng, danh sách, liên kết, chèn hoặc dán ảnh (tối đa 2 MB mỗi ảnh), tệp từ máy (10 MB mỗi tệp, 20 MB tổng) hoặc từ Drive. Tự lưu nháp mỗi 20 giây. Tệp và ảnh lưu vào thư mục Drive "ECO - Đính kèm mail"; ảnh trong thư ghi là `drive:<mã>` và được nhúng vào thư khi gửi.
+- Trang Hộp thư của BOD, tab Duyệt thư: yêu cầu chờ duyệt lên đầu. BOD xem thư, thư gốc, rồi Duyệt và gửi, Trả lại UCV sửa hoặc Từ chối (hai cách sau phải ghi chú). BOD tự sửa người nhận, tiêu đề, nội dung rồi duyệt được; chỗ sửa ghi Nhật ký và UCV thấy chữ "BOD đã sửa". Gmail báo lỗi thì yêu cầu chuyển sang Lỗi kèm lý do.
+- Chữ ký lấy từ Gmail của CLB, bật tắt ở Cài đặt, Hộp thư, Chữ ký (dòng `mail_signature`). Cần bật dịch vụ nâng cao Gmail trong `appsscript.json`, Google sẽ hỏi quyền Gmail ở lần triển khai tới.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
