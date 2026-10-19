@@ -129,6 +129,7 @@ function cancelPoints(token, entryIds) {
   withLock_(function () {
     var now = new Date();
     var rows = readTable_('point_entries').filter(function (e) { return ids.indexOf(e.entry_id) >= 0 && !e.is_cancelled; });
+    rows.forEach(function (e) { assertNotLocked_(e.awarded_at, 'huỷ điểm đã cộng'); });
     updateRecords_('point_entries', rows.map(function (e) {
       return { key: e.entry_id, patch: { is_cancelled: true, cancelled_by: me.memberId, cancelled_at: now } };
     }), { actorId: me.memberId, action: 'cancel_points' });

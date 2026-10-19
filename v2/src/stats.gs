@@ -101,14 +101,33 @@ function eventTerms_(events) {
   return m;
 }
 
+/** Ngày của task để biết task thuộc giai đoạn nào: hạn chót, chưa có hạn thì lúc tạo. */
+function taskDate_(t) {
+  return t.deadline || t.created_at || null;
+}
+
+/** Ngày của sự kiện để biết thuộc giai đoạn nào: lúc chốt (mốc kết thúc của sự kiện), chưa chốt thì ngày dự kiến. */
+function eventDate_(e, closing) {
+  return closing && closing.status === 'closed' && closing.closed_at ? closing.closed_at : e.planned_date || null;
+}
+
+/** Ngày d có nằm trong khoảng { from, to } không (to = null là chưa kết thúc). Không có khoảng thì luôn đúng. */
+function inRange_(d, range) {
+  if (!range) return true;
+  if (!d) return false;
+  var ms = d.getTime();
+  return ms >= range.from.getTime() && (!range.to || ms < range.to.getTime());
+}
+
 /**
  * KPI task của một người trong nhiệm kỳ. Chỉ tính task được tính (không tạo trong giao thoa), chưa huỷ, của sự kiện trong
  * nhiệm kỳ; người bổ sung chỉ tính task tạo từ lúc bắt đầu GD2. Phần trăm = Đạt ÷ (Đạt + Chưa đạt): task chưa xong hoặc
- * chưa chấm chưa tính, để KPI không tụt oan.
- * c: { tasks, assignments, events, termId, from, now, notDoneHours }
+ * chưa chấm chưa tính, để KPI không tụt oan. needed: số task đạt cần thêm để lên ngưỡng (nếu các task còn lại đều đạt).
+ * c: { tasks, assignments, events, termId, from, range (chỉ tính task có hạn trong khoảng này), now, notDoneHours, threshold }
+ * list: từng task { taskId, eventId, name, deadline, result, timing, quality }.
  */
 function kpiTask_(memberId, c) {
-  var out = { assigned: 0, pass: 0, fail: 0, waiting: 0, open: 0, percent: null };
+  var out = { assigned: 0, pass: 0, fail: 0, waiting: 0, open: 0, percent: null, needed: 0, list: [] };
   if (c.from === false) return out;
   var termOf = eventTerms_(c.events), byId = {};
   c.tasks.forEach(function (t) { byId[t.task_id] = t; });
@@ -116,15 +135,26 @@ function kpiTask_(memberId, c) {
     var t = byId[a.task_id];
     if (a.member_id !== memberId || !t || t.is_cancelled || !t.is_counted || termOf[t.event_id] !== String(c.termId)) return;
     if (c.from && (!t.created_at || t.created_at.getTime() < c.from.getTime())) return;
+    if (!inRange_(taskDate_(t), c.range)) return;
     out.assigned++;
-    var r = taskResult_(taskTiming_(t, a, c.now, c.notDoneHours), a.quality);
+    var timing = taskTiming_(t, a, c.now, c.notDoneHours), r = taskResult_(timing, a.quality);
     if (r === 'pass') out.pass++;
     else if (r === 'fail') out.fail++;
     else if (r === 'waiting') out.waiting++;
     else out.open++;
+    out.list.push({ taskId: t.task_id, eventId: t.event_id, name: t.name, deadline: t.deadline || null, result: r || 'open', timing: timing, quality: a.quality || '' });
   });
   out.percent = percent_(out.pass, out.pass + out.fail);
+  out.needed = tasksNeeded_(out.pass, out.fail, c.threshold);
   return out;
+}
+
+/** Cần thêm bao nhiêu task đạt (không thêm task chưa đạt nào) để Đạt ÷ (Đạt + Chưa đạt) lên tới ngưỡng. */
+function tasksNeeded_(pass, fail, threshold) {
+  if (!threshold || !fail) return 0;
+  var t = threshold / 100;
+  if (t >= 1) return 999;
+  return Math.max(0, Math.ceil((t * (pass + fail) - pass) / (1 - t) - 1e-9));
 }
 
 /** Phần trăm làm tròn thông thường (2,5 → 3). null nếu chưa có gì để chia. */
@@ -163,13 +193,14 @@ function initialQuota_(quotas, eventId, memberId, memberTerm) {
  * Sự kiện đang mở: tạm lấy chỉ tiêu ban đầu và số buổi đã điểm danh, để thành viên biết còn thiếu bao nhiêu.
  * Bỏ sự kiện chưa có buổi nào được tính (tạo trong giao thoa). Người bổ sung chỉ tính sự kiện bắt đầu từ GD2.
  * needed: số buổi còn phải đi để đạt ngưỡng (dự báo "cần thêm 1 buổi").
- * c: { events, closings, sessions, attendance, quotas, results, termId, from, threshold }
+ * c: { events, closings, sessions, attendance, quotas, results, termId, from, range (chỉ tính sự kiện có ngày trong khoảng này), threshold }
+ * list: từng sự kiện { eventId, name, quota, attended, closed }.
  */
 function kpiLog_(memberId, memberTerm, c) {
-  var out = { quota: 0, attended: 0, percent: null, needed: 0, events: 0 };
+  var out = { quota: 0, attended: 0, percent: null, needed: 0, events: 0, list: [] };
   if (c.from === false) return out;
-  var closed = {}, counted = {}, units = {};
-  c.closings.forEach(function (x) { if (x.status === 'closed') closed[x.event_id] = true; });
+  var closed = {}, closing = {}, counted = {}, units = {};
+  c.closings.forEach(function (x) { closing[x.event_id] = x; if (x.status === 'closed') closed[x.event_id] = true; });
   c.sessions.forEach(function (s) {
     units[s.session_id] = { eventId: s.event_id, units: sessionUnits_(s.duration_min) };
     if (s.is_counted) counted[s.event_id] = true;
@@ -178,6 +209,7 @@ function kpiLog_(memberId, memberTerm, c) {
   c.events.forEach(function (e) {
     if (String(e.term_id) !== String(c.termId) || !counted[e.event_id]) return;
     if (c.from && (!e.planned_date || e.planned_date.getTime() < c.from.getTime())) return;
+    if (!inRange_(eventDate_(e, closing[e.event_id]), c.range)) return;
     var quota = 0, attended = 0;
     if (closed[e.event_id]) {
       var r = c.results.filter(function (x) { return x.event_id === e.event_id && x.member_id === memberId; })[0];
@@ -193,6 +225,7 @@ function kpiLog_(memberId, memberTerm, c) {
     out.events++;
     out.quota += quota;
     out.attended += attended;
+    out.list.push({ eventId: e.event_id, name: e.name, quota: quota, attended: attended, closed: !!closed[e.event_id] });
   });
   out.quota = Math.round(out.quota * 100) / 100;
   out.percent = percent_(out.attended, out.quota);
@@ -267,4 +300,66 @@ function rankList_(memberIds, points) {
   list.sort(function (a, b) { return b.points - a.points; });
   list.forEach(function (x, i) { x.rank = i && list[i - 1].points === x.points ? list[i - 1].rank : i + 1; });
   return list;
+}
+
+/** Số người trong top: số người được xếp hạng × tỉ lệ, làm tròn thông thường (70 × 15% = 10,5 → 11). */
+function topCount_(n, pct) {
+  return Math.round(n * pct / 100 + 1e-9);
+}
+
+/**
+ * Mã những người lọt top pct% của một bảng xếp hạng (kết quả rankList_). Người bằng điểm với người cuối trong top cũng được
+ * tính; người 0 điểm không được tính. { Mã TV: true }.
+ */
+function topIds_(list, pct) {
+  var k = topCount_(list.length, pct), out = {};
+  if (!k) return out;
+  var sorted = list.slice().sort(function (a, b) { return b.points - a.points; }), cut = sorted[k - 1].points;
+  sorted.forEach(function (x) { if (x.points > 0 && x.points >= cut) out[x.memberId] = true; });
+  return out;
+}
+
+/**
+ * Certificate theo quy chế (mục 5.4): log và task đều từ ngưỡng đạt (80%) thì cấp vì đạt KPI; đều từ ngưỡng bù trừ (60%)
+ * và lọt top bù trừ thì cấp nhờ bù trừ; còn lại chưa cấp. Phần chưa được giao việc gì (null) coi như đạt.
+ * rules: { threshold, offsetThreshold }. Trả về 'cert_kpi', 'cert_offset' hoặc 'none'.
+ */
+function certificateOf_(log, task, inOffsetTop, rules) {
+  var ok = function (x, min) { return x === null || x === undefined || x >= min; };
+  if (ok(log, rules.threshold) && ok(task, rules.threshold)) return 'cert_kpi';
+  if (ok(log, rules.offsetThreshold) && ok(task, rules.offsetThreshold)) return inOffsetTop ? 'cert_offset' : 'none';
+  return 'none';
+}
+
+/** Có cần bù trừ không: chưa đạt KPI nhưng mỗi phần đều từ ngưỡng bù trừ. */
+function needsOffset_(log, task, rules) {
+  return certificateOf_(log, task, true, rules) === 'cert_offset';
+}
+
+/* ===================== Khoá sau tổng kết ===================== */
+
+/**
+ * Khoảng thời gian bị khoá vì giai đoạn đã tổng kết (tab Kết quả giai đoạn đã có dòng của giai đoạn đó).
+ * GD2 kéo tới lúc nhiệm kỳ sau bắt đầu (giao thoa). [{ termId, phase, from, to }].
+ */
+function lockedRanges_(terms, results) {
+  var done = {};
+  results.forEach(function (r) { done[r.term_id + '|' + r.phase] = true; });
+  var sorted = terms.filter(function (t) { return t.term_id; }).sort(function (a, b) { return String(a.term_id) < String(b.term_id) ? -1 : 1; });
+  var out = [];
+  sorted.forEach(function (t, i) {
+    var next = sorted[i + 1];
+    ['phase_1', 'phase_2'].forEach(function (p) {
+      var r = phaseRange_(t, p);
+      if (!r || !done[t.term_id + '|' + p]) return;
+      out.push({ termId: String(t.term_id), phase: p, from: r.from, to: p === 'phase_2' ? (next && next.prep_start_at) || null : r.to });
+    });
+  });
+  return out;
+}
+
+/** Giai đoạn đã khoá chứa ngày d, hoặc null. */
+function lockedAt_(ranges, d) {
+  if (!d) return null;
+  return ranges.filter(function (r) { return inRange_(d, r); })[0] || null;
 }

@@ -20,6 +20,7 @@ function confirmTask(token, taskId) {
     delete memo_.tasks; delete memo_.task_assignments;
     var x = myAssignment_(me.memberId, taskId), now = new Date();
     if (x.task.is_cancelled) throw new Error('Task này đã bị huỷ.');
+    assertNotLocked_(taskDate_(x.task), 'xác nhận task này');
     if (x.assignment.confirmed_at) throw new Error('Bạn đã xác nhận task này rồi.');
     if (taskTiming_(x.task, x.assignment, now, getNumberSetting_('not_done_after_hours', 24)) === 'not_done') {
       throw new Error('Task đã quá hạn lâu nên tính là Không làm. Nếu bạn đã nộp, nhắn BOD hoặc NS phụ trách ban nhé.');
@@ -34,7 +35,8 @@ function undoConfirmTask(token, taskId) {
   var me = requireUser_(token);
   return withLock_(function () {
     delete memo_.tasks; delete memo_.task_assignments;
-    var a = myAssignment_(me.memberId, taskId).assignment;
+    var x = myAssignment_(me.memberId, taskId), a = x.assignment;
+    assertNotLocked_(taskDate_(x.task), 'huỷ xác nhận task này');
     if (!a.confirmed_at) throw new Error('Task này chưa được xác nhận.');
     if (a.quality) throw new Error('BOD đã chấm task này nên không huỷ được. Nhắn BOD nếu cần sửa.');
     if (a.confirmed_by !== me.memberId) throw new Error('Task này do NS hoặc BOD xác nhận giúp bạn. Nhắn họ nếu cần sửa.');
@@ -202,6 +204,7 @@ function saveTask(token, f) {
     }
     var old = managedTask_(x, f.taskId);
     if (old.is_cancelled) throw new Error('Task này đã huỷ. Mở lại task trước rồi hãy sửa.');
+    assertNotLocked_(taskDate_(old), 'sửa task này');
     updateRecord_('tasks', old.task_id, fields);
     if (!old.deadline || old.deadline.getTime() !== deadline.getTime()) {
       updateRecord_('tasks', old.task_id, { deadline: deadline }, { actorId: audit.actorId, action: 'change_deadline' });
@@ -227,7 +230,10 @@ function setTaskDeadline(token, taskId, deadline) {
   withLock_(function () {
     var t = managedTask_(x, taskId);
     if (t.is_cancelled) throw new Error('Task này đã huỷ.');
-    updateRecord_('tasks', t.task_id, { deadline: deadlineFrom_(deadline) }, { actorId: x.me.memberId, action: 'change_deadline' });
+    var d = deadlineFrom_(deadline);
+    assertNotLocked_(taskDate_(t), 'sửa hạn task này');
+    assertNotLocked_(d, 'dời hạn vào lúc đó');
+    updateRecord_('tasks', t.task_id, { deadline: d }, { actorId: x.me.memberId, action: 'change_deadline' });
   });
   return taskBoardFor_(x);
 }
@@ -237,6 +243,7 @@ function setTaskCancelled(token, taskId, cancelled) {
   var x = requireTaskManager_(token);
   withLock_(function () {
     var t = managedTask_(x, taskId);
+    assertNotLocked_(taskDate_(t), cancelled ? 'huỷ task này' : 'mở lại task này');
     updateRecord_('tasks', t.task_id, { is_cancelled: !!cancelled }, { actorId: x.me.memberId, action: 'change_task_status' });
   });
   return taskBoardFor_(x);
@@ -254,6 +261,7 @@ function setAssignmentStatus(token, taskId, memberId, what) {
   withLock_(function () {
     var t = managedTask_(x, taskId);
     if (t.is_cancelled) throw new Error('Task này đã huỷ.');
+    assertNotLocked_(taskDate_(t), 'sửa task này');
     var key = { task_id: t.task_id, member_id: String(memberId || '') };
     var a = findRecord_('task_assignments', key);
     if (!a) throw new Error('Người này không có trong task.');
@@ -285,6 +293,7 @@ function gradeTask(token, taskId, memberId, quality) {
   withLock_(function () {
     var t = managedTask_(x, taskId);
     if (t.is_cancelled) throw new Error('Task này đã huỷ.');
+    assertNotLocked_(taskDate_(t), 'sửa task này');
     var key = { task_id: t.task_id, member_id: String(memberId || '') };
     var a = findRecord_('task_assignments', key);
     if (!a) throw new Error('Người này không có trong task.');

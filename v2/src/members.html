@@ -1,0 +1,348 @@
+<script>
+/*
+ * KPI của tôi, Điểm và xếp hạng (thành viên) và Thành viên (BOD): bảng tổng hợp lọc được, chi tiết từng người, Tổng kết
+ * (khen thưởng top, certificate, nút copy cho sheet Đoàn).
+ */
+var RESULT_PILLS = { pass: ['Đạt', 'good'], fail: ['Chưa đạt', 'bad'], waiting: ['Chờ chấm', 'info'], open: ['Chưa xong', ''] };
+var TIMING_WORDS = { on_time: 'Đúng hạn', late: 'Trễ hạn', not_done: 'Không làm' };
+var QUALITY_WORDS = { complete: 'Hoàn chỉnh', needs_revision: 'Cần chỉnh sửa', poor: 'Làm quá sơ sài' };
+var CERT_PILLS = { cert_kpi: ['Cấp vì đạt KPI', 'good'], cert_offset: ['Cấp nhờ bù trừ', 'info'], none: ['Chưa cấp', ''] };
+var PHASE_NAMES = { phase_1: 'Giai đoạn 1', phase_2: 'Giai đoạn 2', full: 'Cả nhiệm kỳ', full_term: 'Cả nhiệm kỳ' };
+
+function pct(x) { return x === null || x === undefined ? '–' : x + '%'; }
+function fmtDate(ms) { var d = new Date(ms); return fmtDay(ms) + '/' + d.getFullYear(); }
+function pageError(id, err) { if ($(id)) $(id).innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; }
+
+/** Dự báo: còn thiếu gì để đạt ngưỡng. */
+function forecastText(task, log, threshold) {
+  var parts = [];
+  if (log && log.needed) parts.push('thêm ' + log.needed + ' buổi log');
+  if (task && task.needed) parts.push(task.needed === Infinity || task.needed > 99 ? 'các task còn lại đều đạt' : 'thêm ' + task.needed + ' task đạt');
+  if (parts.length) return 'Bạn cần ' + parts.join(' và ') + ' để đạt ' + threshold + '%.';
+  if ((task && task.percent !== null) || (log && log.quota)) return 'Bạn đang đạt KPI. Giữ phong độ nhé!';
+  return 'Chưa có task được chấm hay chỉ tiêu log nào, nên chưa có KPI.';
+}
+
+function taskItems(list) {
+  return list.length ? list.map(function (t) {
+    var p = RESULT_PILLS[t.result] || RESULT_PILLS.open;
+    var meta = [t.event, fmtDeadline(t.deadline), t.result === 'open' ? '' : TIMING_WORDS[t.timing], QUALITY_WORDS[t.quality]].filter(Boolean).join(' · ');
+    return item(t.name, meta, pill(p[0], p[1]));
+  }).join('') : '<div class="empty">Chưa có task nào được tính KPI.</div>';
+}
+function logItems(list) {
+  return list.length ? list.map(function (e) {
+    return item(e.name, e.closed ? 'Đã chốt' : 'Đang mở, số buổi giao còn tạm tính tới lúc chốt', '<span class="num">' + fmtNum(e.attended) + '/' + fmtNum(e.quota) + ' buổi</span>');
+  }).join('') : '<div class="empty">Chưa có sự kiện nào giao chỉ tiêu log cho bạn.</div>';
+}
+function kpiStats(task, log, threshold) {
+  var tOk = task.percent !== null && task.percent >= threshold, lOk = log.percent !== null && log.percent >= threshold;
+  return '<div class="stats">' +
+    '<div class="stat"><b class="' + (task.percent === null ? '' : tOk ? 'c-good' : 'c-bad') + '">' + pct(task.percent) + '</b><span>KPI task · ' +
+      (task.percent === null ? 'chưa có task được chấm' : (tOk ? 'đạt' : 'chưa đạt') + ' (' + task.pass + '/' + (task.pass + task.fail) + ' task)') + '</span></div>' +
+    '<div class="stat"><b class="' + (log.percent === null ? '' : lOk ? 'c-good' : 'c-warn') + '">' + pct(log.percent) + '</b><span>KPI log · ' +
+      (log.quota ? fmtNum(log.attended) + '/' + fmtNum(log.quota) + ' buổi' : 'chưa có chỉ tiêu') + '</span></div>' +
+    '<div class="stat"><b>' + (task.waiting || 0) + '</b><span>Task chờ BOD chấm</span></div></div>';
+}
+
+/* ===================== KPI của tôi ===================== */
+PAGES['my-kpi'] = function (main) {
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>KPI của tôi</h1><p class="lead" id="kpLead">Đạt khi KPI task và KPI log đều từ ngưỡng của quy chế.</p></div></div>' +
+    '<div id="kpBody">' + loadingHtml() + '</div></div>';
+  call('myKpi', TOKEN).then(function (d) { if (currentPage() === 'my-kpi') renderMyKpi(d); }).catch(function (err) { pageError('kpBody', err); });
+};
+
+function renderMyKpi(d) {
+  if (d.term) $('kpLead').textContent = 'Nhiệm kỳ ' + d.term.label + '. Đạt khi KPI task và KPI log đều từ ' + d.threshold + '%.';
+  if (d.bod) { $('kpBody').innerHTML = '<div class="note plain"><span>BOD không tính KPI. Xem KPI của các thành viên ở trang Thành viên.</span>' + goButton('members', 'Mở trang Thành viên') + '</div>'; return; }
+  if (!d.counting) {
+    $('kpBody').innerHTML = '<div class="note plain"><span>' + (d.term ? 'Đang ở giai đoạn giao thoa, chưa tính KPI.' : 'Nhiệm kỳ chưa bắt đầu, chưa tính KPI.') + '</span></div>';
+    return;
+  }
+  $('kpBody').innerHTML = '<div class="kpi-page">' +
+    (d.supplementary ? '<div class="note plain"><span>Bạn là thành viên bổ sung nên KPI chỉ tính việc được giao từ GD2' + (d.from ? ' (' + fmtDate(d.from) + ')' : '') + '.</span></div>' : '') +
+    kpiStats(d.task, d.log, d.threshold) +
+    '<div class="note' + (d.task.needed || d.log.needed ? '' : ' plain') + '"><span>' + esc(forecastText(d.task, d.log, d.threshold)) + '</span></div>' +
+    '<div class="home-cols"><section class="sec" aria-labelledby="kpTask"><h2 id="kpTask">Task</h2><div class="list">' + taskItems(d.task.list) + '</div>' +
+    '<p class="hint">KPI task = task đạt ÷ (đạt + chưa đạt). Task chưa xong hoặc chờ chấm chưa tính.</p></section>' +
+    '<section class="sec" aria-labelledby="kpLog"><h2 id="kpLog">Log</h2><div class="list">' + logItems(d.log.list) + '</div>' +
+    '<p class="hint">Đơn vị là buổi 90 phút, buổi 180 phút tính 2 buổi. Sự kiện chốt xong mới có số buổi giao cuối.</p></section></div></div>';
+}
+
+/* ===================== Điểm và xếp hạng ===================== */
+var RK = { phase: '', dept: '' };
+PAGES.ranking = function (main) {
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Điểm và xếp hạng</h1><p class="lead">Điểm về 0 khi sang giai đoạn mới. Mọi người thấy điểm của nhau, BOD không có tên trên bảng.</p></div>' +
+    '<span class="tabs" id="rkTabs"></span></div><div id="rkBody">' + loadingHtml() + '</div></div>';
+  loadRanking(RK.phase);
+};
+function loadRanking(phase) {
+  call('myRanking', TOKEN, phase || '').then(function (d) { if (currentPage() === 'ranking') { RK.phase = d.phase || ''; RK.data = d; renderRanking(); } })
+    .catch(function (err) { pageError('rkBody', err); });
+}
+
+function renderRanking() {
+  var d = RK.data;
+  $('rkTabs').innerHTML = d.phases.length > 1 ? d.phases.map(function (p) {
+    return '<button type="button" data-rk-phase="' + p.id + '" aria-pressed="' + (p.id === d.phase) + '">' + esc(PHASE_NAMES[p.id]) + '</button>';
+  }).join('') : '';
+  if (!d.phases.length) { $('rkBody').innerHTML = '<div class="note plain"><span>Chưa tới GD1 nên chưa có điểm. Giai đoạn giao thoa không tính điểm.</span></div>'; return; }
+  var depts = [];
+  d.list.forEach(function (x) { if (x.dept && depts.indexOf(x.dept) < 0) depts.push(x.dept); });
+  var rows = d.list.filter(function (x) { return !RK.dept || x.dept === RK.dept; });
+  var mine = d.bod ? '' : '<section class="sec" aria-labelledby="rkMine"><div class="sec-head"><h2 id="rkMine">Điểm của tôi</h2>' +
+    (d.me ? '<span class="big">' + d.me.points + '</span>' : '') + '</div>' +
+    (d.notRanked ? '<div class="note plain"><span>' + esc(d.notRanked) + '</span></div>' : '') +
+    (d.me ? '<p class="hint">Hạng ' + d.me.rank + '/' + d.me.of + (d.me.top ? ' · đang trong top ' + d.topPercent + '%' : '') + '</p>' : '') +
+    '<div class="list">' + (d.history.length ? d.history.map(function (h) {
+      return item(h.activity, [fmtDay(h.at), h.event, h.source].filter(String).join(' · '), '<span class="num c-good">+' + h.points + '</span>');
+    }).join('') : '<div class="empty">Chưa có điểm nào trong giai đoạn này.</div>') + '</div></section>';
+  var board = '<section class="sec" aria-labelledby="rkBoard"><div class="sec-head"><h2 id="rkBoard">Bảng xếp hạng ' + esc(PHASE_NAMES[d.phase]) + '</h2>' +
+    (depts.length > 1 ? '<div class="chips">' + [''].concat(depts).map(function (x) {
+      return '<button type="button" class="chip sm" data-rk-dept="' + esc(x) + '" aria-pressed="' + (RK.dept === x) + '">' + esc(x || 'Tất cả') + '</button>';
+    }).join('') + '</div>' : '') + '</div>' +
+    '<div class="rank-list">' + (rows.length ? rows.map(function (x) {
+      return '<div class="rank-row' + (x.me ? ' me' : '') + '"><span class="no">' + x.rank + '</span><span class="n">' + esc(x.name) + (x.me ? ' (bạn)' : '') +
+        '<small>' + esc([x.dept, x.subTeam].filter(String).join(' ')) + '</small></span>' + (x.top ? pill('Top ' + d.topPercent + '%', 'good') : '') +
+        '<span class="num">' + x.points + '</span></div>';
+    }).join('') : '<div class="empty">Chưa có ai trên bảng.</div>') + '</div>' +
+    '<p class="hint">Top ' + d.topPercent + '% (làm tròn thông thường, bằng điểm người cuối cũng tính) được xét khen thưởng cuối giai đoạn.</p></section>';
+  $('rkBody').innerHTML = d.bod ? board : '<div class="home-cols">' + mine + board + '</div>';
+}
+
+/* ===================== Thành viên (BOD) ===================== */
+var MB_TABS = [['points', 'Bảng điểm'], ['task', 'KPI task'], ['log', 'KPI log'], ['summary', 'Tổng kết']];
+var MV = { tab: 'points', data: null, phase: '', dept: '', grade: '', group: '', event: '', q: '', sum: null, sumTab: 'cert', termId: '' };
+
+PAGES.members = function (main) {
+  MV.data = null; MV.sum = null;
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Thành viên</h1><p class="lead" id="mvLead">Theo dõi mọi thành viên trừ BOD, chỉ trong nhiệm kỳ này.</p></div></div>' +
+    '<div class="tabs" role="group" aria-label="Xem theo">' + MB_TABS.map(function (t) {
+      return '<button type="button" data-mv-tab="' + t[0] + '" aria-pressed="' + (MV.tab === t[0]) + '">' + t[1] + '</button>';
+    }).join('') + '</div><div id="mvBody" class="stack">' + loadingHtml() + '</div></div>';
+  call('membersPage', TOKEN).then(function (d) {
+    if (currentPage() !== 'members') return;
+    MV.data = d;
+    if (d.term) $('mvLead').textContent = 'Nhiệm kỳ ' + d.term.label + (d.term.phaseLabel ? ' · ' + d.term.phaseLabel : '') + '. Mọi thành viên trừ BOD.';
+    if (!MV.phase || (MV.phase !== 'full' && !d.phases.some(function (p) { return p.id === MV.phase; }))) {
+      MV.phase = d.phases.length ? d.phases[d.phases.length - 1].id : '';
+    }
+    renderMembers();
+  }).catch(function (err) { pageError('mvBody', err); });
+};
+
+function renderMembers() {
+  document.querySelectorAll('[data-mv-tab]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mvTab === MV.tab); });
+  if (MV.tab === 'summary') return loadSummary(MV.termId);
+  var d = MV.data;
+  if (!d) return;
+  if (!d.phases.length) { $('mvBody').innerHTML = '<div class="note plain"><span>Chưa tới GD1 nên chưa có điểm và KPI. Kết quả nhiệm kỳ trước xem ở tab Tổng kết.</span></div>'; return; }
+  var sel = function (id, cur, opts) {
+    return '<select class="pick" id="' + id + '" aria-label="' + esc(opts[0][1]) + '">' + opts.map(function (o) {
+      return '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+    }).join('') + '</select>';
+  };
+  var tools = '<div class="toolbar">' +
+    (MV.tab === 'points' ? sel('mvPhase', MV.phase, d.phases.map(function (p) { return [p.id, PHASE_NAMES[p.id]]; }).concat([['full', 'Cả nhiệm kỳ (chính thức)']])) :
+      sel('mvEvent', MV.event, [['', 'Mọi sự kiện']].concat(d.events.map(function (e) { return [e.id, e.name]; })))) +
+    sel('mvDept', MV.dept, [['', 'Mọi ban']].concat(d.depts.map(function (x) { return [x, 'Ban ' + x]; }))) +
+    sel('mvGrade', MV.grade, [['', 'Mọi khối']].concat(d.grades.map(function (x) { return [x, 'Khối ' + x]; }))) +
+    sel('mvGroup', MV.group, [['', 'Mọi thành viên'], ['official', 'Chính thức'], ['supplementary', 'Bổ sung']]) +
+    '<label class="search">' + icon('search') + '<input type="search" id="mvFind" placeholder="Tìm tên" aria-label="Tìm tên" value="' + esc(MV.q) + '"></label></div>';
+  $('mvBody').innerHTML = tools + '<div id="mvTable"></div>';
+  ['mvPhase', 'mvEvent', 'mvDept', 'mvGrade', 'mvGroup'].forEach(function (id) {
+    if ($(id)) $(id).onchange = function () { MV[{ mvPhase: 'phase', mvEvent: 'event', mvDept: 'dept', mvGrade: 'grade', mvGroup: 'group' }[id]] = this.value; renderMemberTable(); };
+  });
+  $('mvFind').oninput = function () { MV.q = this.value; renderMemberTable(); };
+  renderMemberTable();
+}
+
+/** KPI của một dòng, lọc theo sự kiện nếu có chọn. */
+function rowKpi(p) {
+  if (!MV.event) return { task: p.task, log: p.log };
+  var x = p.byEvent[MV.event] || [0, 0, 0, 0, 0], th = MV.data.rules.threshold;
+  var tp = x[0] + x[1] ? Math.round(x[0] * 100 / (x[0] + x[1]) + 1e-9) : null, lp = x[3] ? Math.round(x[4] * 100 / x[3] + 1e-9) : null;
+  return { task: { pass: x[0], fail: x[1], waiting: x[2], percent: tp, needed: 0 },
+    log: { quota: x[3], attended: x[4], percent: lp, needed: x[3] ? Math.max(0, Math.ceil(th * x[3] / 100 - x[4] - 1e-9)) : 0 } };
+}
+function rowPoints(p) {
+  var key = MV.phase === 'full' ? 'full' : MV.phase;
+  return { points: key === 'full' ? p.points.total : p.points[key], rank: p.ranks[key], top: p.top[key] };
+}
+
+function renderMemberTable() {
+  var d = MV.data, q = MV.q.trim().toLowerCase(), th = d.rules.threshold;
+  var rows = d.people.filter(function (p) {
+    if (MV.dept && p.dept !== MV.dept) return false;
+    if (MV.grade && p.grade !== MV.grade) return false;
+    if (MV.group && (MV.group === 'supplementary') !== p.supplementary) return false;
+    if (MV.tab === 'points' && !rowPoints(p).rank) return false;
+    return !q || p.name.toLowerCase().indexOf(q) >= 0;
+  }).map(function (p) { return { p: p, k: rowKpi(p), s: rowPoints(p) }; });
+  var low = function (x) { return x === null ? Infinity : x; };
+  if (MV.tab === 'points') rows.sort(function (a, b) { return a.s.rank.rank - b.s.rank.rank || a.p.name.localeCompare(b.p.name, 'vi'); });
+  else rows.sort(function (a, b) { return low(a.k[MV.tab].percent) - low(b.k[MV.tab].percent) || a.p.name.localeCompare(b.p.name, 'vi'); });
+  var tone = function (x) { return x === null ? '' : x >= th ? 'c-good' : 'c-bad'; };
+  var note = function (r) {
+    var out = [];
+    if (MV.tab === 'points' && r.s.top) out.push('Top ' + d.rules.topPercent + '%');
+    if (r.k.log.needed) out.push('Cần thêm ' + r.k.log.needed + ' buổi log');
+    if (r.k.task.waiting) out.push(r.k.task.waiting + ' task chờ chấm');
+    if (r.p.supplementary) out.push('Bổ sung');
+    return out.join(' · ');
+  };
+  $('mvTable').innerHTML = rows.length ? '<div class="table-wrap"><table class="mtable"><thead><tr>' +
+    (MV.tab === 'points' ? '<th class="r">Hạng</th>' : '') + '<th>Họ tên</th><th>Ban</th><th class="r">Điểm</th><th class="r">KPI task</th><th class="r">KPI log</th><th>Ghi chú</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      var p = r.p, pts = r.s.points;
+      return '<tr data-mv-person="' + esc(p.id) + '" tabindex="0">' + (MV.tab === 'points' ? '<td class="r num">' + (r.s.rank ? r.s.rank.rank : '') + '</td>' : '') +
+        '<td><b>' + esc(p.name) + '</b></td><td class="soft">' + esc([p.dept, p.subTeam].filter(String).join(' ')) + '</td>' +
+        '<td class="r num">' + (pts === null || pts === undefined ? '–' : pts) + '</td>' +
+        '<td class="r num ' + tone(r.k.task.percent) + '">' + pct(r.k.task.percent) + (MV.tab === 'task' ? '<small>' + r.k.task.pass + '/' + (r.k.task.pass + r.k.task.fail) + '</small>' : '') + '</td>' +
+        '<td class="r num ' + tone(r.k.log.percent) + '">' + pct(r.k.log.percent) + (MV.tab === 'log' ? '<small>' + fmtNum(r.k.log.attended) + '/' + fmtNum(r.k.log.quota) + '</small>' : '') + '</td>' +
+        '<td class="soft small">' + esc(note(r)) + '</td></tr>';
+    }).join('') + '</tbody></table></div><p class="hint">' + rows.length + ' người. Bấm vào một dòng để xem chi tiết task, log và điểm.' +
+    (MV.tab === 'points' ? '' : ' KPI thấp lên trước. Thành viên bổ sung tính KPI từ GD2.') + '</p>' :
+    '<div class="empty">Không có ai khớp bộ lọc.</div>';
+}
+
+function openMemberDetail(id) {
+  openDrawer('<h2 id="drTitle">Đang mở…</h2>' + loadingHtml());
+  call('memberDetail', TOKEN, id).then(function (x) {
+    if (!drawerOpen()) return;
+    var hist = x.history.length ? x.history.map(function (h) {
+      return item(h.activity, [fmtDay(h.at), PHASE_LABELS_SHORT[h.phase], h.event, h.source].filter(Boolean).join(' · '), '<span class="num c-good">+' + h.points + '</span>');
+    }).join('') : '<div class="empty">Chưa có điểm nào.</div>';
+    var r = x.row;
+    openDrawer('<h2 id="drTitle">' + esc(x.name) + '</h2>' +
+      (r ? '<p class="hint">' + esc([r.dept, r.subTeam, r.className, r.supplementary ? 'Bổ sung, KPI tính từ GD2' : 'Chính thức'].filter(String).join(' · ')) + '</p>' : '') +
+      kpiStats(x.task, x.log, x.threshold) +
+      '<section class="sec"><h3>Task</h3><div class="list">' + taskItems(x.task.list) + '</div></section>' +
+      '<section class="sec"><h3>Log</h3><div class="list">' + logItems(x.log.list) + '</div></section>' +
+      '<section class="sec"><h3>Lịch sử điểm</h3><div class="list">' + hist + '</div></section>');
+  }).catch(function (err) { openDrawer('<h2 id="drTitle">Không mở được</h2><p class="msg bad">' + esc(err.message) + '</p>'); });
+}
+var PHASE_LABELS_SHORT = { phase_1: 'GD1', phase_2: 'GD2' };
+
+/* ---------- Tổng kết ---------- */
+function loadSummary(termId) {
+  if (MV.sum && (!termId || MV.sum.term.id === termId)) return renderSummaryTab();
+  $('mvBody').innerHTML = loadingHtml();
+  call('summaryView', TOKEN, termId || '').then(function (s) {
+    if (currentPage() !== 'members' || MV.tab !== 'summary') return;
+    MV.sum = s; MV.termId = s.term.id; renderSummaryTab();
+  }).catch(function (err) { pageError('mvBody', err); });
+}
+
+function roundLine(label, at, when) {
+  return at ? label + ': đã tổng kết lúc ' + fmtTime(at) + ' ' + fmtDate(at) + '. Dữ liệu thuộc giai đoạn này đã khoá.'
+    : label + ': chưa tổng kết. App tự chụp kết quả và khoá ' + when + '.';
+}
+
+function grantedList() { return MV.sum.certificates.filter(function (p) { return p.certificate !== 'none'; }); }
+
+function renderSummaryTab() {
+  var s = MV.sum;
+  var head = '<div class="toolbar">' + (s.terms.length > 1 ? '<select class="pick" id="mvTerm" aria-label="Nhiệm kỳ">' + s.terms.map(function (t) {
+    return '<option value="' + esc(t.id) + '"' + (t.id === s.term.id ? ' selected' : '') + '>Nhiệm kỳ ' + esc(t.label) + '</option>';
+  }).join('') + '</select>' : '') + '<div class="chips">' + [['cert', 'Certificate'], ['reward', 'Khen thưởng']].map(function (c) {
+    return '<button type="button" class="chip" data-mv-sum="' + c[0] + '" aria-pressed="' + (MV.sumTab === c[0]) + '">' + c[1] + '</button>';
+  }).join('') + '</div></div>' +
+    '<div class="note plain"><span>' + esc(roundLine('GD1', s.rounds.round_1, 'khi BOD tải sheet đợt 2')) + '<br>' +
+    esc(roundLine('GD2 và cả nhiệm kỳ', s.rounds.round_2, 'khi BOD bấm Kết thúc nhiệm kỳ')) + '</span></div>';
+  $('mvBody').innerHTML = head + '<div id="mvSum" class="stack">' + (MV.sumTab === 'cert' ? certHtml(s) : rewardHtml(s)) + '</div>';
+  if ($('mvTerm')) $('mvTerm').onchange = function () { MV.sum = null; loadSummary(this.value); };
+}
+
+function certHtml(s) {
+  if (!s.certificates.length) return '<div class="empty">Chưa có ai được xét certificate.</div>';
+  var r = s.rules, granted = grantedList();
+  var missing = granted.filter(function (p) { return !p.birth || !p.phone; }).length;
+  var group = function (kind, title) {
+    var list = s.certificates.filter(function (p) { return p.certificate === kind; });
+    return '<section class="sec"><h2>' + esc(title) + ' <span class="soft">· ' + list.length + '</span></h2>' + (list.length ? '<div class="list">' + list.map(function (p) {
+      var meta = [p.dept, p.supplementary ? 'Bổ sung' : '', 'Log ' + pct(p.log), 'Task ' + pct(p.task),
+        p.offsetNeeded && p.offsetRank ? 'Hạng bù trừ ' + p.offsetRank + '/' + p.offsetOf : ''].filter(String).join(' · ');
+      return '<div class="item click" data-mv-person="' + esc(p.id) + '"><div class="t"><b>' + esc(p.name) + '</b><small>' + esc(meta) + '</small></div>' +
+        (kind === 'none' ? '' : '<span class="soft small">' + esc([p.birth, p.phone].filter(String).join(' · ')) + '</span>') + '</div>';
+    }).join('') + '</div>' : '<div class="empty">Không có ai.</div>') + '</section>';
+  };
+  return (s.live.certificates ? '<div class="note"><span>Đang tạm tính theo số liệu hiện tại, còn đổi tới lúc tổng kết.</span></div>' : '') +
+    '<p class="hint">Cấp vì đạt KPI: log và task đều từ ' + r.threshold + '%. Cấp nhờ bù trừ: mỗi phần từ ' + r.offsetThreshold + '% và lọt top ' + r.offsetTopPercent +
+    '% bảng bù trừ (chính thức xếp theo điểm cả nhiệm kỳ, so với chính thức; bổ sung xếp theo điểm GD2, so với tất cả). Phần không được giao việc gì coi như đạt.</p>' +
+    (granted.length ? '<div class="copy-bar"><span>Copy cho sheet Đoàn (' + granted.length + ' người được cấp):</span>' +
+      '<button type="button" class="btn ghost sm" data-mv-copy="name">Copy Họ tên</button>' +
+      '<button type="button" class="btn ghost sm" data-mv-copy="birth">Copy Ngày sinh</button>' +
+      '<button type="button" class="btn ghost sm" data-mv-copy="phone">Copy SĐT</button>' +
+      '<button type="button" class="btn ghost sm" data-mv-copy="both">Copy Ngày sinh + SĐT</button>' +
+      '<span class="msg" id="mvCopyMsg" role="status"></span></div>' +
+      (missing ? '<p class="hint c-warn">' + missing + ' bạn chưa có ngày sinh hoặc SĐT trong tab Thành viên, dòng đó sẽ để trống.</p>' : '') : '') +
+    group('cert_kpi', 'Cấp vì đạt KPI') + group('cert_offset', 'Cấp nhờ bù trừ') + group('none', 'Chưa cấp');
+}
+
+function rewardHtml(s) {
+  var pctTop = s.rules.topPercent;
+  return '<p class="hint">Top ' + pctTop + '% mỗi bảng, làm tròn thông thường; bằng điểm người cuối trong top cũng được tính, 0 điểm không tính. ' +
+    'Cả nhiệm kỳ xếp theo tổng điểm GD1 + GD2, chỉ thành viên chính thức.</p>' +
+    [['phase_1', 'Top ' + pctTop + '% GD1'], ['phase_2', 'Top ' + pctTop + '% GD2'], ['full_term', 'Top ' + pctTop + '% cả nhiệm kỳ']].map(function (x) {
+      var list = s.rewards[x[0]];
+      return '<section class="sec"><h2>' + esc(x[1]) + (s.live[x[0]] ? ' <span class="soft">· tạm tính</span>' : '') + '</h2>' +
+        (list === null ? '<div class="empty">Giai đoạn chưa bắt đầu.</div>' : list.length ? '<div class="rank-list">' + list.map(function (p) {
+          return '<div class="rank-row click" data-mv-person="' + esc(p.id) + '"><span class="no">' + p.rank + '</span><span class="n">' + esc(p.name) + '<small>' + esc(p.dept) + '</small></span><span class="num">' + p.points + '</span></div>';
+        }).join('') + '</div>' : '<div class="empty">Chưa có ai lọt top.</div>') + '</section>';
+    }).join('');
+}
+
+/** Chép chữ vào bộ nhớ tạm. Trong khung của Apps Script, navigator.clipboard có thể bị chặn nên có cách dự phòng. */
+function copyText(text) {
+  var fallback = function () {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+    return ok ? Promise.resolve() : Promise.reject();
+  };
+  return navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text).catch(fallback) : fallback();
+}
+
+var COPY_WORDS = { name: 'họ tên', birth: 'ngày sinh', phone: 'SĐT', both: 'ngày sinh và SĐT' };
+function copyColumn(kind) {
+  var lines = grantedList().map(function (p) {
+    if (kind === 'name') return p.name;
+    if (kind === 'birth') return p.birth || '';
+    if (kind === 'phone') return p.phone || '';
+    return (p.birth || '') + '\t' + (p.phone || '');
+  });
+  copyText(lines.join('\n')).then(function () {
+    setMsg('mvCopyMsg', 'ok', 'Đã chép ' + COPY_WORDS[kind] + ' của ' + lines.length + ' người. Bấm vào ô đầu tiên trong sheet Đoàn rồi dán.');
+  }, function () { setMsg('mvCopyMsg', 'bad', 'Trình duyệt chặn việc chép. Bạn thử lại hoặc dùng máy tính nhé.'); });
+}
+
+document.addEventListener('click', function (e) {
+  var page = currentPage();
+  if (page === 'ranking' && RK.data) {
+    var r = e.target.closest('[data-rk-phase],[data-rk-dept]');
+    if (!r) return;
+    if (r.dataset.rkPhase) { $('rkBody').innerHTML = loadingHtml(); RK.dept = ''; return loadRanking(r.dataset.rkPhase); }
+    RK.dept = r.dataset.rkDept; return renderRanking();
+  }
+  if (page !== 'members') return;
+  var b = e.target.closest('[data-mv-tab],[data-mv-person],[data-mv-sum],[data-mv-copy],[data-tb="close"]');
+  if (!b) return;
+  if (b.dataset.tb === 'close') return closeDrawer();
+  if (b.dataset.mvTab) { MV.tab = b.dataset.mvTab; return renderMembers(); }
+  if (b.dataset.mvPerson) {
+    if (MV.sum && MV.tab === 'summary' && !MV.sum.term.current) return;
+    return openMemberDetail(b.dataset.mvPerson);
+  }
+  if (b.dataset.mvSum) { MV.sumTab = b.dataset.mvSum; return renderSummaryTab(); }
+  if (b.dataset.mvCopy) return copyColumn(b.dataset.mvCopy);
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' || currentPage() !== 'members') return;
+  var tr = e.target.closest && e.target.closest('tr[data-mv-person]');
+  if (tr) openMemberDetail(tr.dataset.mvPerson);
+});
+</script>

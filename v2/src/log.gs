@@ -336,6 +336,7 @@ function reopenEvent(token, eventId) {
   withLock_(function () {
     var c = findRecord_('event_closings', String(eventId || ''));
     if (!c || c.status !== 'closed') throw new Error('Sự kiện này đang mở rồi.');
+    assertNotLocked_(c.closed_at, 'mở chốt sự kiện này');
     updateRecord_('event_closings', c.event_id, { status: 'open' }, { actorId: me.memberId, action: 'reopen_event' });
     cancelLogExtraPoints_(c.event_id, me.memberId, new Date());
   });
