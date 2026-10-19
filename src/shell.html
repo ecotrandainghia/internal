@@ -226,7 +226,7 @@ function toggleConsent(agree) {
 /* ---------- Lần đăng nhập đầu: (1) đồng ý dữ liệu, (2) hướng dẫn cài app theo máy, (3) tour ---------- */
 function startOnboarding() {
   openModal('<div class="steps">Bước 1 trên 3</div><h2 id="boxTitle">Chào ' + esc(USER.name.split(' ').pop()) + ', mừng bạn đến với app CLB ECO</h2>' +
-    '<p class="hint" style="font-size:14px">CLB có một nhóm nghiên cứu muốn dùng dữ liệu hoạt động (task, log, điểm) ở dạng ẩn danh, không kèm tên hay thông tin liên lạc.</p>' +
+    '<p class="hint" style="font-size:14px">CLB muốn dùng dữ liệu hoạt động (task, log, điểm) ở dạng ẩn danh, không kèm tên hay thông tin liên lạc, để thống kê và cải thiện hoạt động của CLB.</p>' +
     '<label class="check"><input type="checkbox" id="consentBox"' + (USER.dataConsent ? ' checked' : '') + '><span>Mình đồng ý cho CLB dùng dữ liệu của mình ở dạng ẩn danh.</span></label>' +
     '<p class="hint">Không tick vẫn dùng app bình thường. Bạn đổi ý được bất cứ lúc nào trong Cài đặt, Tài khoản của tôi.</p>' +
     '<div class="actions"><button class="btn" id="step1Next">Tiếp tục</button></div>');
