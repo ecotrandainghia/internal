@@ -98,9 +98,10 @@ img.avatar { object-fit: cover; }
 
 .icon-btn { width: 44px; height: 44px; border: 0; background: none; border-radius: var(--r-btn); display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
 .icon-btn:hover { background: var(--hover); color: var(--ink); }
-.avatar-btn { width: 40px; height: 40px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+/* Safari trên iPhone tự thêm khoảng đệm hai bên cho nút, đẩy avatar lệch phải: bỏ hẳn đệm, nút đúng bằng avatar như app cũ. */
+.avatar-btn { width: 32px; height: 32px; padding: 0; margin: 0; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; cursor: pointer; flex: none; }
 .topbar { position: sticky; top: 0; z-index: 10; min-height: calc(52px + var(--sat)); display: flex; align-items: center; gap: 6px; padding: calc(6px + var(--sat)) calc(10px + var(--sar)) 6px calc(6px + var(--sal)); background: var(--paper); border-bottom: 1px solid var(--line); }
-.topbar .icon-btn { width: 40px; height: 40px; color: var(--ink); }
+.topbar .icon-btn { width: 40px; height: 40px; padding: 0; margin: 0; flex: none; color: var(--ink); }
 .topbar-title { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .only-phone { display: none; }
 .only-desk { display: grid; }
@@ -564,7 +565,8 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .set-body { padding: 20px 16px; }
   .menu-scrim { background: rgb(28 27 23 / .32); backdrop-filter: blur(4px); }
   .overlay.small { padding: calc(24px + var(--sat)) 16px calc(24px + var(--sab)); place-items: center; }
-  .menu { left: 0 !important; right: 0; bottom: 0 !important; width: auto; border-radius: var(--r-card) var(--r-card) 0 0; padding: 8px 12px calc(24px + var(--sab)); }
+  /* Menu avatar: ô gọn ngay dưới avatar, cao vừa nội dung; máy thấp quá thì cuộn trong ô, không chạm thanh vuốt về màn hình chính. */
+  .menu { max-height: calc(100% - var(--menu-top, 60px) - 12px - var(--sab)); overflow-y: auto; }
 }
 
 /* Thành viên, KPI của tôi, Điểm và xếp hạng */
