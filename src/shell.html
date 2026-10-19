@@ -100,7 +100,10 @@ window.addEventListener('message', function (e) {
     WRAPPER_PUSH = String(d.thongBao || '');
     var first = !wrapper;
     wrapper = e.source; wrapperOrigin = e.origin;
+    // Khoảng an toàn (tai thỏ, thanh vuốt) do trang vỏ đo, app tự chừa chỗ.
+    if (d.vien) ['t', 'b', 'l', 'r'].forEach(function (k) { document.documentElement.style.setProperty('--sa' + k, (Number(d.vien[k]) || 0) + 'px'); });
     if (!first) return;
+    toWrapper({ eco: 'ho-tro-vien' });
     if (d.trang) { if (USER) openPath(String(d.trang), true); else START_PATH = String(d.trang); }
     paintWrapper();
     // Phiên lưu ở trang vỏ bền hơn (điện thoại hay xoá dữ liệu của khung bên trong).
