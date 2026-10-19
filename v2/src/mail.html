@@ -1,10 +1,10 @@
 <script>
-/* Trang Hộp thư của BOD: duyệt thư và việc UCV xin làm với Gmail của CLB. Gửi hàng loạt và hẹn giờ làm ở bước 6c. */
+/* Trang Hộp thư của BOD: duyệt thư và việc UCV xin làm với Gmail của CLB. Tab Thư nháp, Gửi hàng loạt, Lịch gửi ở bulk.html. */
 var ML = { data: null, tab: 'review', filter: 'pending', id: '', req: null, editing: false };
-var ML_TABS = [['review', 'Duyệt thư'], ['drafts', 'Thư nháp'], ['bulk', 'Gửi hàng loạt'], ['scheduled', 'Đã lên lịch']];
+var ML_TABS = [['review', 'Duyệt thư'], ['drafts', 'Thư nháp'], ['bulk', 'Gửi hàng loạt'], ['scheduled', 'Lịch gửi']];
 
 PAGES.mail = function (main) {
-  ML.data = null; ML.id = ''; ML.req = null; ML.editing = false;
+  ML.data = null; ML.id = ''; ML.req = null; ML.editing = false; ML.tab = 'review';
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Hộp thư</h1><p class="lead">Thư UCV soạn và việc UCV xin làm với Gmail của CLB chỉ chạy khi BOD duyệt.</p></div>' +
     '<a class="btn ghost" id="mlGmail" href="https://mail.google.com/" target="_blank" rel="noopener">' + icon('ext') + 'Mở Gmail CLB</a></div>' +
     '<div class="chips" id="mlTabs"></div><span class="msg" id="mlMsg" role="status"></span><div id="mlBody">' + loadingHtml() + '</div></div>';
@@ -140,8 +140,7 @@ document.addEventListener('click', function (e) {
   if (b.dataset.mlTab) {
     ML.tab = b.dataset.mlTab; drawMailTabs(); setMsg('mlMsg', '', '');
     if (ML.tab === 'review') { if (ML.data) drawReview(); else loadReview(); return; }
-    $('mlBody').innerHTML = '<div class="todo">' + esc(ML_TABS.filter(function (t) { return t[0] === ML.tab; })[0][1]) + ' làm ở bước 6c của kế hoạch.</div>';
-    return;
+    return BULK_TABS[ML.tab]();
   }
   if (b.dataset.mlFilter) { ML.filter = b.dataset.mlFilter; ML.id = ''; return drawReview(); }
   if (b.dataset.mlBack !== undefined) { $('ml').classList.remove('reading'); return; }

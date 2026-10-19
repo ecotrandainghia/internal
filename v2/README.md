@@ -86,6 +86,14 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Trang Hộp thư của BOD, tab Duyệt thư: yêu cầu chờ duyệt lên đầu. BOD xem thư, thư gốc, rồi Duyệt và gửi, Trả lại UCV sửa hoặc Từ chối (hai cách sau phải ghi chú). BOD tự sửa người nhận, tiêu đề, nội dung rồi duyệt được; chỗ sửa ghi Nhật ký và UCV thấy chữ "BOD đã sửa". Gmail báo lỗi thì yêu cầu chuyển sang Lỗi kèm lý do.
 - Chữ ký lấy từ Gmail của CLB, bật tắt ở Cài đặt, Hộp thư, Chữ ký (dòng `mail_signature`). Cần bật dịch vụ nâng cao Gmail trong `appsscript.json`, Google sẽ hỏi quyền Gmail ở lần triển khai tới.
 
+## Gửi hàng loạt, hẹn giờ, danh bạ
+
+- BOD soạn thư nháp trong Gmail của CLB, để chỗ điền như `{Tên}` hoặc `{{Họ và tên}}`. Tab Thư nháp liệt kê 60 thư nháp mới sửa nhất, có link soạn và sửa trong Gmail; thư nháp đã ghi người nhận thì hẹn giờ gửi nguyên thư được.
+- Tab Gửi hàng loạt: chọn thư nháp, chọn người nhận từ Thành viên CLB (chỗ điền Họ và tên, Tên, Ban, Lớp, Chức vụ, Email, Ngày sinh), Danh bạ (Tên, Email, Nhóm, Ghi chú), Google Sheet (mỗi cột một chỗ điền, tối đa 2000 dòng) hoặc nhập tay (không có chỗ điền). Bấm Kiểm tra: chỗ điền không có trong nguồn thì chặn, người nhận trống ô thì cảnh báo; xem trước thư của người đầu tiên. Ảnh chèn và tệp đính kèm của thư nháp được gửi kèm.
+- Hạn mức: app hiện số người Gmail còn gửi được hôm nay (khoảng 100). Vượt thì chặn, trừ khi chọn Chia đợt: gửi phần còn được, phần sau tự gửi lúc 7 giờ sáng các ngày kế tiếp (hẹn giờ thì cùng giờ các ngày sau), mỗi đợt một dòng ở Lịch gửi. Đến giờ mà hết hạn mức thì đợt đó tự dời sang 7 giờ sáng hôm sau.
+- Thư hẹn giờ: đến giờ app mới đọc thư nháp, nên sửa trong Gmail trước giờ gửi vẫn kịp. Việc tự chạy `runScheduledSends` mỗi 10 phút, app tự cài khi có thư hẹn đầu tiên. Tab Lịch gửi: thư chờ gửi (kể cả từ nhiệm kỳ trước) để đổi giờ hoặc huỷ, và kết quả các lần gửi (ví dụ "Đã gửi 38/40 thư").
+- Danh bạ ở Cài đặt, Hộp thư, Danh bạ: thêm, sửa, xoá liên hệ theo nhóm. Thành viên CLB có sẵn, không cần thêm.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
