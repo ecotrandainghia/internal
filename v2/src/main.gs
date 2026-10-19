@@ -13,6 +13,7 @@ function doGet(e) {
   if (!hasDataFile_()) return setupPage_();
   var page = HtmlService.createTemplateFromFile('index');
   page.googleClientId = String(getSetting_('google_client_id', '')).trim();
+  page.season = seasonTheme_();
   return page.evaluate()
     .setTitle('CLB ECO')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')

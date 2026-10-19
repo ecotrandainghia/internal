@@ -37,7 +37,8 @@
   <div class="menu" id="meMenu" role="menu" aria-label="Tài khoản" hidden></div>
   <div class="overlay" id="settings" hidden></div>
   <div class="overlay small" id="modal" hidden></div>
-  <script>var GOOGLE_CLIENT_ID = <?= googleClientId ?>;</script>
+  <script>var GOOGLE_CLIENT_ID = <?= googleClientId ?>; var SEASON = <?= season ?>;</script>
+  <?!= include('season') ?>
   <?!= include('home') ?>
   <?!= include('taskboard') ?>
   <?!= include('points') ?>

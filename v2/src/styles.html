@@ -4,6 +4,7 @@
   --paper: #FAF8F5; --surface: #FDFBFA; --side: #F3F1EC; --sunken: #F1EFEA;
   --ink: #27251E; --ink-2: #72706B; --ink-3: #92918B; --line: #D1D1CD; --line-soft: #E6E3DC;
   --accent: #274E13; --on-accent: #FFFFFF; --accent-soft: #E4EBDD;
+  --login-art: linear-gradient(150deg, #3C6E22 0%, #274E13 55%, #1B3A0C 100%);
   --btn: #27251E; --on-btn: #FAF8F5; --bad: #9A4636;
   --bad-soft: #F3E3DE; --warn: #86622A; --warn-soft: #F2EADB; --info: #3A546C; --info-soft: #E5EBF0; --good: #3F6B35;
   --shadow-pop: 0 12px 32px rgb(39 37 30 / .16), 0 1px 2px rgb(39 37 30 / .08);
@@ -101,7 +102,17 @@ img.avatar { object-fit: cover; }
 
 /* Màn chờ và màn đăng nhập */
 .splash { min-height: 100dvh; display: grid; place-items: center; color: var(--ink-2); }
-.login { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.login { min-height: 100dvh; display: grid; grid-template-columns: 1.15fr 1fr; }
+.login-side { display: grid; place-items: center; padding: 24px 16px; }
+/* Nửa trái: ảnh nền BOD chọn (Cài đặt > Giao diện theo mùa), chưa có thì nền xanh mặc định kèm logo */
+.login-art { position: relative; overflow: hidden; isolation: isolate; background: var(--login-art); background-size: cover; background-position: center; display: grid; place-items: center; }
+.login-art > .logo { width: 96px; height: 96px; padding: 18px; background: rgb(255 255 255 / .12); color: rgb(255 255 255 / .9); }
+.login-art > .logo svg { width: 100%; height: 100%; }
+.login-art.has-img > .logo { display: none; }
+@media (max-width: 720px) {
+  .login { grid-template-columns: 1fr; grid-template-rows: 160px 1fr; }
+  .login-art > .logo { width: 56px; height: 56px; }
+}
 .login-card { width: min(400px, 100%); display: flex; flex-direction: column; gap: 16px; }
 .login-card .brand { padding: 0; }
 .login-card h1 { margin: 0; font-size: 22px; font-weight: 500; }

@@ -1,0 +1,362 @@
+<style>
+/* Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt, chuyển từ app cũ). Không đổi màu app, chỉ thêm hình trang trí
+   trong khung chào ở trang chủ và ở màn đăng nhập. */
+.ss-snow { color: var(--ss-snow, #a9c9e8); }
+.ss-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; font-size: 10px; overflow: hidden; }
+.ss-decor > * { position: absolute; }
+.ss-decor svg { width: 100%; height: 100%; display: block; }
+.ss-hang { top: -2px; transform-origin: 50% 0; animation: ss-swing 3.4s ease-in-out infinite alternate; }
+.ss-hang.slow { animation-duration: 4.6s; animation-delay: -1.3s; }
+.ss-hang.fast { animation-duration: 2.8s; animation-delay: -.7s; }
+.ss-branch { right: 0; top: 0; width: 20em !important; height: 9em !important; transform-origin: 100% 0; animation: ss-wind 6s ease-in-out infinite alternate; }
+.ss-decor .fall { top: -2em; width: var(--size); height: var(--size); animation: ss-fall var(--t) linear var(--delay) infinite; }
+.ss-decor .fly { left: 0; width: var(--size); height: calc(var(--size) / 2); animation: ss-fly var(--t) linear var(--delay) infinite; }
+.ss-decor .fly > svg { animation: ss-flap .3s ease-in-out infinite alternate; }
+.ss-decor .fly.paper > svg { animation: none; }
+.ss-decor .rise { bottom: -3em; width: var(--size); height: calc(var(--size) * 1.3); filter: drop-shadow(0 0 5px rgb(255 170 60 / .9)); animation: ss-rise var(--t) linear var(--delay) infinite; }
+.ss-firework { width: 7em; height: 7em; margin: -3.5em 0 0 -3.5em; }
+.ss-firework i { position: absolute; left: 50%; top: 50%; width: 2px; height: 1.1em; margin-left: -1px; border-radius: 2px; background: var(--m); transform-origin: 50% 0; opacity: 0; animation: ss-burst 2.8s ease-out var(--delay) infinite; }
+.ss-firework i:nth-child(2n) { height: .7em; }
+.ss-moon { width: 7em; height: 7em; border-radius: 50%; background: radial-gradient(circle at 40% 38%, #fffbe6 0%, #ffe9a3 45%, #f7c95c 100%); box-shadow: 0 0 0 .8em rgb(255 233 163 / .18), 0 0 4em 1.4em rgb(255 214 110 / .45); }
+.ss-moon.orange { background: radial-gradient(circle at 40% 38%, #fff3d6 0%, #ffcf8a 50%, #f29a3c 100%); box-shadow: 0 0 0 .8em rgb(255 180 90 / .15), 0 0 4em 1.4em rgb(255 150 60 / .4); }
+.ss-lantern { filter: drop-shadow(0 0 .6em rgb(255 110 50 / .55)); }
+.ss-lights { left: 0; right: 0; top: 0; height: 3.4em; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='20'%3E%3Cpath d='M0 3Q20 15 40 3T80 3' stroke='%23244a2c' stroke-width='1.6' fill='none'/%3E%3C/svg%3E") repeat-x 0 0 / 8em 2em; display: flex; justify-content: space-between; padding: 0 1.2em; }
+.ss-lights i { display: block; width: .9em; height: 1.4em; margin-top: calc(var(--y) * 1em); border-radius: 45% 45% 50% 50%; background: var(--m); box-shadow: 0 0 .8em .2em var(--m); animation: ss-blink 1.3s ease-in-out var(--delay) infinite alternate; }
+.ss-bottom { bottom: 0; }
+.ss-spin { animation: ss-spin 16s linear infinite; }
+@keyframes ss-swing { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+@keyframes ss-wind { from { transform: rotate(-1.5deg); } to { transform: rotate(2deg); } }
+@keyframes ss-fall { from { transform: translate(0, 0) rotate(0); } to { transform: translate(var(--drift), 22em) rotate(320deg); } }
+@keyframes ss-fly { 0% { transform: translate(-4em, var(--y)); } 50% { transform: translate(45vw, calc(var(--y) - 1.4em)); } 100% { transform: translate(110vw, var(--y)); } }
+@keyframes ss-flap { from { transform: scaleY(1); } to { transform: scaleY(.4); } }
+@keyframes ss-blink { from { opacity: .35; } to { opacity: 1; } }
+@keyframes ss-rise { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--drift), -20em); opacity: 0; } }
+@keyframes ss-burst { 0% { transform: rotate(var(--g)) translateY(0) scaleY(.2); opacity: 0; } 8% { opacity: 1; } 55% { opacity: 1; } 75% { transform: rotate(var(--g)) translateY(2.8em) scaleY(1); opacity: 0; } 100% { transform: rotate(var(--g)) translateY(2.8em); opacity: 0; } }
+@keyframes ss-spin { to { transform: translateX(-40px); } }
+@media (max-width: 720px) {
+  .ss-decor { font-size: 6.5px; }
+  .ss-branch { width: 17em !important; height: 7.6em !important; }
+  .ss-decor .ss-bottom { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .ss-decor, .ss-decor * { animation: none !important; } }
+
+/* Khung chào ở trang chủ có hình trang trí phía sau chữ */
+.hello { position: relative; overflow: hidden; isolation: isolate; }
+.hello > :not(.ss-decor) { position: relative; z-index: 1; }
+
+/* Thẻ chọn giao diện trong Cài đặt */
+.ss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.ss-card { display: grid; padding: 0; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); cursor: pointer; text-align: left; overflow: hidden; color: inherit; font: inherit; position: relative; }
+.ss-card:hover { border-color: var(--ink-2); }
+.ss-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.ss-card .band { height: 56px; display: grid; place-items: center; overflow: hidden; background: var(--sunken); }
+.ss-card .band > span { width: 36px; height: 36px; filter: drop-shadow(0 2px 4px rgb(0 0 0 / .25)); }
+.ss-card .band svg { width: 100%; height: 100%; }
+.ss-card .txt { padding: 8px 10px 10px; display: grid; gap: 1px; }
+.ss-card b { font-size: 13px; font-weight: 500; }
+.ss-card small { font-size: 12px; color: var(--ink-2); }
+.ss-card .on { position: absolute; top: 6px; right: 6px; background: #fff; color: #1a1a1a; border-radius: 999px; font-size: 11px; font-weight: 500; padding: 1px 8px; }
+.ss-preview { position: relative; flex: none; height: 110px; border-radius: var(--r-card); background: var(--sunken); overflow: hidden; isolation: isolate; padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; }
+.ss-preview > b { position: relative; z-index: 1; font-weight: 500; }
+
+/* Ảnh nền màn đăng nhập */
+.bg-preview { position: relative; aspect-ratio: 16 / 9; max-width: 520px; border-radius: var(--r-in); border: 1px solid var(--line); background: var(--login-art); background-size: cover; background-position: center; overflow: hidden; display: grid; grid-template-columns: 1.15fr 1fr; }
+.bg-preview::after { content: ""; grid-column: 2; background: var(--bg); }
+</style>
+<script>
+/* ---------- Danh sách giao diện (mã phải khớp SEASONS trong season.gs) ---------- */
+var SEASON_LIST = [
+  { id: 'spring', group: 'season', name: 'Mùa xuân', when: 'Tháng 2 đến tháng 4', band: 'linear-gradient(135deg,#fde2ea,#bfe3a5)' },
+  { id: 'summer', group: 'season', name: 'Mùa hè', when: 'Tháng 5 đến tháng 7', band: 'linear-gradient(135deg,#7fd3f0,#ffe08a)' },
+  { id: 'autumn', group: 'season', name: 'Mùa thu', when: 'Tháng 8 đến tháng 10', band: 'linear-gradient(135deg,#f7c873,#c8642a)' },
+  { id: 'winter', group: 'season', name: 'Mùa đông', when: 'Tháng 11 đến tháng 1', band: 'linear-gradient(135deg,#dbe9f6,#7aa3c8)' },
+  { id: 'tet', group: 'holiday', name: 'Tết Nguyên Đán', when: 'Mùng 1 tháng Giêng', band: 'linear-gradient(135deg,#d8231c,#f5b400)' },
+  { id: 'womens_day', group: 'holiday', name: 'Ngày Phụ nữ', when: '8/3 và 20/10', band: 'linear-gradient(135deg,#f8b7d0,#c0457f)' },
+  { id: 'earth', group: 'holiday', name: 'Trái Đất và Môi trường', when: 'Giờ Trái Đất, 22/4, 5/6', band: 'linear-gradient(135deg,#2f86d6,#4caf50)' },
+  { id: 'national_day', group: 'holiday', name: 'Lễ 30/4 và Quốc khánh', when: '30/4, 1/5 và 2/9', band: 'linear-gradient(135deg,#da251d,#e8501c)' },
+  { id: 'mid_autumn', group: 'holiday', name: 'Tết Trung thu', when: 'Rằm tháng 8 âm lịch', band: 'linear-gradient(160deg,#141a46,#3a2f5e)' },
+  { id: 'halloween', group: 'holiday', name: 'Halloween', when: '31/10', band: 'linear-gradient(160deg,#140a24,#2e1248 55%,#7a3412)' },
+  { id: 'teachers_day', group: 'holiday', name: 'Ngày Nhà giáo', when: '20/11', band: 'linear-gradient(135deg,#a3c4f3,#f8c8dc)' },
+  { id: 'christmas', group: 'holiday', name: 'Giáng sinh', when: '24 và 25/12', band: 'linear-gradient(135deg,#16603f,#c62828)' }
+];
+function findSeason(id) { return SEASON_LIST.filter(function (s) { return s.id === id; })[0] || null; }
+
+/* ---------- Hình vẽ ---------- */
+var shapeCount = 0;
+function svgShape(vb, inner, cls) { return '<svg viewBox="' + vb + '"' + (cls ? ' class="' + cls + '"' : '') + ' aria-hidden="true">' + inner + '</svg>'; }
+function starPoints(cx, cy, R, r) {
+  var o = [];
+  for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R; o.push((cx + rr * Math.cos(a)).toFixed(1) + ',' + (cy + rr * Math.sin(a)).toFixed(1)); }
+  return o.join(' ');
+}
+function flower5(color, center) {
+  var c = '';
+  for (var i = 0; i < 5; i++) c += '<ellipse cx="0" cy="-6" rx="4.4" ry="6" transform="rotate(' + (i * 72) + ')" fill="' + color + '"/>';
+  return c + '<circle r="2.8" fill="' + center + '"/>';
+}
+var SHAPES = {
+  petal: function (m) { return svgShape('0 0 24 24', '<path fill="' + m + '" d="M12 2C6.5 7 6.5 15 12 22c5.5-7 5.5-15 0-20z"/>'); },
+  flower: function (m, n) { return svgShape('-12 -12 24 24', flower5(m, n || '#f5c518')); },
+  leaf: function (m) { return svgShape('0 0 24 24', '<path fill="' + m + '" d="M12 22C6 19 4 13 7 5c6 1 11 5 11 11 0 3-2 5-6 6z"/><path d="M12 22c-1-6-2-10-5-15" stroke="rgb(0 0 0 / .3)" stroke-width="1.2" fill="none"/>'); },
+  maple: function (m) { return svgShape('0 0 24 24', '<path fill="' + m + '" d="M12 1.5l1.7 4.3 3.1-1.7-.8 4.6 4-.7-1.7 3.1 2.6 1.3-4.9 3.6.9 2.1-4.9-.9V23h-.9v-5.8l-4.9.9.9-2.1-4.9-3.6 2.6-1.3-1.7-3.1 4 .7-.8-4.6 3.1 1.7z"/>'); },
+  snow: function () { return svgShape('0 0 24 24', '<g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.8l3 2.2 3-2.2M9 20.2l3-2.2 3 2.2M3.6 10.6l3.4-1.4-.5-3.6M20.4 13.4l-3.4 1.4.5 3.6M3.6 13.4l3.4 1.4-.5 3.6M20.4 10.6l-3.4-1.4.5-3.6"/></g>', 'ss-snow'); },
+  heart: function (m) { return svgShape('0 0 24 24', '<path fill="' + m + '" d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3.2 5 6.6 5c2.1 0 3.6 1.2 5.4 3.2C13.8 6.2 15.3 5 17.4 5c3.4 0 5.4 3.6 4.1 6.8C19.5 16.4 12 21 12 21z"/>'); },
+  bat: function (m) { return svgShape('0 0 40 20', '<path fill="' + (m || '#120818') + '" d="M20 7c-1.2 0-2 .8-2.3 1.8C15 6.2 9 4.5 1 7c3 1 4.5 3 5 5.5 1.5-1.2 3.5-1.2 5 0 .8-1 2.2-1.6 3.6-1.2.6 1.4 1.8 2.7 5.4 4.7 3.6-2 4.8-3.3 5.4-4.7 1.4-.4 2.8.2 3.6 1.2 1.5-1.2 3.5-1.2 5 0 .5-2.5 2-4.5 5-5.5-8-2.5-14-.8-16.7 1.8C22 7.8 21.2 7 20 7zM18.6 7.8l-.7-2.6 1.6 1.5zM21.4 7.8l.7-2.6-1.6 1.5z"/>'); },
+  skyLantern: function () { return svgShape('0 0 20 26', '<path d="M5 3h10l3 17H2z" fill="#ff9a3a"/><path d="M7 5h6l2 13H5z" fill="#ffd36b" opacity=".85"/><rect x="5" y="20" width="10" height="2.4" rx="1" fill="#b4561a"/>'); },
+  paperPlane: function () { return svgShape('0 0 24 24', '<path d="M2 11l20-8-6 18-4-7z" fill="#ffffff" stroke="#5b7fae" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 14l10-11" stroke="#5b7fae" stroke-width="1.2"/>'); },
+  /* Đèn lồng treo (Tết đỏ, Trung thu cam). */
+  lantern: function (body, rim, rib) {
+    body = body || '#d8231c'; rim = rim || '#e5a50a'; rib = rib || '#a3120d';
+    return svgShape('0 0 34 56', '<path d="M17 0v9" stroke="#8a6d1d" stroke-width="1.4"/><rect x="10" y="8" width="14" height="4" rx="1.2" fill="' + rim + '"/><ellipse cx="17" cy="24" rx="15" ry="13" fill="' + body + '"/>' +
+      '<path d="M17 11v26M10 12.5c-4.5 6.5-4.5 16.5 0 23M24 12.5c4.5 6.5 4.5 16.5 0 23" stroke="' + rib + '" stroke-width="1.1" fill="none"/><rect x="10" y="36" width="14" height="4" rx="1.2" fill="' + rim + '"/>' +
+      '<path d="M14 40v13M17 40v15M20 40v13" stroke="' + rim + '" stroke-width="1.3" stroke-linecap="round"/>');
+  },
+  starLantern: function () {
+    return svgShape('0 0 44 60', '<path d="M22 0v10" stroke="#c9b27a" stroke-width="1.3"/><polygon points="' + starPoints(22, 27, 17, 7.5) + '" fill="#ff5a36" stroke="#ffd23f" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<polygon points="' + starPoints(22, 27, 8, 3.5) + '" fill="#ffd23f" opacity=".85"/><path d="M15 42l-3 13M22 43v15M29 42l3 13" stroke="#ffd23f" stroke-width="1.4" stroke-linecap="round"/>');
+  },
+  pumpkin: function () {
+    return svgShape('0 0 40 36', '<path d="M20 9c0-3 1-5 3-7" stroke="#3b6b1e" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="12" cy="22" rx="9" ry="12" fill="#d9661a"/><ellipse cx="28" cy="22" rx="9" ry="12" fill="#d9661a"/><ellipse cx="20" cy="22" rx="9.5" ry="13" fill="#f0842a"/>' +
+      '<path d="M11 19l4.5-4.5 2 5.5zM29 19l-4.5-4.5-2 5.5zM10 25.5c3 3.5 17 3.5 20 0l-2.2 4.6-2.2-2.2-2.2 3.2-2.4-3.2-2.4 3.2-2.2-3.2-2.2 2.2z" fill="#ffd23f"/>');
+  },
+  flag: function () { return svgShape('0 0 30 20', '<rect width="30" height="20" rx="1" fill="#da251d"/><polygon fill="#ffde00" points="' + starPoints(15, 10.6, 6.4, 2.5) + '"/>'); },
+  pine: function () {
+    return svgShape('0 0 40 52', '<rect x="17.5" y="44" width="5" height="8" fill="#6b4226"/><path d="M20 5L7 22h6L4 34h8L2 46h36L28 34h8L27 22h6z" fill="#1f7a3e"/>' +
+      '<circle cx="14" cy="30" r="2" fill="#e53935"/><circle cx="25" cy="25" r="2" fill="#ffca28"/><circle cx="22" cy="38" r="2.2" fill="#42a5f5"/><circle cx="10" cy="42" r="1.8" fill="#ffca28"/><circle cx="31" cy="41" r="2" fill="#e53935"/>' +
+      '<polygon points="' + starPoints(20, 5, 5, 2.2) + '" fill="#ffd23f"/>');
+  },
+  books: function () {
+    return svgShape('0 0 60 44', '<rect x="6" y="32" width="48" height="9" rx="2" fill="#3f6fb5"/><rect x="10" y="23" width="42" height="9" rx="2" fill="#d9534f"/><rect x="4" y="14" width="46" height="9" rx="2" fill="#f0ad4e"/>' +
+      '<path d="M8 36.5h40M14 27.5h34M8 18.5h38" stroke="#ffffff" stroke-width="1.2" opacity=".75"/><g transform="translate(44 8) scale(.55)">' + flower5('#f48fb1', '#ffd23f') + '</g><path d="M44 12v4" stroke="#3b7a1e" stroke-width="1.4"/>');
+  },
+  mask: function () {
+    return svgShape('0 -26 44 48', '<path d="M22 -26v28" stroke="#cfc6d8" stroke-width=".9"/><path d="M2 6c6-4 14-4 20 2 6-6 14-6 20-2-1 9-6 14-12 14-4 0-6-3-8-6-2 3-4 6-8 6C8 20 3 15 2 6z" fill="#7b2cbf" stroke="#ffb347" stroke-width="1.3"/>' +
+      '<ellipse cx="12" cy="11" rx="4.6" ry="3" fill="#120818"/><ellipse cx="32" cy="11" rx="4.6" ry="3" fill="#120818"/><path d="M42 6c3-3 2-7-1-9" stroke="#ffb347" stroke-width="1.3" fill="none"/>');
+  },
+  web: function () {
+    var o = '', pts = [], rays = 6, i, j;
+    for (i = 0; i <= rays; i++) { var a = Math.PI / 2 + i * (Math.PI / 2) / rays; pts.push([Math.cos(a), Math.sin(a)]); o += '<path d="M80 0L' + (80 + 80 * pts[i][0]).toFixed(1) + ' ' + (80 * pts[i][1]).toFixed(1) + '"/>'; }
+    [16, 30, 44, 58, 72].forEach(function (r) {
+      var d = '';
+      for (j = 0; j < rays; j++) {
+        var x1 = 80 + r * pts[j][0], y1 = r * pts[j][1], x2 = 80 + r * pts[j + 1][0], y2 = r * pts[j + 1][1];
+        var mx = 80 + r * .86 * (pts[j][0] + pts[j + 1][0]) / 2, my = r * .86 * (pts[j][1] + pts[j + 1][1]) / 2;
+        d += (j ? '' : 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1)) + 'Q' + mx.toFixed(1) + ' ' + my.toFixed(1) + ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+      }
+      o += '<path d="' + d + '"/>';
+    });
+    return svgShape('0 0 80 80', '<g stroke="rgb(255 255 255 / .55)" stroke-width=".8" fill="none">' + o + '</g><path d="M52 0v34" stroke="rgb(255 255 255 / .6)" stroke-width=".7"/><circle cx="52" cy="37" r="3.2" fill="#0d0614"/><path d="M48 35l-3-2M48 38l-3 1M56 35l3-2M56 38l3 1" stroke="#0d0614" stroke-width=".9"/>');
+  },
+  snowman: function () {
+    return svgShape('0 0 40 54', '<circle cx="20" cy="40" r="13" fill="#ffffff"/><circle cx="20" cy="20" r="9" fill="#ffffff"/><path d="M11 27c6 3 12 3 18 0l1 3c-6 3-14 3-20 0z" fill="#d32f2f"/><path d="M26 28l3 9-3 1z" fill="#d32f2f"/>' +
+      '<rect x="12" y="7" width="16" height="3" rx="1" fill="#263238"/><rect x="15" y="-1" width="10" height="9" rx="1.5" fill="#263238"/><circle cx="17" cy="18" r="1.2" fill="#263238"/><circle cx="23" cy="18" r="1.2" fill="#263238"/><path d="M20 21l6 1.5-6 1z" fill="#ff8f00"/>' +
+      '<circle cx="20" cy="36" r="1.3" fill="#263238"/><circle cx="20" cy="42" r="1.3" fill="#263238"/>');
+  },
+  earth: function () {
+    var id = 'ssEarth' + (++shapeCount);
+    var land = '<path d="M6 13c4-3 9-2 11 2s-1 7-4 9-2 6-5 6-5-5-4-9 0-6 2-8zM25 26c3-2 8-1 9 3s-2 8-6 8-4-4-3-7zM29 7c4 0 7 2 6 5s-5 3-7 1-2-6 1-6z"/>';
+    return svgShape('0 -8 48 56', '<defs><clipPath id="' + id + '"><circle cx="24" cy="24" r="20"/></clipPath></defs><circle cx="24" cy="24" r="20" fill="#2f86d6"/>' +
+      '<g clip-path="url(#' + id + ')"><g class="ss-spin" fill="#5cb85c">' + land + '<g transform="translate(40 0)">' + land + '</g></g></g>' +
+      '<circle cx="24" cy="24" r="20" fill="none" stroke="rgb(255 255 255 / .4)" stroke-width="1.2"/><path d="M17 14a10 10 0 0 1 8-6" stroke="rgb(255 255 255 / .6)" stroke-width="2" stroke-linecap="round" fill="none"/>' +
+      '<path d="M24 4V-2" stroke="#3b7a1e" stroke-width="1.4"/><path d="M24 -1c1-4 4-6 8-6-1 4-4 6-8 6zM24 0c-1-3-3-5-6-5 0 3 3 5 6 5z" fill="#6cc04a"/>');
+  },
+  /* Cành cây có hoa hoặc lá, mọc từ góc trên bên phải. */
+  branch: function (kind) {
+    var colors = { peach: ['#f7a8c4', '#d6336c'], flame: ['#e8352a', '#ffd23f'] }[kind];
+    var o = '<path d="M200 4C170 10 150 24 120 30S70 44 38 64M150 22c-6 14-4 26 2 38M112 32c4-12 2-20-6-28M78 42c-10 2-18 8-22 18" stroke="#6b4226" stroke-width="3.4" fill="none" stroke-linecap="round"/>';
+    var spots = [[176, 11, 1], [140, 26, .9], [118, 31, 1.1], [152, 56, .85], [104, 9, .8], [70, 46, .95], [42, 62, 1], [57, 59, .7], [128, 20, .6]];
+    if (kind === 'maple') {
+      var leaves = ['#d9822b', '#c0392b', '#e0a526', '#b5651d'];
+      spots.forEach(function (c, i) { o += '<g transform="translate(' + (c[0] - 11) + ' ' + (c[1] - 9) + ') scale(' + c[2] + ') rotate(' + (i * 37 % 60 - 30) + ' 12 12)"><path fill="' + leaves[i % 4] + '" d="M12 1.5l1.7 4.3 3.1-1.7-.8 4.6 4-.7-1.7 3.1 2.6 1.3-4.9 3.6.9 2.1-4.9-.9V23h-.9v-5.8l-4.9.9.9-2.1-4.9-3.6 2.6-1.3-1.7-3.1 4 .7-.8-4.6 3.1 1.7z"/></g>'; });
+      return '<span class="ss-branch">' + svgShape('0 0 200 90', o) + '</span>';
+    }
+    if (kind === 'flame') spots.forEach(function (c, i) { o += '<ellipse cx="' + (c[0] + 7) + '" cy="' + (c[1] + 6) + '" rx="7" ry="2.6" transform="rotate(' + (i * 40) + ' ' + (c[0] + 7) + ' ' + (c[1] + 6) + ')" fill="#4f9a2a"/>'; });
+    spots.forEach(function (c) { o += '<g transform="translate(' + c[0] + ' ' + c[1] + ') scale(' + c[2] + ')">' + flower5(colors[0], colors[1]) + '</g>'; });
+    if (kind === 'peach') [[92, 20], [160, 40], [60, 52]].forEach(function (c) { o += '<ellipse cx="' + c[0] + '" cy="' + c[1] + '" rx="3" ry="4.2" fill="#e8749b"/>'; });
+    return '<span class="ss-branch">' + svgShape('0 0 200 90', o) + '</span>';
+  },
+  /* Dây cờ đỏ sao vàng. */
+  flagLine: function () {
+    var o = '<path d="M0 2Q120 30 240 2" stroke="#7a5a3a" stroke-width="1.4" fill="none"/>';
+    for (var i = 1; i <= 7; i++) {
+      var t = i / 8, x = 240 * t, y = 2 * (1 - t) * (1 - t) + 60 * (1 - t) * t + 2 * t * t;
+      o += '<g transform="translate(' + (x - 10).toFixed(1) + ' ' + y.toFixed(1) + ')"><rect width="20" height="13" rx="1" fill="#da251d"/><polygon fill="#ffde00" points="' + starPoints(10, 6.9, 4.2, 1.7) + '"/></g>';
+    }
+    return svgShape('0 0 240 46', o);
+  }
+};
+
+/* ---------- Ghép hình trang trí ---------- */
+function rand(a, b) { return a + Math.random() * (b - a); }
+function firework(right, top, color, delay) {
+  var o = '';
+  for (var i = 0; i < 12; i++) o += '<i style="--g:' + (i * 30) + 'deg"></i>';
+  return '<span class="ss-firework" style="right:' + right + 'em;top:' + top + 'em;--m:' + color + ';--delay:' + delay + 's">' + o + '</span>';
+}
+function falling(shapes, count, cls) {
+  var o = '';
+  for (var i = 0; i < count; i++) {
+    var h = shapes[i % shapes.length], t = rand(5, 9);
+    o += '<span class="fall ' + (cls || '') + '" style="left:' + rand(40, 98).toFixed(0) + '%;--size:' + rand(1, 1.6).toFixed(2) + 'em;--t:' + t.toFixed(1) + 's;--delay:' + (-rand(0, t)).toFixed(1) + 's;--drift:' + rand(-40, 20).toFixed(0) + 'px">' + SHAPES[h[0]](h[1], h[2]) + '</span>';
+  }
+  return o;
+}
+function hanging(shape, right, w, h, cls) { return '<span class="ss-hang ' + (cls || '') + '" style="right:' + right + 'em;width:' + w + 'em;height:' + h + 'em">' + shape + '</span>'; }
+function flying(shape, count, cls) {
+  var o = '';
+  for (var i = 0; i < count; i++) { var t = rand(8, 13); o += '<span class="fly ' + (cls || '') + '" style="top:0;--y:' + rand(1, 8).toFixed(1) + 'em;--size:' + rand(2.6, 3.6).toFixed(1) + 'em;--t:' + t.toFixed(1) + 's;--delay:' + (-rand(0, t)).toFixed(1) + 's">' + shape + '</span>'; }
+  return o;
+}
+var DECOR = {
+  spring: function () { return SHAPES.branch('peach') + falling([['flower', '#f7a8c4', '#d6336c'], ['petal', '#f9c0d3']], 6); },
+  summer: function () { return SHAPES.branch('flame') + falling([['petal', '#e8352a'], ['petal', '#f05a3a']], 5); },
+  autumn: function () { return SHAPES.branch('maple') + falling([['maple', '#d9822b'], ['maple', '#c0392b'], ['leaf', '#e0a526']], 6); },
+  winter: function () {
+    return falling([['snow']], 12, 'ss-snow') + '<span class="ss-bottom" style="left:0;right:0;height:1.6em;background:#ffffff;border-radius:60% 60% 0 0 / 100% 100% 0 0;opacity:.9"></span>' +
+      '<span class="ss-bottom" style="right:3em;width:4.4em;height:6em;bottom:.6em">' + SHAPES.snowman() + '</span>';
+  },
+  tet: function () {
+    return hanging(SHAPES.lantern(), 10, 3.4, 5.6, 'ss-lantern') + hanging(SHAPES.lantern(), 15.5, 2.8, 4.6, 'ss-lantern slow') + hanging(SHAPES.lantern(), 20, 2.4, 4, 'ss-lantern fast') +
+      firework(24, 3.5, '#ffd23f', 0) + firework(5, 9, '#ff6b6b', -1.3) + falling([['flower', '#ffcc1f', '#e07b00'], ['flower', '#f7a8c4', '#d6336c']], 5);
+  },
+  womens_day: function () {
+    var heart = function (color, len) { return svgShape('0 0 26 ' + (len + 28), '<path d="M13 0v' + (len + 2) + '" stroke="#c98aa8" stroke-width="1"/><g transform="translate(0 ' + len + ')"><path fill="' + color + '" d="M13 25s-9-5.5-11.5-11C0 10 2.4 5.6 6.6 5.6c2.6 0 4.4 1.5 6.4 3.9 2-2.4 3.8-3.9 6.4-3.9 4.2 0 6.6 4.4 5.1 8.4C22 19.5 13 25 13 25z"/></g>'); };
+    return hanging(heart('#e0457b', 38), 9, 2.6, 6.4) + hanging(heart('#f28cb1', 28), 13.5, 2, 4.6, 'slow') + hanging(heart('#c0457f', 34), 17.5, 2.3, 5.6, 'fast') +
+      falling([['petal', '#e0457b'], ['petal', '#f28cb1'], ['flower', '#f7a8c4', '#ffd23f']], 6);
+  },
+  earth: function () { return '<span style="right:3em;top:1.6em;width:6em;height:7em">' + SHAPES.earth() + '</span>' + falling([['leaf', '#4caf50'], ['leaf', '#7cc35a'], ['leaf', '#2e8b57']], 6); },
+  national_day: function () { return '<span style="right:0;top:0;width:26em;height:5em">' + SHAPES.flagLine() + '</span>' + firework(20, 6, '#ffd23f', 0) + firework(6, 9, '#ff5252', -.9) + firework(13, 4.5, '#ffffff', -1.8); },
+  mid_autumn: function () {
+    return '<span class="ss-moon" style="right:3em;top:1.4em"></span>' + hanging(SHAPES.starLantern(), 12.5, 4, 5.6, 'ss-lantern') + hanging(SHAPES.lantern('#ff8a1e', '#ffd23f', '#c9580c'), 18, 2.8, 4.6, 'ss-lantern slow') +
+      '<span class="rise" style="right:22em;--size:1.8em;--t:9s;--delay:-2s;--drift:-30px">' + SHAPES.skyLantern() + '</span><span class="rise" style="right:8em;--size:1.4em;--t:11s;--delay:-7s;--drift:20px">' + SHAPES.skyLantern() + '</span>';
+  },
+  halloween: function () {
+    return '<span class="ss-moon orange" style="right:6em;top:2em;width:6em;height:6em"></span><span style="right:0;top:0;width:9em;height:9em">' + SHAPES.web() + '</span>' +
+      hanging(SHAPES.mask(), 14, 4.6, 5, 'slow') + flying(SHAPES.bat('#0d0614'), 3) +
+      '<span class="ss-bottom" style="right:2em;width:5em;height:4.6em">' + SHAPES.pumpkin() + '</span><span class="ss-bottom" style="right:7.4em;width:3.6em;height:3.3em">' + SHAPES.pumpkin() + '</span>';
+  },
+  teachers_day: function () {
+    return flying(SHAPES.paperPlane(), 2, 'paper') + falling([['flower', '#f48fb1', '#ffd23f'], ['flower', '#ffd54f', '#ff8f00'], ['petal', '#ce93d8']], 6) +
+      '<span class="ss-bottom" style="right:2.5em;width:8em;height:6em;bottom:.4em">' + SHAPES.books() + '</span>';
+  },
+  christmas: function () {
+    var colors = ['#ff5252', '#ffd23f', '#40c4ff', '#69f0ae', '#ff80ab'], o = '';
+    for (var i = 0; i < 16; i++) o += '<i style="--m:' + colors[i % 5] + ';--y:' + (i % 2 ? .25 : .9) + ';--delay:' + (-(i % 4) * .35).toFixed(2) + 's"></i>';
+    return '<span class="ss-lights">' + o + '</span>' + falling([['snow']], 9, 'ss-snow') + '<span class="ss-bottom" style="right:3em;width:5.6em;height:7.4em">' + SHAPES.pine() + '</span>';
+  }
+};
+/** Lớp hình trang trí của giao diện id (mặc định là giao diện CLB đang dùng), đặt trong một khung position: relative. */
+function seasonDecor(id) {
+  var f = DECOR[id === undefined ? SEASON : id];
+  return f ? '<div class="ss-decor" aria-hidden="true">' + f() + '</div>' : '';
+}
+
+/** Hình nhỏ trên thẻ chọn giao diện. */
+var CARD_SHAPES = {
+  spring: function () { return SHAPES.flower('#f7a8c4', '#d6336c'); }, summer: function () { return SHAPES.flower('#e8352a', '#ffd23f'); }, autumn: function () { return SHAPES.maple('#fff1d6'); },
+  winter: function () { return '<span style="color:#ffffff;display:block;width:100%;height:100%">' + SHAPES.snow().replace(' class="ss-snow"', '') + '</span>'; },
+  tet: function () { return SHAPES.lantern(); }, womens_day: function () { return SHAPES.heart('#ffffff'); }, earth: function () { return SHAPES.earth(); }, national_day: function () { return SHAPES.flag(); },
+  mid_autumn: function () { return SHAPES.starLantern(); }, halloween: function () { return SHAPES.pumpkin(); }, teachers_day: function () { return SHAPES.books(); }, christmas: function () { return SHAPES.pine(); }
+};
+
+/* ---------- Ảnh nền màn đăng nhập (lưu trên máy, chỉ tải lại khi BOD đổi ảnh) ---------- */
+var LOGIN_BG = (function () { try { return JSON.parse(localStorage.getItem('eco_login_bg') || 'null'); } catch (e) { return null; } })();
+var loginBgAsked = null; // lời hỏi máy chủ, chỉ hỏi một lần mỗi lần mở app
+function keepLoginBg(b) {
+  LOGIN_BG = b && b.data ? b : null;
+  try { if (LOGIN_BG) localStorage.setItem('eco_login_bg', JSON.stringify(LOGIN_BG)); else localStorage.removeItem('eco_login_bg'); } catch (e) { /* máy chặn lưu */ }
+}
+function paintLoginBg() {
+  var art = document.querySelector('.login-art');
+  if (!art) return;
+  art.style.backgroundImage = LOGIN_BG ? 'url("' + LOGIN_BG.data + '")' : '';
+  art.classList.toggle('has-img', !!LOGIN_BG);
+}
+function loadLoginBg() {
+  paintLoginBg();
+  if (loginBgAsked) return loginBgAsked;
+  loginBgAsked = call('loginBackground', LOGIN_BG ? LOGIN_BG.version : '').then(function (r) {
+    if (!r || !r.version) keepLoginBg(null);
+    else if (r.data) keepLoginBg(r);
+    paintLoginBg();
+  }).catch(function () { /* không có ảnh thì dùng nền mặc định */ });
+}
+
+/* ---------- Cài đặt > Giao diện theo mùa ---------- */
+function seasonRowText() { var s = findSeason(SEASON); return s ? 'Đang dùng: ' + s.name : 'Không dùng hình trang trí'; }
+function loginBgRowText() { return LOGIN_BG ? 'Đang dùng ảnh riêng của CLB' : 'Đang dùng nền xanh mặc định'; }
+/** Cập nhật mô tả các dòng trong Cài đặt sau khi đổi. */
+function refreshSettingsRows() { if (!$('settings').hidden) renderSettings(''); }
+
+function seasonCard(s, current) {
+  var on = (s ? s.id : '') === current;
+  return '<button type="button" class="ss-card" data-ss="' + (s ? s.id : '') + '" aria-pressed="' + on + '">' +
+    '<span class="band"' + (s ? ' style="background:' + s.band + '"' : '') + '><span>' + (s ? CARD_SHAPES[s.id]() : icon('close')) + '</span></span>' +
+    '<span class="txt"><b>' + esc(s ? s.name : 'Không dùng') + '</b><small>' + esc(s ? s.when : 'Không có hình trang trí') + '</small></span>' +
+    (on ? '<span class="on">Đang dùng</span>' : '') + '</button>';
+}
+
+function openSeasonBox(flash) {
+  var pick = SEASON;
+  var draw = function () {
+    wideModal('<h2 id="boxTitle">Giao diện theo mùa</h2><p class="hint">Hình trang trí ở khung chào trang chủ và màn đăng nhập, mọi người thấy giống nhau. Không đổi màu app; mỗi người vẫn tự chọn sáng hoặc tối.</p>' +
+      '<div class="ss-preview">' + seasonDecor(pick) + '<b>Xem trước: ' + esc(pick ? findSeason(pick).name : 'Không dùng') + '</b></div>' +
+      '<span class="msg" id="ssMsg" role="status"></span>' +
+      '<h3 class="tm-h">Theo mùa</h3><div class="ss-grid">' + seasonCard(null, pick) + SEASON_LIST.filter(function (s) { return s.group === 'season'; }).map(function (s) { return seasonCard(s, pick); }).join('') + '</div>' +
+      '<h3 class="tm-h">Ngày lễ</h3><div class="ss-grid">' + SEASON_LIST.filter(function (s) { return s.group === 'holiday'; }).map(function (s) { return seasonCard(s, pick); }).join('') + '</div>' +
+      '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="ssSave"' + (pick === SEASON ? ' disabled' : '') + '>Dùng giao diện này</button></div>');
+    if (flash) { setMsg('ssMsg', 'ok', flash); flash = ''; }
+    document.querySelectorAll('[data-ss]').forEach(function (b) { b.onclick = function () { pick = b.dataset.ss; draw(); }; });
+    $('ssSave').onclick = function () {
+      var btn = this;
+      btn.disabled = true; setMsg('ssMsg', '', 'Đang lưu…');
+      call('saveSeason', TOKEN, pick).then(function (id) { SEASON = id; flash = 'Đã đổi giao diện cho cả CLB.'; refreshSettingsRows(); draw(); if (currentPage() === 'home') renderPage(); })
+        .catch(function (err) { btn.disabled = false; setMsg('ssMsg', 'bad', err.message); });
+    };
+  };
+  draw();
+}
+
+/** Thu nhỏ ảnh còn rộng tối đa max px, trả về data URL JPEG. */
+function shrinkJpeg(file, max) {
+  return new Promise(function (ok, fail) {
+    var img = new Image(), url = URL.createObjectURL(file);
+    img.onload = function () {
+      var k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); fail(); };
+    img.src = url;
+  });
+}
+
+function openLoginBgBox(flash) {
+  if (!loginBgAsked) return loadLoginBg().then(function () { openLoginBgBox(flash); });
+  var show = function (data) { $('bgShow').style.backgroundImage = data ? 'url("' + data + '")' : ''; };
+  openModal('<h2 id="boxTitle">Ảnh nền đăng nhập</h2><p class="hint">Ảnh hiện ở nửa trái màn đăng nhập trên máy tính, và dải trên cùng trên điện thoại. Không có ảnh thì dùng nền xanh mặc định. Nên chọn ảnh ngang của CLB.</p>' +
+    '<div class="bg-preview" id="bgShow"></div>' +
+    '<div><label class="btn ghost">Chọn ảnh<input type="file" id="bgFile" accept="image/*" hidden></label></div>' +
+    '<span class="msg" id="bgMsg" role="status"></span>' +
+    '<div class="actions">' + (LOGIN_BG ? '<button type="button" class="btn ghost" id="bgDel">Dùng nền mặc định</button>' : '') +
+    '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="bgSave" disabled>Lưu</button></div>');
+  if (flash) setMsg('bgMsg', 'ok', flash);
+  show(LOGIN_BG && LOGIN_BG.data);
+  var picked = '';
+  var save = function (img, btn, done) {
+    btn.disabled = true; setMsg('bgMsg', '', 'Đang lưu…');
+    call('saveLoginBackground', TOKEN, img).then(function (version) { keepLoginBg(version ? { version: version, data: img } : null); refreshSettingsRows(); openLoginBgBox(done); })
+      .catch(function (err) { btn.disabled = false; setMsg('bgMsg', 'bad', err.message); });
+  };
+  $('bgFile').onchange = function () {
+    var f = this.files[0];
+    if (!f) return;
+    shrinkJpeg(f, 1600).then(function (url) { picked = url; show(url); $('bgSave').disabled = false; setMsg('bgMsg', '', ''); })
+      .catch(function () { setMsg('bgMsg', 'bad', 'Không đọc được ảnh này. Bạn chọn ảnh JPG hoặc PNG khác nhé.'); });
+  };
+  $('bgSave').onclick = function () { if (picked) save(picked, this, 'Đã đổi ảnh nền.'); };
+  if ($('bgDel')) $('bgDel').onclick = function () { if (confirm('Bỏ ảnh nền, dùng nền xanh mặc định?')) save('', this, 'Đã về nền mặc định.'); };
+}
+</script>

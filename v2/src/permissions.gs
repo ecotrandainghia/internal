@@ -75,7 +75,8 @@ function removeStaffLabel(token, labelId) {
     var l = findRecord_('member_labels', labelId);
     if (!l || !STAFF_LABELS[l.label_type]) throw new Error('Không tìm thấy phân quyền này.');
     if (l.end_date && l.end_date.getTime() < Date.now()) return;
-    updateRecord_('member_labels', labelId, { end_date: new Date() }, { actorId: me.memberId, action: 'change_setting' });
+    // Đến ngày tính cả mili giây đó, nên lùi 1 ms để nhãn hết hiệu lực ngay.
+    updateRecord_('member_labels', labelId, { end_date: new Date(Date.now() - 1) }, { actorId: me.memberId, action: 'change_setting' });
   });
   return accountAdmin(token);
 }
