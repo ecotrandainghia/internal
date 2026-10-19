@@ -118,10 +118,11 @@ function compactTab_(sh, def) {
   var last = sh.getLastRow();
   if (last < 3) return;
   var values = sh.getRange(1, 1, last, Math.max(1, sh.getLastColumn())).getValues();
-  var header = values[0].map(function (h) { return String(h).trim(); });
-  var keep = values.slice(1).filter(function (row) { return !blankRow_(def, header, row); });
+  // Chỉ coi là trống khi mọi ô đều rỗng hoặc FALSE (dòng có chữ nhưng thiếu mã vẫn giữ, không xoá gì).
+  var empty = function (row) { return row.every(function (v) { return v === '' || v === null || v === false; }); };
+  var keep = values.slice(1).filter(function (row) { return !empty(row); });
   var lastReal = 0;
-  values.forEach(function (row, i) { if (i > 0 && !blankRow_(def, header, row)) lastReal = i; });
+  values.forEach(function (row, i) { if (i > 0 && !empty(row)) lastReal = i; });
   if (!keep.length || keep.length === lastReal) return; // không có dòng trống xen giữa
   var blank = values[0].map(function () { return ''; });
   while (keep.length < values.length - 1) keep.push(blank.slice());

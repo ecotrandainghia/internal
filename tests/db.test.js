@@ -173,9 +173,11 @@ test('dữ liệu cũ bắt đầu từ dòng 1001: chạy lại cấu trúc th�
   sh.data.length = 1; sh.maxRows = 1100;
   for (let i = 0; i < 999; i++) { const row = header.map(() => ''); row[on] = false; sh.data.push(row); }
   moved.forEach((r) => sh.data.push(r));
+  const odd = header.map(() => ''); odd[header.indexOf('dept_name')] = 'Dòng thiếu mã'; sh.data.push(odd);
   app.ensureSchema_(true);
+  assert.ok(sh.data.some((r) => r[header.indexOf('dept_name')] === 'Dòng thiếu mã'), 'dòng có chữ nhưng thiếu mã không được mất');
   assert.deepEqual(sh.data.slice(1, 1 + real.length).map((r) => r[code]), real.map((r) => r[code]));
-  assert.equal(sh.getLastRow(), 1 + real.length);
+  assert.equal(sh.getLastRow(), 2 + real.length);
   const snap = JSON.stringify(sh.data);
   app.ensureSchema_(true);
   assert.equal(JSON.stringify(sh.data), snap);
