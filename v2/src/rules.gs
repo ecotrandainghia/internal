@@ -53,8 +53,8 @@ function clubRules(token) {
 }
 
 /**
- * Lưu Cơ cấu ban. list: [{ code, name, subTeams, active }] theo thứ tự hiện. Mã ban cũ không đổi ở đây (đổi tên ban khi tải
- * danh sách thành viên); ban mới thêm mã viết hoa, không trùng. Ban không xoá được, chỉ tắt Đang dùng. BOD luôn bật.
+ * Lưu Cơ cấu ban. list: [{ code, name, subTeams, active }] theo thứ tự hiện. Mã ban cũ không đổi được (muốn đổi thì thêm ban mã mới,
+ * tắt ban cũ, rồi tải danh sách Cập nhật); ban mới thêm mã viết hoa, không trùng. Ban không xoá được, chỉ tắt Đang dùng. BOD luôn bật.
  */
 function saveDepartments(token, list) {
   var me = requireUser_(token, 'bod');

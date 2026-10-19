@@ -62,7 +62,7 @@ function renderHome(d) {
     var b = d.bod;
     if (BADGES.mail !== b.counts.mail) { BADGES.mail = b.counts.mail; renderNav(); }
     setHelloLine(b.todo.length ? 'Hôm nay có ' + b.todo.length + ' việc cần bạn xem. Làm nhanh rồi nghỉ nha.' : 'Hôm nay không có việc gấp. Nghỉ ngơi chút nha.');
-    html += '<div class="note plain"><span>' + esc(b.nextStep) + '</span></div>';
+    html += '<div class="note plain"><span>' + esc(b.nextStep) + '</span><button type="button" class="btn sm" data-act="roster">Mở</button></div>';
     html += notifyNote(d);
     html += '<div class="stats">' + stat(b.counts.tasks, 'Task trễ hạn hoặc sắp đến hạn', 'task', b.counts.tasks ? 'c-bad' : '') +
       stat(b.counts.mail, 'Thư UCV chờ duyệt', 'mail', b.counts.mail ? 'c-warn' : '') +

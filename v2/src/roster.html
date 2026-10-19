@@ -1,0 +1,140 @@
+<script>
+/* Cài đặt > Tài khoản và phân quyền > Tải danh sách thành viên: chọn loại đợt, dán link sheet, xem trước rồi tải; các lần tải gần
+   đây (hoàn tác lần mới nhất); Kết thúc nhiệm kỳ khi đang ở GD2. */
+var RS = { data: null, decisions: {}, view: null };
+var RS_KINDS = {
+  oday: ['Oday', 'BOD mới và người ở lại sau Oday. Ai không có trong sheet thì mất tài khoản, BOD cũ giữ tới đợt 1.'],
+  batch_1: ['Đợt 1', 'Sau tuyển đợt 1. Mở GD1, bắt đầu tính điểm và KPI.'],
+  batch_2: ['Đợt 2', 'Sau tuyển đợt 2. Đóng GD1 (chụp kết quả) và mở GD2.'],
+  update: ['Cập nhật', 'Sửa danh sách giữa chừng (thêm người, đổi ban, người rời). Không đổi giai đoạn.']
+};
+var RS_TYPES = { members: 'Thành viên', core_team: 'Core team', ucv: 'UCV' };
+
+function openRoster() {
+  RS.decisions = {}; RS.view = null;
+  wideModal('<h2 id="boxTitle">Tải danh sách thành viên</h2>' + loadingHtml());
+  call('rosterPage', TOKEN).then(function (d) { drawRoster(d); }).catch(function (err) { failBox('Tải danh sách thành viên', err); });
+}
+
+function rsList(items, kind) {
+  return '<ul class="rs-list' + (kind ? ' ' + kind : '') + '">' + items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+}
+
+function drawRoster(d, flash) {
+  RS.data = d;
+  var first = d.kinds.filter(function (k) { return !k.block; })[0];
+  var pick = RS.kind && d.kinds.some(function (k) { return k.kind === RS.kind && !k.block; }) ? RS.kind : first ? first.kind : '';
+  RS.kind = pick;
+  wideModal('<h2 id="boxTitle">Tải danh sách thành viên</h2>' +
+    '<div class="note plain"><span>' + esc(d.nextStep) + '</span></div>' +
+    '<span class="msg" id="rsMsg" role="status"></span>' +
+    '<form id="rsForm" class="rs-form">' +
+    '<fieldset class="rs-kinds"><legend>Loại đợt</legend>' + d.kinds.map(function (k) {
+      return '<label class="check' + (k.block ? ' off' : '') + '"><input type="radio" name="rsKind" value="' + k.kind + '"' + (k.kind === pick ? ' checked' : '') + (k.block ? ' disabled' : '') + '>' +
+        '<span>' + esc(RS_KINDS[k.kind][0]) + '<small>' + esc(k.block || RS_KINDS[k.kind][1]) + '</small></span></label>';
+    }).join('') + '</fieldset>' +
+    '<label class="field">Link Google Sheets danh sách<input id="rsLink" type="url" value="' + esc(d.link) + '" placeholder="https://docs.google.com/spreadsheets/d/..." required></label>' +
+    '<label class="field">Tên tab (để trống là tab đầu tiên)<input id="rsTab" maxlength="100"></label>' +
+    '<p class="hint">Sheet cần cột Họ và tên và cột Ban (ghi mã ban như BOD, PR). App đọc thêm các cột Ngày sinh, Email, Số điện thoại, Tên Facebook, Link Facebook, Mảng, Lớp, Chức vụ nếu có; ô trống thì giữ thông tin cũ. Sheet phải chia sẻ cho tài khoản Google của CLB.</p>' +
+    '<div class="actions" style="justify-content:flex-start"><button class="btn ghost" id="rsPreviewBtn"' + (pick ? '' : ' disabled') + '>Xem trước</button></div>' +
+    '</form><div id="rsPreview"></div>' +
+    rsUploads(d) + rsEnd(d) +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+  if (flash) setMsg('rsMsg', flash[0], flash[1]);
+  var reset = function () { RS.view = null; $('rsPreview').innerHTML = ''; };
+  document.querySelectorAll('[name=rsKind]').forEach(function (r) { r.onchange = function () { RS.kind = r.value; reset(); }; });
+  $('rsLink').oninput = function () { RS.decisions = {}; reset(); };
+  $('rsTab').oninput = reset;
+  $('rsForm').onsubmit = function (e) { e.preventDefault(); rsPreview(); };
+  bindRosterRows();
+}
+
+function rsReq() { return { kind: RS.kind, link: $('rsLink').value.trim(), tab: $('rsTab').value.trim(), decisions: RS.decisions }; }
+
+function rsPreview() {
+  var btn = $('rsPreviewBtn');
+  btn.disabled = true; setMsg('rsMsg', '', 'Đang đọc sheet…'); $('rsPreview').innerHTML = '';
+  call('previewRoster', TOKEN, rsReq()).then(function (v) { btn.disabled = false; setMsg('rsMsg', '', ''); RS.view = v; drawRosterPreview(v); })
+    .catch(function (err) { btn.disabled = false; setMsg('rsMsg', 'bad', err.message); });
+}
+
+function rsBirth(ms) { if (!ms) return 'chưa có ngày sinh'; var d = new Date(ms); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
+
+function drawRosterPreview(v) {
+  var h = '<section class="sec rs-prev"><h2>Xem trước: ' + esc(RS_KINDS[v.kind][0]) + ', nhiệm kỳ ' + esc(v.termLabel) + '</h2>';
+  if (v.errors.length) h += '<p class="hint sd-warn">' + icon('help') + 'Sửa các dòng này trong sheet rồi bấm Xem trước lại:</p>' + rsList(v.errors, 'bad');
+  if (v.deptProblems.length) {
+    h += '<p class="hint sd-warn">' + icon('help') + 'Có ban chưa dùng được. Thêm ban, bật Đang dùng ở Cơ cấu ban, hoặc sửa cột Ban trong sheet:</p>' +
+      rsList(v.deptProblems.map(function (p) { return p.code + ' (' + p.people + ' người): ' + (p.inactive ? 'đang tắt' : 'chưa có trong Cơ cấu ban'); }), 'bad') +
+      '<div><button type="button" class="btn ghost sm" data-act="departments">Mở Cơ cấu ban</button></div>';
+  }
+  if (v.ask.length) {
+    h += '<p class="hint">Mấy người này tên gần giống hoặc trùng tên người đã có trong app. Bạn chọn đúng người rồi bấm Xem trước lại:</p>' +
+      '<div class="rs-ask">' + v.ask.map(function (a) {
+        return '<label class="field">Dòng ' + a.row + ': ' + esc(a.name) + ' (' + esc(rsBirth(a.birth)) + ')<select data-rs-ask="' + a.row + '"><option value="">Chọn…</option>' +
+          a.choices.map(function (c) { return '<option value="' + esc(c.id) + '"' + (RS.decisions[a.row] === c.id ? ' selected' : '') + '>Là ' + esc(c.name) + ' (' + esc(rsBirth(c.birth)) + ', mã ' + esc(c.id) + ')</option>'; }).join('') +
+          '<option value="new"' + (RS.decisions[a.row] === 'new' ? ' selected' : '') + '>Người mới, khác người trong app</option></select></label>';
+      }).join('') + '</div>';
+  }
+  if (v.blockers.length) h += '<p class="hint sd-warn">' + icon('help') + 'GD1 còn việc chưa xong. Xong hết mới đóng GD1 được:</p>' + rsList(v.blockers, 'bad');
+  if (v.ready) {
+    var line = function (n, label, names) { return '<li><b>' + n + '</b> ' + esc(label) + (names && names.length ? ': ' + esc(names.join(', ')) : '') + '</li>'; };
+    h += '<ul class="rs-list rs-sum">' + line(v.added.length, 'người mới', v.added) + line(v.stayed, 'người ở lại') + line(v.left.length, 'người rời (mất tài khoản)', v.left) +
+      (v.moved.length ? line(v.moved.length, 'người đổi ban', v.moved) : '') + (v.edited ? line(v.edited, 'người đổi thông tin (tên, ngày sinh, email…)') : '') + '</ul>';
+    if (v.noEmail.length) h += '<p class="hint sd-warn">' + icon('help') + esc(v.noEmail.length + ' người chưa có email nên chưa đăng nhập được: ' + v.noEmail.join(', ') + '.') + '</p>';
+    if (v.top.length) h += '<p class="hint">Top khen thưởng GD1 sẽ được chụp lại: ' + esc(v.top.map(function (t) { return t.name + ' (' + t.points + ' điểm)'; }).join(', ')) + '.</p>';
+    h += '<div class="note plain"><span>' + esc(v.phaseText) + '</span><button type="button" class="btn" id="rsApply">Tải lên</button></div>';
+  }
+  $('rsPreview').innerHTML = h + '</section>';
+  document.querySelectorAll('[data-rs-ask]').forEach(function (s) {
+    s.onchange = function () { if (s.value) RS.decisions[s.dataset.rsAsk] = s.value; else delete RS.decisions[s.dataset.rsAsk]; };
+  });
+  if ($('rsApply')) $('rsApply').onclick = function () {
+    if (!confirm('Tải danh sách ' + RS_KINDS[v.kind][0] + ' cho nhiệm kỳ ' + v.termLabel + '? ' + v.phaseText)) return;
+    var btn = this;
+    btn.disabled = true; setMsg('rsMsg', '', 'Đang tải danh sách…');
+    call('applyRoster', TOKEN, rsReq()).then(function (r) {
+      RS.decisions = {}; RS.view = null;
+      drawRoster(r.page, ['ok', 'Đã tải: ' + r.summary + '. ' + r.notes.join(' ')]);
+      $('rsMsg').scrollIntoView({ block: 'nearest' });
+    }).catch(function (err) { btn.disabled = false; setMsg('rsMsg', 'bad', err.message); });
+  };
+}
+
+function rsUploads(d) {
+  if (!d.uploads.length) return '';
+  return '<section class="sec"><h2>Các lần tải gần đây</h2><div class="list">' + d.uploads.map(function (u) {
+    return '<div class="sd-row"><div><b>' + esc(RS_TYPES[u.type] + (u.kind ? ', ' + RS_KINDS[u.kind][0] : '')) + '</b>' +
+      '<small>' + fmtTime(u.at) + ' ' + fmtDay(u.at) + ' · ' + esc(u.by) + (u.summary ? ' · ' + esc(u.summary) : '') + '</small></div>' +
+      (u.status === 'undone' ? pill('Đã hoàn tác', '') : '<span></span>') +
+      '<div class="acts">' + (u.url ? '<a class="btn ghost sm" href="' + esc(u.url) + '" target="_blank" rel="noopener">Bản sao</a>' : '') +
+      (u.canUndo ? '<button type="button" class="btn ghost sm" data-rs-undo="' + esc(u.id) + '">Hoàn tác</button>' : '') + '</div></div>';
+  }).join('') + '</div><p class="hint">Chỉ hoàn tác được lần tải danh sách thành viên mới nhất, trong ' + d.undoDays + ' ngày, khi người mới chưa có task, điểm danh hay điểm.</p></section>';
+}
+
+function rsEnd(d) {
+  var h = '<section class="sec"><h2>Kết thúc nhiệm kỳ</h2><p class="hint">Bấm sau bonding farewell. App chụp kết quả GD2 và cả nhiệm kỳ, bỏ file bằng chứng seeding của nhiệm kỳ, rồi mở nhiệm kỳ mới ở giai đoạn giao thoa. Mọi người vẫn vào app tới lần tải Oday.</p>';
+  if (d.endBlock) return h + '<p class="hint"><b>' + esc(d.endBlock) + '</b></p></section>';
+  if (d.endBlockers.length) h += '<p class="hint sd-warn">' + icon('help') + 'GD2 còn việc chưa xong:</p>' + rsList(d.endBlockers, 'bad');
+  else if (d.endTop.length) h += '<p class="hint">Top khen thưởng GD2: ' + esc(d.endTop.map(function (t) { return t.name + ' (' + t.points + ' điểm)'; }).join(', ')) + '.</p>';
+  return h + '<div><button type="button" class="btn ghost" id="rsEnd"' + (d.endBlockers.length ? ' disabled' : '') + '>Kết thúc nhiệm kỳ ' + esc(d.term.label) + '</button></div></section>';
+}
+
+function bindRosterRows() {
+  document.querySelectorAll('[data-rs-undo]').forEach(function (b) {
+    b.onclick = function () {
+      if (!confirm('Hoàn tác lần tải này? Người mới thêm sẽ bị xoá, thông tin và ban của người cũ trở lại như trước.')) return;
+      b.disabled = true; setMsg('rsMsg', '', 'Đang hoàn tác…');
+      call('undoRoster', TOKEN, b.dataset.rsUndo).then(function (d) { drawRoster(d, ['ok', 'Đã hoàn tác.']); })
+        .catch(function (err) { b.disabled = false; setMsg('rsMsg', 'bad', err.message); });
+    };
+  });
+  if ($('rsEnd')) $('rsEnd').onclick = function () {
+    if (!confirm('Kết thúc nhiệm kỳ ' + RS.data.term.label + '? Sau khi bấm không sửa được điểm, KPI của GD2 nữa.')) return;
+    var btn = this;
+    btn.disabled = true; setMsg('rsMsg', '', 'Đang kết thúc nhiệm kỳ…');
+    call('endTerm', TOKEN).then(function (d) { drawRoster(d, ['ok', 'Đã kết thúc nhiệm kỳ. Bước tiếp: chốt BOD mới rồi tải sheet Oday.']); })
+      .catch(function (err) { btn.disabled = false; setMsg('rsMsg', 'bad', err.message); });
+  };
+}
+</script>
