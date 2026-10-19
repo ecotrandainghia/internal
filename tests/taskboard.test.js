@@ -29,7 +29,7 @@ test('BOD thấy mọi task của nhiệm kỳ, trạng thái chung và từng n
   assert.equal(find(d, ids.soon).event, 'Ngày hội Xanh');
 });
 
-test('NS phụ trách ban chỉ thấy task và người của ban mình, không chấm được; thành viên thường không vào được', () => {
+test('Người phụ trách ban chỉ thấy task và người của ban mình, không chấm được; thành viên thường không vào được', () => {
   const { app, ids } = setUp();
   const d = plain(app.taskBoard(asLead(app)));
   assert.equal(d.canGrade, false);
@@ -37,7 +37,7 @@ test('NS phụ trách ban chỉ thấy task và người của ban mình, không
   assert.deepEqual(d.members.map((m) => m.id), ['M1']);
   assert.equal(d.tasks.length, 6);
   assert.throws(() => app.gradeTask(asLead(app), ids.waiting, 'M1', 'complete'), /Chỉ BOD/);
-  assert.throws(() => app.taskBoard(login(app, 'binh@gmail.com', 'chungCLB')), /Chỉ BOD và NS/);
+  assert.throws(() => app.taskBoard(login(app, 'binh@gmail.com', 'chungCLB')), /Chỉ BOD và người phụ trách/);
 });
 
 test('nhập task mới: giao nhiều người, đúng ban, được tính vì đang ở GD1', () => {

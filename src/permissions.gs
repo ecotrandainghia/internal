@@ -1,10 +1,10 @@
 /**
- * Cài đặt > Tài khoản và phân quyền: Phân quyền nhân sự (NS phụ trách ban, seeding, sinh nhật), Đặt lại mật khẩu,
+ * Cài đặt > Tài khoản và phân quyền: Phân quyền nhân sự (người phụ trách ban, seeding, sinh nhật), Đặt lại mật khẩu,
  * Đăng nhập bằng Google. Nhãn chỉ có hiệu lực trong nhiệm kỳ đang chạy; gỡ nhãn là ghi Đến ngày, không xoá dòng.
  * Mọi thay đổi ghi Nhật ký (change_setting), không bao giờ ghi mật khẩu.
  */
 
-var STAFF_LABELS = { dept_lead: 'NS phụ trách ban', seeding_lead: 'NS phụ trách seeding', birthday_lead: 'NS phụ trách sinh nhật' };
+var STAFF_LABELS = { dept_lead: 'Người phụ trách ban', seeding_lead: 'Người phụ trách seeding', birthday_lead: 'Người phụ trách sinh nhật' };
 
 /** Người đang ở CLB trong nhiệm kỳ đang chạy, kèm ban, lớp và tình trạng mật khẩu. */
 function staffPeople_(data, termId) {
@@ -46,7 +46,7 @@ function accountAdminFor_(me) {
   };
 }
 
-/** Gắn nhãn phụ trách cho một người ở nhiệm kỳ đang chạy. req: { type, memberId, dept (chỉ với NS phụ trách ban) }. */
+/** Gắn nhãn phụ trách cho một người ở nhiệm kỳ đang chạy. req: { type, memberId, dept (chỉ với người phụ trách ban) }. */
 function addStaffLabel(token, req) {
   var me = requireUser_(token, 'bod');
   req = req || {};
@@ -60,7 +60,7 @@ function addStaffLabel(token, req) {
     if (type === 'dept_lead') {
       if (!view.depts.some(function (d) { return d.code === dept; })) throw new Error('Chọn ban được phụ trách.');
     } else dept = '';
-    if (view.leads[type].some(function (l) { return l.id === who.id && l.dept === dept; })) throw new Error(who.name + ' đã là ' + STAFF_LABELS[type] + (dept ? ' ' + dept : '') + ' rồi.');
+    if (view.leads[type].some(function (l) { return l.id === who.id && l.dept === dept; })) throw new Error(who.name + ' đã là ' + STAFF_LABELS[type].toLowerCase() + (dept ? ' ' + dept : '') + ' rồi.');
     var rec = insertRecords_('member_labels', [{ member_id: who.id, term_id: term.term_id, label_type: type, detail: dept, start_date: new Date() }], { termId: term.term_id })[0];
     writeAudit_({ actorId: me.memberId, action: 'change_setting', table: 'member_labels', rowId: rec.label_id },
       [{ column: 'label_type', oldValue: '', newValue: STAFF_LABELS[type] + (dept ? ' ' + dept : '') + ': ' + who.name }]);

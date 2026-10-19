@@ -10,7 +10,7 @@ const asBod = (app) => login(app, 'an@gmail.com', 'matkhauAn');
 const asBinh = (app) => login(app, 'binh@gmail.com', 'chungCLB');
 const asChi = (app) => login(app, 'chi@gmail.com', 'chungCLB');
 
-/** Chi là NS phụ trách seeding; Bình có tên Facebook, Chi chưa có (app dò theo họ tên). */
+/** Chi là người phụ trách seeding; Bình có tên Facebook, Chi chưa có (app dò theo họ tên). */
 function seedingSetUp() {
   const s = setUp();
   s.app.insertRecords_('member_labels', [{ member_id: 'M2', term_id: s.term, label_type: 'seeding_lead' }], { termId: s.term });
@@ -41,7 +41,7 @@ test('dò tên: tên dài che tên ngắn nằm trong nó, trùng tên phải ti
 test('đặt nhắc hẹn: chỉ NS seeding hoặc BOD, link Facebook, lúc nhắc trong 14 ngày, không trùng bài', () => {
   const { app } = seedingSetUp();
   const chi = asChi(app);
-  assert.throws(() => addPost(app, asBinh(app), 'https://www.facebook.com/eco/posts/1'), /Chỉ NS phụ trách seeding/);
+  assert.throws(() => addPost(app, asBinh(app), 'https://www.facebook.com/eco/posts/1'), /Chỉ người phụ trách seeding/);
   assert.throws(() => addPost(app, chi, 'https://example.com/eco/posts/1'), /link bài đăng Facebook/);
   assert.throws(() => addPost(app, chi, 'https://www.facebook.com/eco/posts/1', -HOUR), /đã qua/);
   assert.throws(() => addPost(app, chi, 'https://www.facebook.com/eco/posts/1', 15 * 24 * HOUR), /14 ngày/);

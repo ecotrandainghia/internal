@@ -1,5 +1,5 @@
 /**
- * Sinh nhật: trang cho NS phụ trách sinh nhật (và BOD), tin nhắc sinh nhật gửi qua Zalo hoặc app, và lịch sinh nhật trên
+ * Sinh nhật: trang cho người phụ trách sinh nhật (và BOD), tin nhắc sinh nhật gửi qua Zalo hoặc app, và lịch sinh nhật trên
  * Google Calendar CLB. Lịch vẫn có để cả CLB xem, nhưng mọi sự kiện tắt hết nhắc của Calendar: tin nhắc do app gửi.
  * Mỗi sự kiện mang thẻ eco_member (Mã TV) và eco_key (ngày, tên, mô tả) nên app nhận ra sự kiện của mình mà không cần thêm cột.
  */
@@ -63,7 +63,7 @@ function birthdaySettings_() {
   };
 }
 
-/** Người nhận tin nhắc sinh nhật: NS phụ trách sinh nhật đang có nhãn; chưa có ai thì BOD, để không bị sót. */
+/** Người nhận tin nhắc sinh nhật: người phụ trách sinh nhật đang có nhãn; chưa có ai thì BOD, để không bị sót. */
 function birthdayLeads_(data, termId, now) {
   var ids = [];
   data.member_labels.forEach(function (l) {
@@ -86,7 +86,7 @@ function birthdayReminderMessages_(now, data) {
   }).join('\n');
   var to = birthdayLeads_(data, term.term_id, now);
   return to.ids.map(function (id) {
-    return { memberId: id, title: 'Nhắc sinh nhật', body: (to.bod ? 'CLB chưa có NS phụ trách sinh nhật nên app gửi BOD.\n' : '') + body };
+    return { memberId: id, title: 'Nhắc sinh nhật', body: (to.bod ? 'CLB chưa có người phụ trách sinh nhật nên app gửi BOD.\n' : '') + body };
   });
 }
 
@@ -94,7 +94,7 @@ function birthdayReminderMessages_(now, data) {
 
 function requireBirthdayLead_(token) {
   var me = requireUser_(token);
-  if (!me.user.isBod && me.user.labels.indexOf('birthday_lead') < 0) throw new Error('Chỉ NS phụ trách sinh nhật (hoặc BOD) mới xem được trang này.');
+  if (!me.user.isBod && me.user.labels.indexOf('birthday_lead') < 0) throw new Error('Chỉ người phụ trách sinh nhật (hoặc BOD) mới xem được trang này.');
   return me;
 }
 

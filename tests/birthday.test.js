@@ -29,9 +29,9 @@ test('ngày sinh: 29/2 năm không nhuận tính là 28/2, đếm ngày tới si
   assert.equal(app.daysToBirthday_(new Date(2026, 5, 11), 6, 10), 364);
 });
 
-test('trang Sinh nhật: NS phụ trách sinh nhật hoặc BOD; 30 ngày tới, cả năm, người thiếu ngày sinh', () => {
+test('trang Sinh nhật: người phụ trách sinh nhật hoặc BOD; 30 ngày tới, cả năm, người thiếu ngày sinh', () => {
   const { app, term } = bdSetUp();
-  assert.throws(() => app.birthdayPage(asBinh(app)), /Chỉ NS phụ trách sinh nhật/);
+  assert.throws(() => app.birthdayPage(asBinh(app)), /Chỉ người phụ trách sinh nhật/);
   app.insertRecords_('member_labels', [{ member_id: 'M1', term_id: term, label_type: 'birthday_lead' }], { termId: term });
   const d = plain(app.birthdayPage(asBinh(app)));
   assert.deepEqual(d.soon.map((p) => [p.name, p.inDays]), [['Lê Chi', 0], ['Trần Thị Bình', 1], ['Nguyễn Văn An', 10]]);
@@ -41,11 +41,11 @@ test('trang Sinh nhật: NS phụ trách sinh nhật hoặc BOD; 30 ngày tới,
   assert.deepEqual(plain(app.birthdayPage(asBod(app))).missing, ['Lê Chi']);
 });
 
-test('tin nhắc sinh nhật: gửi NS phụ trách sinh nhật, chưa có ai thì gửi BOD; trước mấy ngày theo cài đặt', () => {
+test('tin nhắc sinh nhật: gửi người phụ trách sinh nhật, chưa có ai thì gửi BOD; trước mấy ngày theo cài đặt', () => {
   const { app, bod, term } = bdSetUp();
   let msgs = plain(app.birthdayReminderMessages_(new Date()));
-  assert.deepEqual(msgs.map((m) => m.memberId), [bod], 'chưa có NS phụ trách sinh nhật thì gửi BOD');
-  assert.match(msgs[0].body, /^CLB chưa có NS phụ trách sinh nhật/);
+  assert.deepEqual(msgs.map((m) => m.memberId), [bod], 'chưa có người phụ trách sinh nhật thì gửi BOD');
+  assert.match(msgs[0].body, /^CLB chưa có người phụ trách sinh nhật/);
   assert.match(msgs[0].body, /• Lê Chi \(AD · 11A2\): \d\d\/\d\d, hôm nay\n• Trần Thị Bình \(PR · 11A1\): \d\d\/\d\d, ngày mai\n  https:\/\/facebook\.com\/binh$/);
   app.insertRecords_('member_labels', [{ member_id: 'M2', term_id: term, label_type: 'birthday_lead' }], { termId: term });
   app.saveBirthdaySettings(asBod(app), { days: 0, time: '06:15', calendarId: '' });

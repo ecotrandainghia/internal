@@ -1,5 +1,5 @@
 <script>
-/* Trang Quản lý task (BOD, NS phụ trách ban). Bấm một task thì mở khung bên phải để xem chi tiết, chấm, đổi trạng thái;
+/* Trang Quản lý task (BOD, người phụ trách ban). Bấm một task thì mở khung bên phải để xem chi tiết, chấm, đổi trạng thái;
    danh sách vẫn ở nguyên chỗ. Mỗi thao tác máy chủ trả lại cả dữ liệu trang để vẽ lại. */
 var TB = { page: '', data: null, tab: 'open', q: '', dept: '', event: '', open: null, gradeFor: null };
 var TB_TABS = [['open', 'Đang mở'], ['due_soon', 'Sắp đến hạn'], ['late', 'Trễ hạn'], ['waiting', 'Chờ chấm'], ['done', 'Đã xong'], ['cancelled', 'Đã huỷ']];
@@ -14,9 +14,9 @@ function tbInTab(t, tab) {
 }
 
 PAGES.task = function (main) {
-  openTaskBoard(main, 'task', 'Quản lý task', 'Thành viên tự bấm “Đã xong”, app tự biết đúng hạn hay trễ. Xin gia hạn vẫn nhắn Messenger, BOD hoặc NS sửa hạn ở đây.', 'Tạo task');
+  openTaskBoard(main, 'task', 'Quản lý task', 'Thành viên tự bấm “Đã xong”, app tự biết đúng hạn hay trễ. Xin gia hạn vẫn nhắn Messenger, BOD hoặc người phụ trách ban sửa hạn ở đây.', 'Tạo task');
 };
-/* NS phụ trách ban dùng cùng danh sách task ở trang Ban phụ trách (team_view.html). */
+/* người phụ trách ban dùng cùng danh sách task ở trang Ban phụ trách (team_view.html). */
 
 function openTaskBoard(main, pageId, title, lead, newText) {
   TB.page = pageId; TB.open = null; TB.data = null; closeDrawer();

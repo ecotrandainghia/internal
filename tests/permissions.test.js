@@ -15,7 +15,7 @@ test('phân quyền nhân sự: gán, chặn trùng, gỡ thì mất quyền nga
   assert.deepEqual(d.people.map((p) => [p.name, p.dept]), [['Nguyễn Văn An', 'BOD'], ['Lê Chi', 'AD'], ['Trần Thị Bình', 'PR']]);
   assert.deepEqual(d.leads.dept_lead.map((l) => [l.name, l.dept]), [['Lê Chi', 'PR']]);
   assert.throws(() => app.addStaffLabel(token, { type: 'dept_lead', memberId: 'M1', dept: '' }), /Chọn ban/);
-  assert.throws(() => app.addStaffLabel(token, { type: 'dept_lead', memberId: 'M2', dept: 'PR' }), /Lê Chi đã là NS phụ trách ban PR rồi/);
+  assert.throws(() => app.addStaffLabel(token, { type: 'dept_lead', memberId: 'M2', dept: 'PR' }), /Lê Chi đã là người phụ trách ban PR rồi/);
   assert.throws(() => app.addStaffLabel(token, { type: 'boss', memberId: 'M1' }), /không hợp lệ/);
   d = plain(app.addStaffLabel(token, { type: 'dept_lead', memberId: 'M2', dept: 'hr' }));
   assert.deepEqual(d.leads.dept_lead.map((l) => [l.name, l.dept]), [['Lê Chi', 'HR'], ['Lê Chi', 'PR']]);

@@ -100,7 +100,7 @@ test('gửi tin theo đường mỗi người chọn, ghi tab Thông báo, đư�
   let calls = fakeWeb(app, { zaloDown: true });
   let r = plain(app.notifyMembers_([{ memberId: 'M1', title: 'Nhắc việc', body: 'Thiết kế poster' }, { memberId: 'M2', title: 'Nhắc việc', body: 'x' }]));
   assert.equal(r.sent, 1);
-  assert.deepEqual(r.failed.map((f) => [f.id, f.why]), [['M2', 'chưa chọn đường nhận nào']]);
+  assert.deepEqual(r.failed.map((f) => [f.id, f.why]), [['M2', 'chưa chọn cách nhận nào']]);
   const push = calls.find((c) => c.url === ENDPOINT);
   assert.equal(push.o.headers['Content-Encoding'], 'aes128gcm');
   assert.match(push.o.headers.Authorization, /^vapid t=[\w-]+\.[\w-]+\.[\w-]+, k=[\w-]{87}$/);
@@ -121,7 +121,7 @@ test('Thông báo của tôi: giữ ít nhất một đường, bật máy thì 
   let d = plain(app.saveMyChannels(tok, { zalo: true, app: false }));
   assert.deepEqual([d.zalo, d.app, d.must, d.linked, d.devices.length], [true, false, false, false, 0]);
   assert.match(d.publicKey, /^[\w-]{87}$/);
-  assert.equal(plain(app.myNotify(asChi(app))).must, true, 'NS phụ trách ban phải nhận tin');
+  assert.equal(plain(app.myNotify(asChi(app))).must, true, 'Người phụ trách ban phải nhận tin');
   assert.throws(() => app.saveDevice(tok, { endpoint: 'https://evil.example.com/x', key: 'k'.repeat(24) }), /chưa hỗ trợ/);
   d = plain(app.saveDevice(tok, { endpoint: ENDPOINT, key: 'k'.repeat(24), name: 'iPhone' }));
   assert.deepEqual([d.app, d.devices.map((m) => m.name)], [true, ['iPhone']]);

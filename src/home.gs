@@ -43,7 +43,7 @@ function pinnedLinks_(settings) {
 }
 
 /**
- * Có cần nhắc cài thông báo không. Người phải nhận tin (BOD, NS phụ trách ban, seeding, sinh nhật) hoặc người tự bật
+ * Có cần nhắc cài thông báo không. Người phải nhận tin (BOD, người phụ trách ban, seeding, sinh nhật) hoặc người tự bật
  * nhắc task: nhắc khi chưa bật kênh nào, hoặc kênh đã bật chưa cài xong (Zalo chưa kết nối, app chưa bật trên máy nào).
  */
 function needsNotifySetup_(me, data) {
@@ -79,7 +79,7 @@ function myTasks_(memberId, tasks, assignments, data, now, rules) {
     var t = byId[a.task_id], status = taskStatus_(t, a, now, rules.dueSoonDays, rules.notDoneHours);
     if (status === 'cancelled' || status === 'not_done' || (status === 'done' && a.quality)) return null;
     return { taskId: t.task_id, name: t.name, deadline: t.deadline ? t.deadline.getTime() : null, status: status,
-      by: dept[t.created_by] === 'BOD' ? 'BOD giao' : 'NS phụ trách ban nhập',
+      by: dept[t.created_by] === 'BOD' ? 'BOD giao' : 'Người phụ trách ban nhập',
       canUndo: status === 'done' && a.confirmed_by === memberId };
   }).filter(Boolean).sort(function (x, y) { return (x.deadline || Infinity) - (y.deadline || Infinity); });
 }
@@ -165,7 +165,7 @@ function memberHome_(memberId, data, term, phase, tasks, assignments, now, rules
   return out;
 }
 
-/** NS phụ trách ban: số task trễ hạn và sắp đến hạn của các ban mình phụ trách. */
+/** người phụ trách ban: số task trễ hạn và sắp đến hạn của các ban mình phụ trách. */
 function leadSummary_(depts, tasks, assignments, now, rules) {
   var urgent = urgentAssignments_(tasks, assignments, now, rules, function (t) { return depts.indexOf(t.dept_code) >= 0; });
   return { late: urgent.filter(function (x) { return x.status === 'late'; }).length, soon: urgent.filter(function (x) { return x.status === 'due_soon'; }).length };

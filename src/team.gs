@@ -1,10 +1,10 @@
 /**
- * Trang Ban phụ trách của NS phụ trách ban (danh sách cần nhắc, log của ban; tab task dùng chung tasks.gs)
+ * Trang Ban phụ trách của người phụ trách ban (danh sách cần nhắc, log của ban; tab task dùng chung tasks.gs)
  * và lịch nhắc hạn task gửi qua Zalo, app (TB-03, TB-04).
  *
  * Nhắc hạn task: mỗi mốc là một ngày so với ngày hạn chót và một giờ (mặc định 20:30 hôm trước, 6:30 ngày hạn, 6:30 hôm sau),
- * chỉ nhắc người chưa xác nhận xong. Tin đi tới NS phụ trách ban của task để nhắc lại qua Messenger; task của BOD gửi thẳng
- * cho BOD đó; ban chưa có NS phụ trách thì gửi thẳng cho người được giao; ai bật Tự nhắc hạn task thì nhận thêm task của mình.
+ * chỉ nhắc người chưa xác nhận xong. Tin đi tới người phụ trách ban của task để nhắc lại qua Messenger; task của BOD gửi thẳng
+ * cho BOD đó; ban chưa có người phụ trách thì gửi thẳng cho người được giao; ai bật Tự nhắc hạn task thì nhận thêm task của mình.
  */
 
 var REMIND_HANDLER = 'runTaskReminders';
@@ -17,7 +17,7 @@ var MAX_REMIND_HOURS = 6;
 
 function requireLead_(token) {
   var me = requireUser_(token);
-  if (!me.user.leadDepts.length) throw new Error('Chỉ NS phụ trách ban mới xem được trang này.');
+  if (!me.user.leadDepts.length) throw new Error('Chỉ người phụ trách ban mới xem được trang này.');
   return me;
 }
 

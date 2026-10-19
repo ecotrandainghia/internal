@@ -22,7 +22,7 @@ var SIZE_ALERT_RATIO = 0.7;
 var JOBS = [
   { id: 'nightly', handler: NIGHTLY_HANDLER, name: 'Việc ban đêm', when: '2 giờ sáng mỗi ngày', what: 'Sao lưu, lưu trữ nhiệm kỳ cũ, làm mới tab xem, dọn phiên đăng nhập, kiểm tra dung lượng' },
   { id: 'task_reminders', handler: 'runTaskReminders', name: 'Nhắc hạn task', when: 'Theo Lịch nhắc task', what: 'Nhắc người sắp đến hạn và trễ hạn, xoá thông báo cũ' },
-  { id: 'birthday', handler: 'runBirthdayReminders', name: 'Nhắc sinh nhật', when: 'Mỗi ngày theo giờ nhắc sinh nhật', what: 'Báo NS phụ trách sinh nhật' },
+  { id: 'birthday', handler: 'runBirthdayReminders', name: 'Nhắc sinh nhật', when: 'Mỗi ngày theo giờ nhắc sinh nhật', what: 'Báo người phụ trách sinh nhật' },
   { id: 'seeding', handler: 'runSeedingReminders', name: 'Nhắc seeding', when: 'Mỗi 15 phút', what: 'Nhắc người đặt hẹn ghi nhận seeding', onDemand: true },
   { id: 'mail_sends', handler: 'runScheduledSends', name: 'Gửi thư hẹn giờ', when: 'Mỗi 10 phút', what: 'Gửi các thư đã đến giờ hẹn', onDemand: true }
 ];

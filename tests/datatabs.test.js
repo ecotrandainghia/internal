@@ -20,7 +20,7 @@ test('tab xem: 5 tab đứng đầu, tô xám, khoá, chữ tiếng Việt có t
   assert.equal(people[1][0], 'Nguyễn Văn An', 'BOD đứng đầu');
   const chi = people.find((r) => r[0] === 'Lê Chi');
   assert.equal(chi[3], '11');
-  assert.equal(chi[7], 'NS phụ trách ban PR');
+  assert.equal(chi[7], 'Người phụ trách ban PR');
   assert.equal(chi[8], 'Đang ở CLB');
 
   const tasks = values(app, 'Xem - Task');

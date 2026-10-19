@@ -33,7 +33,7 @@ function drawDepartments(d, flash) {
       '<td><input type="checkbox" class="dp-on"' + (x.active ? ' checked' : '') + (x.code === 'BOD' ? ' disabled' : '') + ' aria-label="Đang dùng"></td></tr>';
   };
   wideModal('<h2 id="boxTitle">Cơ cấu ban</h2>' +
-    '<p class="hint">Mã ban phải đúng chữ ghi ở cột Ban của sheet tải lên. Mảng gõ tên rồi bấm Enter để thêm, bấm × để bỏ. Ban đã có dữ liệu không xoá được, chỉ bỏ tick Đang dùng để dữ liệu năm cũ vẫn đọc được. NS phụ trách ban gán ở Phân quyền nhân sự, ban nào cũng được.</p>' +
+    '<p class="hint">Mã ban phải đúng chữ ghi ở cột Ban của sheet tải lên. Mảng gõ tên rồi bấm Enter để thêm, bấm × để bỏ. Ban đã có dữ liệu không xoá được, chỉ bỏ tick Đang dùng để dữ liệu năm cũ vẫn đọc được. người phụ trách ban gán ở Phân quyền nhân sự, ban nào cũng được.</p>' +
     '<div class="table-wrap"><table class="mtable dp-table"><thead><tr><th>Mã</th><th>Tên ban</th><th>Mảng</th><th class="r">Đang có</th><th>Dùng</th></tr></thead><tbody>' +
     d.depts.map(row).join('') + '</tbody></table></div>' +
     '<div><button type="button" class="btn ghost sm" id="dpAdd">' + icon('plus') + 'Thêm ban</button></div>' +

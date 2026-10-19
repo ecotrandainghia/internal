@@ -10,7 +10,7 @@ var ICONS = {
   users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c1.8.6 3 2.4 3 5.2',
   target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   chart: 'M4 20v-9M10 20V5M16 20v-6M3 20h18',
-  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4L10.7 6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.5z',
+  gear: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   theme: 'M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18',
   help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
   logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
@@ -51,7 +51,7 @@ function $(id) { return document.getElementById(id); }
 var NAV_BOD = [['home', 'Trang chủ', 'home', 4], ['task', 'Quản lý task', 'task', 5], ['log', 'Quản lý log', 'log', 5], ['points', 'Cộng điểm', 'star', 5],
   ['mail', 'Hộp thư', 'mail', 6], ['feedback', 'Góp ý', 'chat', 6], ['members', 'Thành viên', 'users', 7]];
 var NAV_MEMBER = [['home', 'Trang chủ', 'home', 4], ['my-kpi', 'KPI của tôi', 'target', 7], ['ranking', 'Điểm và xếp hạng', 'chart', 7], ['feedback', 'Góp ý', 'chat', 6]];
-/* Trang riêng theo nhãn: NS phụ trách ban, seeding, sinh nhật (bước 8). */
+/* Trang riêng theo nhãn: người phụ trách ban, seeding, sinh nhật (bước 8). */
 var NAV_BY_LABEL = { ucv: ['mailbox', 'Hộp thư', 'mail', 6], dept_lead: ['my-team', 'Ban phụ trách', 'users', 8], seeding_lead: ['seeding', 'Seeding', 'link', 8], birthday_lead: ['birthdays', 'Sinh nhật', 'cake', 8] };
 function navItems() {
   if (!USER) return [];
@@ -64,13 +64,13 @@ var APP_LINK = 'https://ecotrandainghia.github.io/internal/';
 var SETTINGS = [
   ['Của tôi', false, [
     ['account', 'Tài khoản của tôi', 'user', 'Ai cũng thấy phần này.', [['Ảnh đại diện', 'Hiện ở thanh bên và bảng điểm', 'Đổi ảnh', 'avatar'], ['Mật khẩu', 'Đổi mật khẩu đăng nhập của bạn', 'Đổi mật khẩu', 'password'], ['Giao diện', 'Sáng, tối hoặc theo cài đặt của máy', 'theme'], ['Dữ liệu ẩn danh', 'Cho CLB dùng dữ liệu của bạn ở dạng ẩn danh, không bắt buộc', 'consent'], ['Fanpage để seeding', 'Page bạn dùng để react, comment vẫn được cộng điểm', 'Sửa', 'fanpages'], ['Hướng dẫn', 'Xem lại hướng dẫn cài app và tour giới thiệu', 'Xem lại', 'guide']]],
-    ['my-notify', 'Thông báo của tôi', 'bell', 'Chọn cách bạn nhận tin: Zalo, app trên điện thoại hoặc cả hai. Phải giữ ít nhất một đường.', [['Zalo', 'Nhắn mã kết nối cho bot Zalo của CLB', 'Kết nối', 'my-notify'], ['App trên điện thoại', 'Khi đã thêm app vào màn hình chính', 'Bật', 'my-notify'], ['Tự nhắc hạn task', 'Mặc định tắt vì NS phụ trách ban nhắc giúp', 'Sửa', 'my-notify'], ['Gửi thử', 'Gửi một tin thử tới các đường đang bật', 'Gửi thử', 'my-notify'], ['Thông báo 30 ngày qua', 'Xem lại những tin app đã gửi bạn', 'Xem', 'notices']]]]],
+    ['my-notify', 'Thông báo của tôi', 'bell', 'Bạn bật được nhiều cách cùng lúc, tin sẽ gửi qua mọi cách đang bật. Cần bật ít nhất một cách.', [['Zalo', 'Nhắn mã kết nối cho bot Zalo của CLB', 'Kết nối'], ['App trên điện thoại', 'Khi đã thêm app vào màn hình chính', 'Bật'], ['Tự nhắc hạn task', 'Mặc định tắt vì người phụ trách ban đã nhắc giúp', 'Sửa'], ['Gửi thử', 'Gửi một tin thử qua mọi cách đang bật', 'Gửi thử'], ['Thông báo 30 ngày qua', 'Xem lại những tin app đã gửi bạn', 'Xem', 'notices']]]]],
   ['Câu lạc bộ (chỉ BOD)', true, [
     ['rules', 'Quy tắc CLB', 'book', 'Mỗi lần sửa được ghi vào Nhật ký.', [['Cơ cấu ban', 'Mã ban, tên ban, các mảng', 'Sửa', 'departments'], ['Thang điểm', 'Các loại hoạt động và số điểm mỗi loại', 'Sửa', 'scale'], ['Khen thưởng và hạn task', 'Top khen thưởng, số ngày tính là sắp đến hạn', 'Sửa', 'rule-reward'], ['Ngưỡng cảnh báo', 'Có số mặc định, sửa được khi cần', 'Sửa', 'rule-warn'], ['Kế hoạch năm', 'Các sự kiện trong năm để gom task và log', 'Mở', 'plan']]],
-    ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua đường nào, gửi thử', 'Xem', 'club-notify'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa', 'task-reminders'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, seeding', 'Sửa', 'bod-alerts'], ['Bot Zalo', 'Mã bot và số người đã kết nối', 'Mở', 'zalo-bot']]],
+    ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua cách nào, gửi thử', 'Xem', 'club-notify'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa', 'task-reminders'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, seeding', 'Sửa', 'bod-alerts'], ['Bot Zalo', 'Mã bot và số người đã kết nối', 'Mở', 'zalo-bot']]],
     ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu sheet đăng ký log', 'Sửa', 'log-files'], ['Sheet đăng ký log', 'Mỗi sự kiện một sheet, tạo hoặc đổi ở trang Quản lý log', 'Mở', 'log-page'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở', 'seeding-page'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa', 'pinned-links']]],
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở', 'contacts'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa', 'mail-signature'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem', 'mail-quota']]],
-    ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển; Kết thúc nhiệm kỳ', 'Tải lên', 'roster'], ['Phân quyền nhân sự', 'NS phụ trách ban, seeding, sinh nhật; BOD gán tay từng người', 'Sửa', 'staff-roles'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên', 'label-sheet'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai, đổi mật khẩu chung', 'Mở', 'reset-password'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Sửa', 'google-login'], ['Lịch sinh nhật', 'Nhắc sinh nhật và Google Lịch ghi sinh nhật', 'Mở', 'birthday-page']]],
+    ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển; Kết thúc nhiệm kỳ', 'Tải lên', 'roster'], ['Phân quyền nhân sự', 'Người phụ trách ban, seeding, sinh nhật; BOD gán tay từng người', 'Sửa', 'staff-roles'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên', 'label-sheet'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai, đổi mật khẩu chung', 'Mở', 'reset-password'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Sửa', 'google-login'], ['Lịch sinh nhật', 'Nhắc sinh nhật và Google Lịch ghi sinh nhật', 'Mở', 'birthday-page']]],
     ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', seasonRowText, 'Đổi', 'season'], ['Ảnh nền đăng nhập', loginBgRowText, 'Đổi ảnh', 'login-bg']]],
     ['system', 'Hệ thống', 'chart', '', [['Tình trạng hệ thống', 'Việc tự chạy lúc 2 giờ sáng, lỗi báo qua Zalo hoặc app', 'Xem', 'system-status'], ['Sao lưu và khôi phục', 'Tự sao lưu mỗi đêm, giữ 30 bản', 'Khôi phục', 'backups'], ['Nhật ký', 'Ai sửa gì, lúc nào', 'Xem', 'audit-log'], ['Tab dữ liệu', 'Các tab đã khoá và tab chỉ để xem', 'Xem', 'data-tabs']]]]]
 ];
@@ -445,9 +445,10 @@ function renderSettings(query) {
   }).join('');
   var body = '<button class="icon-btn only-phone" type="button" data-act="back" aria-label="Quay lại">' + icon('back') + '</button>' +
     '<h2 id="setTitle">' + esc(sec[1]) + '</h2>' + (sec[3] ? '<p class="lead">' + esc(sec[3]) + '</p>' : '') +
-    sec[4].map(function (r) {
+    // Thông báo của tôi vẽ thẳng ở đây (bật, tắt từng cách), không mở thêm hộp nào.
+    (sec[0] === 'my-notify' ? '<div id="myNotify">' + loadingHtml() + '</div>' : sec[4].map(function (r) {
       return '<div class="row"><div><b>' + esc(r[0]) + '</b><small>' + esc(rowText(r)) + '</small></div>' + settingControl(r) + '</div>';
-    }).join('');
+    }).join(''));
   var box = $('settings').querySelector('.dialog');
   if (!box) {
     $('settings').innerHTML = '<div class="dialog" role="dialog" aria-modal="true" aria-labelledby="setTitle">' +
@@ -460,6 +461,7 @@ function renderSettings(query) {
   $('setNav').innerHTML = nav || '<div class="set-group">Không thấy cài đặt nào</div>';
   $('setBody').innerHTML = body;
   box.classList.toggle('in-section', !!openSection);
+  if (sec[0] === 'my-notify') loadMyNotify();
   reportPath();
 }
 function openSettings() { if (!USER) return; closeMenu(); closeSide(); openSection = null; $('settings').hidden = false; renderSettings(''); $('setQuery').focus(); }
@@ -514,8 +516,7 @@ document.addEventListener('click', function (e) {
   else if (act === 'audit-log') openAuditLog();
   else if (act === 'data-tabs') openDataTabs();
   else if (act === 'close-modal') closeModal();
-  else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); openMyNotify(); }
-  else if (act === 'my-notify') openMyNotify();
+  else if (act === 'notify') openMyNotify();
   else if (act === 'notices') { closeSettings(); closeMenu(); page = 'notifications'; renderPage(); }
   else if (act === 'club-notify') openClubNotify('people');
   else if (act === 'bod-alerts') openClubNotify('alerts');
