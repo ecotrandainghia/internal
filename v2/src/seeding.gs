@@ -332,11 +332,13 @@ function seedingReminderMessages_(from, to) {
 /** Chạy tự động mỗi 15 phút: nhắc người đặt nhắc khi tới giờ. Nhớ mốc đã nhắc tới đâu để không nhắc lại. */
 function runSeedingReminders(e) {
   if (!fromOwnTrigger_(e)) return null;
-  var props = PropertiesService.getScriptProperties(), now = Date.now();
-  var from = Number(props.getProperty(SEEDING_REMIND_PROP)) || now - 15 * 60e3;
-  var items = seedingReminderMessages_(from, now);
-  props.setProperty(SEEDING_REMIND_PROP, String(now));
-  return items.length ? notifyMembers_(items) : null;
+  return trackJob_('seeding', function () {
+    var props = PropertiesService.getScriptProperties(), now = Date.now();
+    var from = Number(props.getProperty(SEEDING_REMIND_PROP)) || now - 15 * 60e3;
+    var items = seedingReminderMessages_(from, now);
+    props.setProperty(SEEDING_REMIND_PROP, String(now));
+    return items.length ? notifyMembers_(items) : null;
+  });
 }
 
 /* ---------- Fanpage để seeding (HS-04) ---------- */

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadApp } = require('./gas');
 
-const FILES = ['schema.gs', 'records.gs', 'db.gs', 'access.gs', 'auth.gs', 'setup.gs', 'main.gs', 'season.gs'];
+const FILES = ['schema.gs', 'records.gs', 'db.gs', 'access.gs', 'auth.gs', 'setup.gs', 'main.gs', 'season.gs', 'system.gs', 'datatabs.gs'];
 const BOD = { name: 'Nguyễn  Văn An', email: ' An@Gmail.com ', position: 'Chủ nhiệm', password: 'matkhauAn', clubPassword: 'chungCLB' };
 
 /** App đã cài xong, có một BOD (An). */

@@ -105,7 +105,7 @@ test('vượt hạn mức: chặn nếu không chia đợt; chia đợt thì g�
   assert.throws(() => app.sendBulk(tok, { draftId: draft, recipients, fields: t.columns }), /chỉ còn gửi được 1 người/);
   const r = plain(app.sendBulk(tok, { draftId: draft, recipients, fields: t.columns, source: 'Sheet: Đối tác', split: true }));
   assert.deepEqual([r.sent, r.scheduled], [1, 1]);
-  assert.deepEqual(plain(app.__triggers), ['runScheduledSends']);
+  assert.deepEqual(plain(app.__triggers.filter((t) => typeof t === 'string' && t !== 'onDataFileOpen')), ['runScheduledSends']);
   const later = app.readTable_('mail_sends').find((x) => x.status === 'scheduled');
   assert.equal(later.send_at.getHours(), 7);
   assert.equal(later.recipient_source, 'Sheet: Đối tác (đợt 2/2)');

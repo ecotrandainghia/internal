@@ -90,6 +90,8 @@ function setupApp(req) {
   ensureSchema_(true);
   createFirstBod_(req, new Date());
   setDefaultPassword_(req.clubPassword);
+  ensureNightlyTrigger_();
+  ensureViewTrigger_();
   CacheService.getScriptCache().remove('setup_code');
   return ScriptApp.getService().getUrl();
 }

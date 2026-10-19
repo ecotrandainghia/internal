@@ -161,8 +161,10 @@ function ensureBirthdayTrigger_() {
 /** Chạy tự động mỗi ngày: gửi tin nhắc sinh nhật. */
 function runBirthdayReminders(e) {
   if (!fromOwnTrigger_(e)) return null;
-  var items = birthdayReminderMessages_(new Date());
-  return items.length ? notifyMembers_(items) : null;
+  return trackJob_('birthday', function () {
+    var items = birthdayReminderMessages_(new Date());
+    return items.length ? notifyMembers_(items) : null;
+  });
 }
 
 /* ---------- Google Calendar ---------- */

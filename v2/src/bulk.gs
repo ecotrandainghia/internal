@@ -354,6 +354,10 @@ function cancelSend(token, id) {
  * Chỉ khoá lúc đánh dấu Đang gửi và lúc ghi kết quả. Hết hạn mức thì dời đợt đó sang 7 giờ sáng hôm sau.
  */
 function runScheduledSends() {
+  return trackJob_('mail_sends', sendDueMails_);
+}
+
+function sendDueMails_() {
   var due = withLock_(function () {
     var now = Date.now();
     return readTable_('mail_sends').filter(function (s) { return s.status === 'scheduled' && s.send_at && s.send_at.getTime() <= now; })
