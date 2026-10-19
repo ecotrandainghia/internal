@@ -162,3 +162,21 @@ test('cột ô tick định dạng sẵn tới cuối sheet: dòng chưa dùng (
   assert.ok(list.every((d) => d.dept_code));
   assert.equal(sh.data[real + 1][header.indexOf('dept_code')], 'MKT');
 });
+
+test('dữ liệu cũ bắt đầu từ dòng 1001: chạy lại cấu trúc thì dồn lên sát dòng tên cột, giữ thứ tự, chạy lần nữa không đổi', () => {
+  const app = setUp();
+  const sh = file(app).getSheetByName('departments');
+  const header = sh.data[0], on = header.indexOf('is_active'), code = header.indexOf('dept_code');
+  const real = sh.data.slice(1).filter((r) => r[code]);
+  assert.ok(real.length >= 2);
+  const moved = real.map((r) => r.slice());
+  sh.data.length = 1; sh.maxRows = 1100;
+  for (let i = 0; i < 999; i++) { const row = header.map(() => ''); row[on] = false; sh.data.push(row); }
+  moved.forEach((r) => sh.data.push(r));
+  app.ensureSchema_(true);
+  assert.deepEqual(sh.data.slice(1, 1 + real.length).map((r) => r[code]), real.map((r) => r[code]));
+  assert.equal(sh.getLastRow(), 1 + real.length);
+  const snap = JSON.stringify(sh.data);
+  app.ensureSchema_(true);
+  assert.equal(JSON.stringify(sh.data), snap);
+});
