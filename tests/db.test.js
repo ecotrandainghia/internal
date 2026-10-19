@@ -148,3 +148,17 @@ test('khoá ghi: lồng nhau chỉ khoá một lần, lỗi giữa chừng vẫn
   assert.throws(() => app.withLock_(() => { throw new Error('hỏng'); }), /hỏng/);
   assert.equal(app.__lock.taken, app.__lock.released);
 });
+
+test('cột ô tick định dạng sẵn tới cuối sheet: dòng chưa dùng (FALSE) không thành bản ghi, dòng mới ghi ngay sau dòng cuối', () => {
+  const app = setUp();
+  const sh = file(app).getSheetByName('departments');
+  const header = sh.data[0], on = header.indexOf('is_active');
+  const real = app.readTable_('departments').length;
+  for (let i = 0; i < 20; i++) { const row = header.map(() => ''); row[on] = false; sh.data.push(row); }
+  app.__resetMemo && app.__resetMemo();
+  app.insertRecords_('departments', [{ dept_code: 'MKT', dept_name: 'Marketing', is_active: true }]);
+  const list = app.readTable_('departments');
+  assert.equal(list.length, real + 1);
+  assert.ok(list.every((d) => d.dept_code));
+  assert.equal(sh.data[real + 1][header.indexOf('dept_code')], 'MKT');
+});

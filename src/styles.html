@@ -688,9 +688,15 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .bd-who a { color: var(--good); }
 .bd-year { margin-top: 32px; }
 /* Quy tắc CLB, link ghim, ảnh đại diện */
+.dp-subs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 180px; }
+.dp-sub { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; background: var(--sunken); }
+.dp-sub button { border: 0; background: none; color: var(--ink-2); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 6px; border-radius: 999px; }
+.dp-sub button:hover { background: var(--hover); color: var(--ink); }
+.dp-table .dp-subs input.dp-sub-new { flex: 1 1 90px; min-width: 90px; width: auto; }
 .dp-table input:not([type=checkbox]) { width: 100%; min-width: 64px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; color: var(--ink); }
 .dp-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
 .mtable.dp-table { min-width: 520px; }
+.dp-table td { vertical-align: middle; }
 .pl-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
 .pl-row input { padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; color: var(--ink); min-width: 0; }
 .av-pick { display: flex; gap: 16px; align-items: center; }

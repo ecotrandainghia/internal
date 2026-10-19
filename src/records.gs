@@ -88,13 +88,23 @@ function sameCell_(a, b) {
 /**
  * Cả tab (dòng 1 là tên cột) → danh sách bản ghi. Bỏ dòng trống hẳn. Cột lạ (ai đó thêm tay) thì giữ nguyên giá trị.
  */
+/**
+ * Dòng trống: mọi ô rỗng, hoặc cột khoá đều rỗng. Cột ô tick định dạng sẵn tới cuối sheet nên dòng chưa dùng vẫn đọc ra FALSE;
+ * những dòng đó không phải bản ghi.
+ */
+function blankRow_(def, header, row) {
+  if (row.every(function (v) { return v === '' || v === null || v === false; })) return true;
+  return def.key.every(function (k) { var c = header.indexOf(k); return c < 0 || row[c] === '' || row[c] === null; }) &&
+    def.key.some(function (k) { return header.indexOf(k) >= 0; });
+}
+
 function rowsToRecords_(def, values) {
   if (!values || values.length < 2) return [];
   var header = values[0].map(function (h) { return String(h).trim(); });
   var out = [];
   for (var r = 1; r < values.length; r++) {
     var row = values[r];
-    if (row.every(function (v) { return v === '' || v === null; })) continue;
+    if (blankRow_(def, header, row)) continue;
     var rec = {};
     def.names.forEach(function (n) { rec[n] = readCell_('', def.types[n]); });
     header.forEach(function (h, c) {

@@ -230,7 +230,10 @@ function insertRecords_(name, records, opts) {
     var header = values[0];
     var added = prepareInsert_(def, rowsToRecords_(def, values), records, opts.termId);
     var rows = added.map(function (rec) { return recordToRow_(def, header, rec); });
-    var start = sh.getLastRow() + 1;
+    // Ghi ngay sau dòng có dữ liệu cuối cùng, không theo getLastRow (ô tick trống ở cuối sheet cũng được tính là có dữ liệu).
+    var start = values.length;
+    while (start > 1 && blankRow_(def, header.map(function (h) { return String(h).trim(); }), values[start - 1])) start--;
+    start++;
     ensureRows_(sh, start + rows.length - 1);
     sh.getRange(start, 1, rows.length, header.length).setValues(rows);
     delete memo_[name];
