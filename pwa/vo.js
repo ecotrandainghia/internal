@@ -38,11 +38,15 @@
   function luuPhien(p) { try { if (p) localStorage.setItem(KHOA_PHIEN, p); else localStorage.removeItem(KHOA_PHIEN); } catch (e) {} }
 
   var nguon = null, nguonOrigin = '', appCon = null, appOrigin = '';
-  /* iPhone (app trên màn hình chính) đôi khi báo chiều cao màn hình thiếu một đoạn ở dưới: kéo khung xuống tận đáy. */
+  /*
+   * iPhone (app trên màn hình chính) đôi khi báo chiều cao màn hình thiếu một đoạn ở dưới: kéo khung xuống tận đáy.
+   * Chỉ làm khi trang vỏ phủ cả màn hình (có khoảng an toàn phía trên). Thanh trạng thái để kiểu thường thì trang
+   * bắt đầu dưới thanh trạng thái, chiều cao báo về đã đúng; kéo thêm sẽ đẩy đáy app xuống dưới thanh vuốt.
+   */
   var iPhone = /iPhone|iPod/.test(navigator.userAgent);
   var dangLaApp = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
   function chinhCao() {
-    if (!iPhone || !dangLaApp) return;
+    if (!iPhone || !dangLaApp || vien().t <= 0) { khung.style.height = ''; return; }
     var doc = window.innerWidth < window.innerHeight, cao = doc ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
     khung.style.height = cao > window.innerHeight && cao - window.innerHeight < 120 ? cao + 'px' : '';
   }

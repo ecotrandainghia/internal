@@ -1,5 +1,5 @@
 /* Service worker tối giản: giữ sẵn các file của trang vỏ để app mở nhanh và cài được lên màn hình chính. */
-var BO_NHO = 'eco-vo-11';
+var BO_NHO = 'eco-vo-12';
 var TEP = ['./config.js', './vo.js', './vo.css', './', './index.html', './manifest.webmanifest',
   './icons/eco-192.png', './icons/eco-512.png', './icons/tab-eco.png', './icons/apple-eco.png', './icons/badge-96.png'];
 
