@@ -71,10 +71,6 @@ function renderHome(d) {
       (b.todo.length || extraRows(d).length ? extraRows(d).concat(b.todo.map(function (x) { return bodRow(x, d.now); })).join('') :
         '<div class="empty">Không có việc gấp. Task trễ hạn, thư chờ duyệt và góp ý mới sẽ hiện ở đây.</div>') + '</div></section>';
     html += d.myTasks.length ? '<div class="home-cols">' + myTasksSection(d) + linksSection(d) + '</div>' : linksSection(d);
-    html += '<section class="sec" aria-labelledby="gotoTitle"><h2 id="gotoTitle">Đi tới</h2><div class="goto">' +
-      navItems().filter(function (x) { return x[0] !== 'home'; }).map(function (x) {
-        return '<a href="#" data-page="' + x[0] + '">' + icon(x[2]) + esc(x[1]) + '</a>';
-      }).join('') + '</div></section>';
   } else {
     var m = d.member;
     if (!d.term || (d.term.phase !== 'phase_1' && d.term.phase !== 'phase_2')) {

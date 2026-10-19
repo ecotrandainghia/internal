@@ -1,6 +1,7 @@
 <style>
 /* Màu theo design system "Thiết kế app CLB ECO". Xanh ECO chỉ dùng cho mục đang chọn. */
 :root {
+  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
   --paper: #FAF8F5; --surface: #FDFBFA; --side: #F3F1EC; --sunken: #F1EFEA;
   --ink: #27251E; --ink-2: #72706B; --ink-3: #92918B; --line: #D1D1CD; --line-soft: #E6E3DC;
   --accent: #274E13; --on-accent: #FFFFFF; --accent-soft: #E4EBDD;
@@ -97,9 +98,10 @@ img.avatar { object-fit: cover; }
 
 .icon-btn { width: 44px; height: 44px; border: 0; background: none; border-radius: var(--r-btn); display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
 .icon-btn:hover { background: var(--hover); color: var(--ink); }
-.avatar-btn { width: 44px; height: 44px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
-.topbar { position: sticky; top: 0; z-index: 10; height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: var(--paper); border-bottom: 1px solid var(--line-soft); }
-.topbar-title { flex: 1; font-size: 16px; font-weight: 500; }
+.avatar-btn { width: 40px; height: 40px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; }
+.topbar { position: sticky; top: 0; z-index: 10; min-height: calc(52px + var(--sat)); display: flex; align-items: center; gap: 6px; padding: calc(6px + var(--sat)) calc(10px + var(--sar)) 6px calc(6px + var(--sal)); background: var(--paper); border-bottom: 1px solid var(--line); }
+.topbar .icon-btn { width: 40px; height: 40px; color: var(--ink); }
+.topbar-title { flex: 1; min-width: 0; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .only-phone { display: none; }
 .only-desk { display: grid; }
 .scrim, .overlay { position: fixed; inset: 0; background: rgb(22 22 19 / .38); z-index: 20; }
@@ -145,7 +147,7 @@ img.avatar { object-fit: cover; }
 /* Màn chờ và màn đăng nhập */
 .splash { min-height: 100dvh; display: grid; place-items: center; color: var(--ink-2); }
 .login { min-height: 100dvh; display: grid; grid-template-columns: 1.15fr 1fr; }
-.login-side { display: grid; place-items: center; padding: 24px 16px; }
+.login-side { display: grid; place-items: center; padding: calc(24px + var(--sat)) 16px calc(24px + var(--sab)); }
 /* Nửa trái: ảnh nền BOD chọn (Cài đặt > Giao diện theo mùa), chưa có thì nền xanh mặc định kèm logo */
 .login-art { position: relative; overflow: hidden; isolation: isolate; background: var(--side); background-size: cover; background-position: center; display: grid; place-items: center; border-right: 1px solid var(--line); }
 .login-art > .logo { width: 96px; height: 96px; padding: 8px; }
@@ -154,7 +156,7 @@ img.avatar { object-fit: cover; }
   .login { grid-template-columns: 1fr; grid-template-rows: 140px 1fr; }
   .login-art { border-right: 0; border-bottom: 1px solid var(--line); }
   .login-art > .logo { width: 64px; height: 64px; }
-  .login-side { place-items: start center; padding: 28px 20px; }
+  .login-side { place-items: start center; padding: 28px 20px calc(28px + var(--sab)); }
 }
 .login-card { width: min(380px, 100%); display: flex; flex-direction: column; gap: 20px; }
 .login-card .brand { padding: 0; }
@@ -230,10 +232,6 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .btn.sm { padding: 6px 12px; font-size: 14px; white-space: nowrap; }
 .home-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 32px; align-items: start; }
 /* Lối tắt cuối trang chủ: nút viền mảnh như app cũ */
-.goto { display: flex; flex-wrap: wrap; gap: 8px; }
-.goto a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r-btn); color: var(--ink); text-decoration: none; font-size: 14px; }
-.goto a svg { width: 14px; height: 14px; }
-.goto a:hover { background: var(--hover); }
 
 /* Trang danh sách (Quản lý task...) */
 .page { display: flex; flex-direction: column; gap: 20px; }
@@ -373,7 +371,6 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .stats b { font-size: 20px; }
   .stats span { font-size: 12px; }
   .home-cols { grid-template-columns: 1fr; gap: 24px; }
-  .goto { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .item { flex-wrap: wrap; }
   .item .t { flex-basis: 100%; }
   .item.link { flex-wrap: nowrap; }
@@ -555,18 +552,19 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .fb-act { width: 100%; justify-content: flex-start; padding-left: 22px; }
   .only-phone { display: flex; }
   .only-desk { display: none; }
-  .side { position: fixed; left: 0; top: 0; z-index: 30; width: 300px; transform: translateX(-100%); transition: transform .2s ease; box-shadow: none; }
-  .side.open { transform: none; box-shadow: 8px 0 32px rgb(28 27 23 / .18); }
-  .main { padding: 16px; }
-  .overlay { padding: 24px 0 0; place-items: end stretch; }
+  .side { position: fixed; left: 0; top: 0; bottom: 0; height: auto; z-index: 30; width: min(300px, 84vw); transform: translateX(-100%); transition: transform .2s ease, visibility .2s; box-shadow: none; visibility: hidden; padding: calc(14px + var(--sat)) 12px calc(12px + var(--sab)) calc(12px + var(--sal)); }
+  .side.open { visibility: visible; transform: none; box-shadow: 8px 0 32px rgb(28 27 23 / .18); }
+  .main { padding: 20px calc(16px + var(--sar)) calc(40px + var(--sab)) calc(16px + var(--sal)); }
+  .overlay { padding: calc(12px + var(--sat)) 0 0; place-items: end stretch; }
+  .dialog { padding-bottom: var(--sab); }
   .dialog { width: 100%; height: 100%; border-radius: var(--r-card) var(--r-card) 0 0; flex-direction: column; }
   .set-nav { width: auto; border-right: 0; }
   .dialog.in-section .set-nav { display: none; }
   .dialog:not(.in-section) .set-body { display: none; }
   .set-body { padding: 20px 16px; }
   .menu-scrim { background: rgb(28 27 23 / .32); backdrop-filter: blur(4px); }
-  .overlay.small { padding: 24px 16px; place-items: center; }
-  .menu { left: 0 !important; right: 0; bottom: 0 !important; width: auto; border-radius: var(--r-card) var(--r-card) 0 0; padding: 8px 12px 24px; }
+  .overlay.small { padding: calc(24px + var(--sat)) 16px calc(24px + var(--sab)); place-items: center; }
+  .menu { left: 0 !important; right: 0; bottom: 0 !important; width: auto; border-radius: var(--r-card) var(--r-card) 0 0; padding: 8px 12px calc(24px + var(--sab)); }
 }
 
 /* Thành viên, KPI của tôi, Điểm và xếp hạng */
@@ -710,4 +708,24 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .dp-table td:nth-child(5) { grid-row: 1; grid-column: 3; }
   .dp-table td:nth-child(2), .dp-table td:nth-child(3) { grid-column: 1 / -1; }
 }
+/* Cửa sổ Cài đặt giữ kiểu bản phác: chữ nhỏ, nét nhẹ. */
+#settings .dialog { font-size: 14px; }
+#settings svg { stroke-width: 1.75; }
+#settings .set-nav { border-right-color: var(--line-soft); }
+#settings .set-group { padding: 10px 12px 4px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+#settings .set-item { font-size: 14px; }
+#settings .set-item[aria-current="true"] { background: var(--sunken); color: var(--ink); font-weight: 500; }
+#settings .row { border-bottom-color: var(--line-soft); }
+#settings .row small { font-size: 12px; }
+#settings .btn-outline { font-size: 14px; }
+#settings .btn { font-size: 14px; }
+#settings .seg { display: inline-flex; flex-wrap: nowrap; gap: 2px; background: var(--sunken); border-radius: 999px; padding: 2px; margin-left: auto; }
+#settings .seg button { border: 0; background: none; border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--ink-2); }
+#settings .seg button svg { display: none; }
+#settings .seg button:hover { color: var(--ink); }
+#settings .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+#settings .hint { font-size: 12px; }
+#settings .msg { font-size: 13px; }
+#settings .field { font-size: 13px; color: var(--ink-2); }
+#settings .lead { font-size: 14px; }
 </style>
