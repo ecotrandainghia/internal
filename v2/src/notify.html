@@ -38,7 +38,7 @@ function drawMyNotify(d, flash) {
     : push === 'khong' ? 'Máy hoặc trình duyệt này không hỗ trợ thông báo của app.' : '';
   wideModal('<h2 id="boxTitle">Thông báo của tôi</h2>' +
     '<p class="hint">Nhắc hạn task, nhắc hẹn seeding, nhắc sinh nhật và các tin báo khác đều đi theo cách bạn chọn ở đây. Phải giữ ít nhất một đường.' +
-    (d.must ? ' Bạn là người phải nhận tin (BOD, NS phụ trách ban hoặc seeding), nên cần cài xong ít nhất một đường.' : '') + '</p>' +
+    (d.must ? ' Bạn là người phải nhận tin (BOD, NS phụ trách ban, seeding hoặc sinh nhật), nên cần cài xong ít nhất một đường.' : '') + '</p>' +
     '<div class="nt-sec"><label class="check"><input type="checkbox" id="ntZalo"' + (d.zalo ? ' checked' : '') + '><span>Nhận qua Zalo' +
       '<small>' + (d.linked ? 'Đã kết nối' + (d.zaloName ? ' với ' + esc(d.zaloName) : '') + '.' : 'Chưa kết nối.') + '</small></span></label>' +
       (d.bot.has ? (d.linked ? '' : '<p>Mở Zalo, tìm bot <b>' + esc(d.bot.name || 'của CLB') + '</b>, nhắn mã <b class="nt-code">' + esc(d.code) + '</b> cho bot, rồi bấm Kiểm tra trong vòng 25 giây.</p>' +

@@ -1,0 +1,86 @@
+<script>
+/* Trang Sinh nhật (NS phụ trách sinh nhật; BOD mở từ Cài đặt > Tài khoản và phân quyền > Lịch sinh nhật).
+   Sinh nhật 30 ngày tới và cả năm theo tháng. BOD sửa cách nhắc và lịch Google ở cuối trang. */
+var BD = { data: null };
+
+PAGES.birthdays = function (main) {
+  BD.data = null;
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Sinh nhật</h1><p class="lead" id="bdLead"></p></div></div><div id="bdBody">' + loadingHtml() + '</div></div>';
+  call('birthdayPage', TOKEN).then(setBirthdays).catch(function (err) { pageError('bdBody', err); });
+};
+
+function setBirthdays(d, flash) {
+  BD.data = d;
+  if (currentPage() !== 'birthdays') return;
+  drawBirthdays();
+  if (flash) setMsg('bdMsg', flash[0], flash[1]);
+}
+
+function bdWhen(n) { return n === 0 ? pill('Hôm nay', 'good') : n === 1 ? pill('Ngày mai', 'warn') : pill('Còn ' + n + ' ngày', ''); }
+
+function bdRow(p, soon) {
+  return '<div class="bd-row"><span class="bd-date">' + p2(p.day) + '/' + p2(p.month) + '</span><div class="bd-who"><b>' + esc(p.name) + '</b><small>' +
+    esc([p.dept, p.className ? 'Lớp ' + p.className : ''].filter(String).join(' · ')) +
+    (p.facebookUrl ? ' · <a href="' + esc(p.facebookUrl) + '" target="_blank" rel="noopener">Facebook</a>' : '') + '</small></div>' + (soon ? bdWhen(p.inDays) : '') + '</div>';
+}
+
+var BD_MONTHS = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+
+function drawBirthdays() {
+  var d = BD.data;
+  $('bdLead').textContent = 'App nhắc qua Zalo hoặc app lúc ' + d.time + (d.days ? ', từ ' + d.days + ' ngày trước' : ', đúng ngày sinh nhật') + '. ' +
+    (d.hasCalendar ? 'Sinh nhật cũng có trên Google Calendar CLB (không có nhắc của Calendar).' : 'Chưa có lịch Google cho sinh nhật.');
+  var byMonth = BD_MONTHS.map(function () { return []; });
+  d.people.forEach(function (p) { byMonth[p.month - 1].push(p); });
+  $('bdBody').innerHTML = '<span class="msg" id="bdMsg" role="status"></span>' +
+    (d.missing.length ? '<p class="hint sd-warn">' + icon('help') + esc(d.missing.length + ' thành viên chưa có ngày sinh hợp lệ nên không được nhắc: ' + d.missing.join(', ') + '.') + '</p>' : '') +
+    '<section class="sec"><h2>30 ngày tới (' + d.soon.length + ')</h2>' + (d.soon.length ? '<div class="list">' + d.soon.map(function (p) { return bdRow(p, true); }).join('') + '</div>' : '<div class="empty">Không có sinh nhật nào trong 30 ngày tới.</div>') + '</section>' +
+    '<section class="sec bd-year"><h2>Cả năm</h2>' + (d.people.length ? byMonth.map(function (list, i) {
+      return list.length ? '<h3 class="tm-h">' + BD_MONTHS[i] + ' (' + list.length + ')</h3><div class="list">' + list.map(function (p) { return bdRow(p, false); }).join('') + '</div>' : '';
+    }).join('') : '<div class="empty">Chưa có ai có ngày sinh.</div>') + '</section>' +
+    (d.isBod ? '<section class="sec bd-year"><h2>Cách nhắc và lịch Google</h2><div class="actions" style="justify-content:flex-start"><button type="button" class="btn ghost" data-act="birthday-settings">Sửa</button></div></section>' : '');
+}
+
+/* ---------- BOD: cách nhắc và lịch Google ---------- */
+function openBirthdaySettings() {
+  if (BD.data && BD.data.isBod) return drawBirthdayBox(BD.data);
+  openModal('<h2 id="boxTitle">Lịch sinh nhật</h2>' + loadingHtml());
+  call('birthdayPage', TOKEN).then(function (d) { BD.data = d; drawBirthdayBox(d); }).catch(function (err) { failBox('Lịch sinh nhật', err); });
+}
+
+function syncText(r) {
+  if (!r) return '';
+  return 'Lịch “' + r.name + '”: thêm ' + r.added + ', bỏ ' + r.removed + ', giữ ' + r.kept + ' sinh nhật.' +
+    (r.left ? ' Còn ' + r.left + ' người chưa kịp thêm, bấm Đồng bộ lần nữa.' : '') + (r.missing ? ' ' + r.missing + ' người chưa có ngày sinh.' : '');
+}
+
+function drawBirthdayBox(d, flash) {
+  openModal('<h2 id="boxTitle">Lịch sinh nhật</h2>' +
+    '<p class="hint">Tin nhắc sinh nhật gửi NS phụ trách sinh nhật (chưa có ai thì gửi BOD) qua Zalo hoặc app, mỗi ngày một lần nếu có sinh nhật sắp tới.</p>' +
+    '<form id="bdForm" style="display:flex;flex-direction:column;gap:12px">' +
+    '<label class="field">Nhắc trước mấy ngày (0 là chỉ nhắc đúng ngày)<input type="number" id="bdDays" min="0" max="' + d.maxDays + '" value="' + d.days + '" required></label>' +
+    '<label class="field">Giờ nhắc<input type="time" id="bdTime" value="' + esc(d.time) + '" required></label>' +
+    '<label class="field">ID Google Calendar (để trống là không dùng lịch)<input id="bdCal" value="' + esc(d.calendarId) + '" placeholder="...@group.calendar.google.com"></label>' +
+    '<p class="hint">ID nằm trong Google Calendar: Cài đặt của lịch, mục Tích hợp lịch. Lịch phải của tài khoản CLB, hoặc được chia sẻ cho tài khoản CLB với quyền Thay đổi sự kiện. App tạo sự kiện lặp hằng năm và tắt nhắc của Calendar; mỗi lần tải danh sách thành viên app đồng bộ lại.</p>' +
+    (d.sync ? '<p class="hint">Lần đồng bộ gần nhất ' + fmtTime(d.sync.at) + ' ' + fmtDay(d.sync.at) + '. ' + esc(syncText(d.sync)) + '</p>' : '') +
+    '<span class="msg" id="bdBoxMsg" role="status"></span>' +
+    '<div class="actions">' + (d.hasCalendar ? '<button type="button" class="btn ghost" id="bdSync">Đồng bộ lịch ngay</button>' : '') +
+    '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="bdSave">Lưu</button></div></form>');
+  if (flash) setMsg('bdBoxMsg', flash[0], flash[1]);
+  var done = function (x, text) {
+    BD.data = x;
+    if (currentPage() === 'birthdays') drawBirthdays();
+    drawBirthdayBox(x, ['ok', text + (x.synced ? ' ' + syncText(x.synced) : '')]);
+  };
+  $('bdForm').onsubmit = function (e) {
+    e.preventDefault();
+    $('bdSave').disabled = true; setMsg('bdBoxMsg', '', 'Đang lưu…');
+    call('saveBirthdaySettings', TOKEN, { days: Number($('bdDays').value), time: $('bdTime').value, calendarId: $('bdCal').value })
+      .then(function (x) { done(x, 'Đã lưu.'); }).catch(function (err) { $('bdSave').disabled = false; setMsg('bdBoxMsg', 'bad', err.message); });
+  };
+  if ($('bdSync')) $('bdSync').onclick = function () {
+    this.disabled = true; setMsg('bdBoxMsg', '', 'Đang đồng bộ…');
+    call('syncBirthdaysNow', TOKEN).then(function (x) { done(x, 'Đã đồng bộ.'); }).catch(function (err) { $('bdSync').disabled = false; setMsg('bdBoxMsg', 'bad', err.message); });
+  };
+}
+</script>

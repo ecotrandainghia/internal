@@ -124,6 +124,12 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Đoạn đã dán được chép nguyên văn sang file "[ECO] Bằng chứng seeding <nhiệm kỳ>" trong thư mục Bằng chứng seeding trên Drive, tab phase_1 hoặc phase_2 theo lúc tạo bài, mỗi bài một hàng, ô quá 50.000 ký tự thì nối xuống hàng dưới. Mã file lưu ở Script Property `SEEDING_EVIDENCE_<nhiệm kỳ>`.
 - Fanpage (HS-04): mỗi thành viên thêm fanpage của mình ở Cài đặt, Tài khoản của tôi, Fanpage để seeding. Tên fanpage không trùng fanpage khác hay tên Facebook của thành viên khác.
 
+## Sinh nhật
+
+- NS phụ trách sinh nhật (nhãn `birthday_lead`) có trang Sinh nhật: sinh nhật 30 ngày tới và cả năm theo tháng, kèm ban, lớp, link Facebook; liệt kê người thiếu ngày sinh. BOD mở từ Cài đặt, Tài khoản và phân quyền, Lịch sinh nhật, và sửa cách nhắc ở cuối trang.
+- Việc tự chạy `runBirthdayReminders` mỗi ngày vào giờ `birthday_remind_time` (mặc định 07:00): nếu có sinh nhật từ hôm nay tới `birthday_remind_days` ngày sau (mặc định 1, 0 là chỉ đúng ngày) thì gửi một tin cho từng NS phụ trách sinh nhật qua Zalo hoặc app; chưa có ai thì gửi BOD. 29/2 năm không nhuận tính là 28/2.
+- Lịch Google (`birthday_calendar_id`, để trống là không dùng): app tạo sự kiện cả ngày lặp hằng năm "Sinh nhật Họ tên (Ban)", mô tả lớp và link Facebook, tắt hết nhắc của Calendar. Sự kiện mang thẻ `eco_member` và `eco_key` để app nhận ra; người đổi ngày sinh, tên, ban, lớp, link thì tạo lại, người rời CLB thì xoá, sự kiện khác trong lịch để yên. Đồng bộ khi BOD lưu lịch mới hoặc bấm Đồng bộ lịch ngay (bước 9 gọi thêm lúc tải danh sách thành viên).
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.

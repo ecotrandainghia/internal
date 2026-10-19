@@ -43,12 +43,12 @@ function pinnedLinks_(settings) {
 }
 
 /**
- * Có cần nhắc cài thông báo không. Người phải nhận tin (BOD, NS phụ trách ban, NS phụ trách seeding) hoặc người tự bật
+ * Có cần nhắc cài thông báo không. Người phải nhận tin (BOD, NS phụ trách ban, seeding, sinh nhật) hoặc người tự bật
  * nhắc task: nhắc khi chưa bật kênh nào, hoặc kênh đã bật chưa cài xong (Zalo chưa kết nối, app chưa bật trên máy nào).
  */
 function needsNotifySetup_(me, data) {
   var account = data.accounts.filter(function (a) { return a.member_id === me.memberId; })[0];
-  var must = me.user.isBod || me.user.labels.indexOf('dept_lead') >= 0 || me.user.labels.indexOf('seeding_lead') >= 0 || account.self_remind;
+  var must = me.user.isBod || me.user.labels.indexOf('dept_lead') >= 0 || me.user.labels.indexOf('seeding_lead') >= 0 || me.user.labels.indexOf('birthday_lead') >= 0 || account.self_remind;
   if (!must) return false;
   var zalo = readTable_('zalo_links').some(function (z) { return z.member_id === me.memberId && z.chat_id; });
   var device = readTable_('devices').some(function (d) { return d.member_id === me.memberId; });

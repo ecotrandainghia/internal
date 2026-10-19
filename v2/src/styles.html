@@ -599,4 +599,12 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .sd-row { grid-template-columns: minmax(0, 1fr) auto; }
   .sd-row .acts { grid-column: 1 / -1; flex-wrap: wrap; }
 }
+/* Sinh nhật */
+.bd-row { display: flex; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+.bd-date { font-variant-numeric: tabular-nums; font-weight: 500; width: 48px; flex: none; }
+.bd-who { flex: 1; min-width: 0; }
+.bd-who b { font-weight: 500; }
+.bd-who small { display: block; font-size: 12px; color: var(--ink-2); }
+.bd-who a { color: var(--good); }
+.bd-year { margin-top: 32px; }
 </style>
