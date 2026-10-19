@@ -66,7 +66,7 @@ var SETTINGS = [
     ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua đường nào, gửi thử', 'Xem', 'club-notify'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa', 'task-reminders'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, seeding', 'Sửa', 'bod-alerts'], ['Bot Zalo', 'Mã bot và số người đã kết nối', 'Mở', 'zalo-bot']]],
     ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu sheet đăng ký log', 'Sửa', 'log-files'], ['Sheet đăng ký log', 'Mỗi sự kiện một sheet, tạo hoặc đổi ở trang Quản lý log', 'Mở', 'log-page'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở', 'seeding-page'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa', 'pinned-links']]],
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở', 'contacts'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa', 'mail-signature'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem', 'mail-quota']]],
-    ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển; Kết thúc nhiệm kỳ', 'Tải lên', 'roster'], ['Phân quyền nhân sự', 'BOD gán tay từng người', 'Sửa'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai', 'Mở'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Bật'], ['Lịch sinh nhật', 'Nhắc sinh nhật và Google Lịch ghi sinh nhật', 'Mở', 'birthday-page']]],
+    ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển; Kết thúc nhiệm kỳ', 'Tải lên', 'roster'], ['Phân quyền nhân sự', 'NS phụ trách ban, seeding, sinh nhật; BOD gán tay từng người', 'Sửa', 'staff-roles'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai, đổi mật khẩu chung', 'Mở', 'reset-password'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Sửa', 'google-login'], ['Lịch sinh nhật', 'Nhắc sinh nhật và Google Lịch ghi sinh nhật', 'Mở', 'birthday-page']]],
     ['season', 'Giao diện theo mùa', 'leaf', 'Đổi cho cả CLB.', [['Chủ đề đang dùng', 'Hình trang trí ở trang chủ và màn đăng nhập', 'Đổi'], ['Ảnh nền đăng nhập', 'Đang dùng nền xanh mặc định', 'Đổi ảnh']]],
     ['system', 'Hệ thống', 'chart', '', [['Tình trạng hệ thống', 'Việc tự chạy lúc 2 giờ sáng, lỗi báo qua Zalo hoặc app', 'Xem'], ['Sao lưu và khôi phục', 'Tự sao lưu mỗi đêm, giữ 30 bản', 'Khôi phục'], ['Nhật ký', 'Ai sửa gì, lúc nào', 'Xem'], ['Tab dữ liệu', 'Các tab đã khoá và tab chỉ để xem', 'Xem']]]]]
 ];
@@ -450,6 +450,9 @@ document.addEventListener('click', function (e) {
   else if (act === 'rule-warn') openRuleNumbers('warn');
   else if (act === 'pinned-links') openPinnedLinks();
   else if (act === 'roster') openRoster();
+  else if (act === 'staff-roles') openStaffRoles();
+  else if (act === 'reset-password') openResetPassword();
+  else if (act === 'google-login') openGoogleLogin();
   else if (act === 'close-modal') closeModal();
   else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); openMyNotify(); }
   else if (act === 'my-notify') openMyNotify();
