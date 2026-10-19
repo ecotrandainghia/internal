@@ -6,7 +6,7 @@ PAGES.points = function (main) {
   PT.data = null; PT.sel = {}; PT.open = {};
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Cộng điểm</h1><p class="lead" id="ptLead">Chọn hoạt động rồi tick những người được cộng.</p></div>' +
     '<button type="button" class="btn ghost" data-pt="scale">Thang điểm</button></div><div id="ptBody">' + loadingHtml() + '</div></div>';
-  call('pointsPage', TOKEN).then(function (d) { if (currentPage() === 'points') { PT.data = d; renderPoints(); } })
+  call('pointsPage', TOKEN).then(function (d) { if (currentPage() === 'points') { PT.data = d; renderPoints(); if (PT.openScale) { PT.openScale = false; renderScale(); } } })
     .catch(function (err) { if ($('ptBody')) $('ptBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 };
 

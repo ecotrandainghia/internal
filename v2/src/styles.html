@@ -607,4 +607,25 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .bd-who small { display: block; font-size: 12px; color: var(--ink-2); }
 .bd-who a { color: var(--good); }
 .bd-year { margin-top: 32px; }
+/* Quy tắc CLB, link ghim, ảnh đại diện */
+.dp-table input:not([type=checkbox]) { width: 100%; min-width: 64px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; color: var(--ink); }
+.dp-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+.mtable.dp-table { min-width: 520px; }
+.pl-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.pl-row input { padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; color: var(--ink); min-width: 0; }
+.av-pick { display: flex; gap: 16px; align-items: center; }
+.av-big { width: 96px; height: 96px; border-radius: 999px; object-fit: cover; display: grid; place-items: center; background: var(--accent-soft); color: var(--good); font-size: 36px; font-weight: 500; }
+@media (max-width: 720px) {
+  .pl-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .pl-row .pl-url { grid-column: 1; grid-row: 2; }
+  .mtable.dp-table { min-width: 0; }
+  .dp-table thead { display: none; }
+  .dp-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .dp-table td { display: block; padding: 0; border: 0; }
+  .dp-table td:nth-child(1) { grid-row: 1; grid-column: 1; }
+  .dp-table td:nth-child(4) { grid-row: 1; grid-column: 2; color: var(--ink-2); font-size: 12px; }
+  .dp-table td:nth-child(4):not(:empty)::after { content: ' người'; }
+  .dp-table td:nth-child(5) { grid-row: 1; grid-column: 3; }
+  .dp-table td:nth-child(2), .dp-table td:nth-child(3) { grid-column: 1 / -1; }
+}
 </style>

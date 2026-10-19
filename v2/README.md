@@ -130,6 +130,14 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Việc tự chạy `runBirthdayReminders` mỗi ngày vào giờ `birthday_remind_time` (mặc định 07:00): nếu có sinh nhật từ hôm nay tới `birthday_remind_days` ngày sau (mặc định 1, 0 là chỉ đúng ngày) thì gửi một tin cho từng NS phụ trách sinh nhật qua Zalo hoặc app; chưa có ai thì gửi BOD. 29/2 năm không nhuận tính là 28/2.
 - Lịch Google (`birthday_calendar_id`, để trống là không dùng): app tạo sự kiện cả ngày lặp hằng năm "Sinh nhật Họ tên (Ban)", mô tả lớp và link Facebook, tắt hết nhắc của Calendar. Sự kiện mang thẻ `eco_member` và `eco_key` để app nhận ra; người đổi ngày sinh, tên, ban, lớp, link thì tạo lại, người rời CLB thì xoá, sự kiện khác trong lịch để yên. Đồng bộ khi BOD lưu lịch mới hoặc bấm Đồng bộ lịch ngay (bước 9 gọi thêm lúc tải danh sách thành viên).
 
+## Cài đặt: Quy tắc CLB, link ghim, ảnh đại diện
+
+- Cơ cấu ban: sửa tên ban, các mảng, tắt Đang dùng, thêm ban mới (mã viết hoa, đúng chữ ở cột Ban của sheet). Ban không xoá được; BOD luôn bật. Đổi mã ban làm ở bước tải danh sách thành viên.
+- Khen thưởng và hạn task, Ngưỡng cảnh báo: các số `top_reward_percent`, `offset_top_percent`, `due_soon_days`, `not_done_after_hours`, `kpi_threshold`, `offset_threshold`, có giới hạn hợp lệ; ngưỡng bù trừ không cao hơn ngưỡng KPI. Thang điểm dùng chung hộp ở trang Cộng điểm.
+- Link ghim: tối đa 8 link https, mỗi link một dòng `pinned_link_N` ở tab Cài đặt (Ý nghĩa là tên link).
+- Mọi lần sửa ghi Nhật ký (`change_setting`).
+- Ảnh đại diện: app cắt ảnh thành hình vuông 256 px trên máy, lưu JPEG vào thư mục Ảnh đại diện trên Drive CLB (ai có link xem được), ghi link vào cột `avatar_url`; ảnh cũ vào thùng rác.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.

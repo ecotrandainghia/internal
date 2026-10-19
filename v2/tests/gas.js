@@ -191,11 +191,12 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
     // Drive: thư mục là { id, name, files }, file trong Drive là chính file Sheets giả.
     DriveApp: {
       Access: { ANYONE_WITH_LINK: 'anyone_with_link' },
-      Permission: { EDIT: 'edit' },
+      Permission: { EDIT: 'edit', VIEW: 'view' },
       getFileById: (id) => {
         if (blobs[id]) {
           const b = blobs[id];
-          return { getId: () => id, getName: () => b.name, getSize: () => b.bytes.length, getBlob: () => ctx.Utilities.newBlob(b.bytes, b.type, b.name) };
+          return { getId: () => id, getName: () => b.name, getSize: () => b.bytes.length, getBlob: () => ctx.Utilities.newBlob(b.bytes, b.type, b.name),
+            setSharing: (a, p) => { b.sharing = a + ':' + p; }, setTrashed: (t) => { b.trashed = !!t; }, __blob: b };
         }
         const ss = files_[id];
         if (!ss) throw new Error('not found');
