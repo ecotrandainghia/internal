@@ -11,10 +11,10 @@ const asChi = (app) => login(app, 'chi@gmail.com', 'chungCLB');
 const at = (d, h, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
 const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes());
 
-test('Cần nhắc: NS phụ trách ban thấy task trễ và sắp đến hạn của ban mình, kèm tên Facebook, lớp', () => {
+test('Cần nhắc: người phụ trách ban thấy task trễ và sắp đến hạn của ban mình, kèm tên Facebook, lớp', () => {
   const { app } = setUp();
   app.updateRecord_('members', 'M1', { facebook_name: 'Bình Trần', facebook_url: 'https://facebook.com/binh' });
-  assert.throws(() => app.teamReminders(asBinh(app)), /Chỉ NS phụ trách ban/);
+  assert.throws(() => app.teamReminders(asBinh(app)), /Chỉ người phụ trách ban/);
   const d = plain(app.teamReminders(asChi(app)));
   assert.equal(d.groups.length, 1);
   const g = d.groups[0];
@@ -30,7 +30,7 @@ test('Log của ban: số buổi đã đi so với số buổi giao của từng
   assert.equal(d.people[0].events[0].name, 'Ngày hội Xanh');
 });
 
-test('tin nhắc hạn task: gửi NS phụ trách ban, BOD nhận task của mình, ban chưa có NS thì gửi thẳng, tự nhắc thì nhận thêm', () => {
+test('tin nhắc hạn task: gửi người phụ trách ban, BOD nhận task của mình, ban chưa có NS thì gửi thẳng, tự nhắc thì nhận thêm', () => {
   const { app, bod, ids } = setUp();
   const deadline = at(addDays(new Date(), 5), 23, 59);
   app.updateRecord_('tasks', ids.soon, { deadline });
@@ -43,7 +43,7 @@ test('tin nhắc hạn task: gửi NS phụ trách ban, BOD nhận task của m�
   const by = (id) => msgs.find((m) => m.memberId === id);
   assert.deepEqual(msgs.map((m) => m.memberId).sort(), [bod, 'M2'].sort());
   assert.match(by('M2').body, /Nhờ bạn nhắc các bạn sau qua Messenger:\n• Trần Thị Bình \(PR · 11A1\): Thiết kế poster, hạn 23:59 \d\d\/\d\d \(còn 1 ngày\)/);
-  assert.match(by('M2').body, /^Bạn có 1 task chưa xác nhận xong:\n• Gọi đối tác/, 'ban AD chưa có NS phụ trách nên gửi thẳng');
+  assert.match(by('M2').body, /^Bạn có 1 task chưa xác nhận xong:\n• Gọi đối tác/, 'ban AD chưa có người phụ trách nên gửi thẳng');
   assert.match(by(bod).body, /^Bạn có 1 task chưa xác nhận xong:\n• Kế hoạch tài trợ.*\(còn 1 ngày\)$/);
   assert.deepEqual(plain(app.taskReminderMessages_(before, 6 * 60 + 30, times)), [], 'giờ 6:30 hôm trước không có mốc');
   app.updateRecord_('accounts', 'M1', { self_remind: true });

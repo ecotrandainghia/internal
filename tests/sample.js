@@ -6,7 +6,7 @@ const DAY = 864e5, HOUR = 36e5;
 const ago = (ms) => new Date(Date.now() - ms);
 const later = (ms) => new Date(Date.now() + ms);
 
-/** App đã cài, đang ở GD1, có BOD An và hai thành viên Bình (PR) và Chi (AD, NS phụ trách ban PR). */
+/** App đã cài, đang ở GD1, có BOD An và hai thành viên Bình (PR) và Chi (AD, người phụ trách ban PR). */
 function setUp() {
   const app = loadApp(FILES);
   app.__viewer = 'clb@example.com';

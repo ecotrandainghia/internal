@@ -1,5 +1,5 @@
 <script>
-/* Trang Ban phụ trách (NS phụ trách ban): Cần nhắc, Task của ban (dùng chung danh sách Quản lý task), Log của ban.
+/* Trang Ban phụ trách (người phụ trách ban): Cần nhắc, Task của ban (dùng chung danh sách Quản lý task), Log của ban.
    Và Cài đặt > Thông báo của CLB > Lịch nhắc task (BOD). */
 var TEAM = { tab: 'remind', remind: null };
 var TEAM_TABS = [['remind', 'Cần nhắc'], ['task', 'Task của ban'], ['log', 'Log của ban']];
@@ -116,7 +116,7 @@ function drawReminderBox(d, flash) {
   var last = d.last ? 'Lần chạy gần nhất ' + fmtTime(d.last.at) + ' ' + fmtDay(d.last.at) + ': ' + d.last.people + ' người cần nhắc, gửi được ' + d.last.sent + '.' +
     (d.last.failed.length ? ' Chưa gửi được: ' + d.last.failed.join('; ') : '') : 'Chưa chạy lần nào.';
   openModal('<h2 id="boxTitle">Lịch nhắc task</h2>' +
-    '<p class="hint">Mỗi mốc là một ngày so với ngày hạn chót và một giờ. Chỉ nhắc người chưa bấm “Đã xong”. Tin gửi tới NS phụ trách ban để nhắc qua Messenger; task của BOD gửi thẳng cho BOD; ban chưa có NS phụ trách thì gửi thẳng người được giao. Tối đa ' + d.maxHours + ' giờ khác nhau.</p>' +
+    '<p class="hint">Mỗi mốc là một ngày so với ngày hạn chót và một giờ. Chỉ nhắc người chưa bấm “Đã xong”. Tin gửi tới người phụ trách ban để nhắc qua Messenger; task của BOD gửi thẳng cho BOD; ban chưa có người phụ trách thì gửi thẳng người được giao. Tối đa ' + d.maxHours + ' giờ khác nhau.</p>' +
     '<div id="rmRows">' + d.times.map(row).join('') + '</div>' +
     '<div><button type="button" class="btn ghost sm" id="rmAdd">' + icon('plus') + 'Thêm mốc</button></div>' +
     '<p class="hint">' + esc(last) + '</p><span class="msg" id="rmMsg" role="status"></span>' +

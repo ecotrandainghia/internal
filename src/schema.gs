@@ -106,8 +106,8 @@ var TABLES = [
 var ENUMS = {
   'member_terms.status': { active: 'Đang ở CLB', left: 'Đã rời' },
   'accounts.theme': { light: 'Sáng', dark: 'Tối', system: 'Theo máy' },
-  'member_labels.label_type': { core_team: 'Core team', ucv: 'UCV', dept_lead: 'NS phụ trách ban', seeding_lead: 'NS phụ trách seeding',
-    birthday_lead: 'NS phụ trách sinh nhật' },
+  'member_labels.label_type': { core_team: 'Core team', ucv: 'UCV', dept_lead: 'Người phụ trách ban', seeding_lead: 'Người phụ trách seeding',
+    birthday_lead: 'Người phụ trách sinh nhật' },
   'roster_uploads.sheet_type': { members: 'Thành viên', core_team: 'Core team', ucv: 'UCV' },
   'roster_uploads.batch_type': { oday: 'Oday', batch_1: 'Đợt 1', batch_2: 'Đợt 2', update: 'Cập nhật' },
   'roster_uploads.status': { applied: 'Đã áp dụng', undone: 'Đã hoàn tác' },

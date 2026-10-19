@@ -1,5 +1,5 @@
 <script>
-/* Trang Sinh nhật (NS phụ trách sinh nhật; BOD mở từ Cài đặt > Tài khoản và phân quyền > Lịch sinh nhật).
+/* Trang Sinh nhật (người phụ trách sinh nhật; BOD mở từ Cài đặt > Tài khoản và phân quyền > Lịch sinh nhật).
    Sinh nhật 30 ngày tới và cả năm theo tháng. BOD sửa cách nhắc và lịch Google ở cuối trang. */
 var BD = { data: null };
 
@@ -56,7 +56,7 @@ function syncText(r) {
 
 function drawBirthdayBox(d, flash) {
   openModal('<h2 id="boxTitle">Lịch sinh nhật</h2>' +
-    '<p class="hint">Tin nhắc sinh nhật gửi NS phụ trách sinh nhật (chưa có ai thì gửi BOD) qua Zalo hoặc app, mỗi ngày một lần nếu có sinh nhật sắp tới.</p>' +
+    '<p class="hint">Tin nhắc sinh nhật gửi người phụ trách sinh nhật (chưa có ai thì gửi BOD) qua Zalo hoặc app, mỗi ngày một lần nếu có sinh nhật sắp tới.</p>' +
     '<form id="bdForm" style="display:flex;flex-direction:column;gap:12px">' +
     '<label class="field">Nhắc trước mấy ngày (0 là chỉ nhắc đúng ngày)<input type="number" id="bdDays" min="0" max="' + d.maxDays + '" value="' + d.days + '" required></label>' +
     '<label class="field">Giờ nhắc<input type="time" id="bdTime" value="' + esc(d.time) + '" required></label>' +

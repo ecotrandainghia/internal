@@ -1,7 +1,7 @@
 /**
  * Task. Thành viên bấm "Đã xong" (xác nhận hoàn thành); app tự biết đúng hạn hay trễ hạn. Bấm nhầm thì tự huỷ xác nhận
  * được, miễn là BOD chưa chấm.
- * BOD quản lý task mọi ban; NS phụ trách ban quản lý task các ban mình phụ trách: nhập task, sửa hạn, huỷ task, xác nhận
+ * BOD quản lý task mọi ban; người phụ trách ban quản lý task các ban mình phụ trách: nhập task, sửa hạn, huỷ task, xác nhận
  * thay, bấm "Nộp đúng hạn". Chỉ BOD chấm chất lượng. Sửa hạn, chấm, đổi trạng thái đều ghi Nhật ký.
  */
 
@@ -23,7 +23,7 @@ function confirmTask(token, taskId) {
     assertNotLocked_(taskDate_(x.task), 'xác nhận task này');
     if (x.assignment.confirmed_at) throw new Error('Bạn đã xác nhận task này rồi.');
     if (taskTiming_(x.task, x.assignment, now, getNumberSetting_('not_done_after_hours', 24)) === 'not_done') {
-      throw new Error('Task đã quá hạn lâu nên tính là Không làm. Nếu bạn đã nộp, nhắn BOD hoặc NS phụ trách ban nhé.');
+      throw new Error('Task đã quá hạn lâu nên tính là Không làm. Nếu bạn đã nộp, nhắn BOD hoặc người phụ trách ban nhé.');
     }
     updateRecord_('task_assignments', { task_id: x.task.task_id, member_id: me.memberId }, { confirmed_at: now, confirmed_by: me.memberId });
     return true;
@@ -39,21 +39,21 @@ function undoConfirmTask(token, taskId) {
     assertNotLocked_(taskDate_(x.task), 'huỷ xác nhận task này');
     if (!a.confirmed_at) throw new Error('Task này chưa được xác nhận.');
     if (a.quality) throw new Error('BOD đã chấm task này nên không huỷ được. Nhắn BOD nếu cần sửa.');
-    if (a.confirmed_by !== me.memberId) throw new Error('Task này do NS hoặc BOD xác nhận giúp bạn. Nhắn họ nếu cần sửa.');
+    if (a.confirmed_by !== me.memberId) throw new Error('Task này do người phụ trách ban hoặc BOD xác nhận giúp bạn. Nhắn họ nếu cần sửa.');
     updateRecord_('task_assignments', { task_id: a.task_id, member_id: me.memberId }, { confirmed_at: '', confirmed_by: '', marked_on_time: false });
     return true;
   });
 }
 
-/* ===================== BOD và NS phụ trách ban quản lý task ===================== */
+/* ===================== BOD và người phụ trách ban quản lý task ===================== */
 
 var TASK_HISTORY_ACTIONS = ['change_deadline', 'grade_task', 'change_task_status', 'remove_assignee'];
 
-/** Phạm vi quản lý task: BOD mọi ban, NS phụ trách ban chỉ các ban mình phụ trách. */
+/** Phạm vi quản lý task: BOD mọi ban, người phụ trách ban chỉ các ban mình phụ trách. */
 function taskScope_(user) {
   if (user.isBod) return { all: true, depts: [], canGrade: true };
   if (user.leadDepts.length) return { all: false, depts: user.leadDepts, canGrade: false };
-  throw new Error('Chỉ BOD và NS phụ trách ban mới quản lý task.');
+  throw new Error('Chỉ BOD và người phụ trách ban mới quản lý task.');
 }
 
 function canManageDept_(scope, dept) {

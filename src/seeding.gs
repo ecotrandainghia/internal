@@ -1,5 +1,5 @@
 /**
- * Seeding (DIEM-01), NS phụ trách seeding làm; BOD vào từ Cài đặt khi chưa có ai phụ trách.
+ * Seeding (DIEM-01), người phụ trách seeding làm; BOD vào từ Cài đặt khi chưa có ai phụ trách.
  * (1) Dán link bài đăng, chọn lúc nhắc, bấm Đặt nhắc hẹn. (2) Đến giờ, app nhắc người đặt qua Zalo hoặc app.
  * (3) Dán nguyên đoạn copy react và comment. (4) App dò tên Facebook của thành viên và fanpage họ đăng ký (HS-04),
  * cộng +1 cho react, +2 cho comment (theo thang điểm), mỗi người một lần mỗi bài. (5) Tên nằm trong tên khác hoặc trùng tên
@@ -95,7 +95,7 @@ function evidenceChunks_(text, max) {
 
 function requireSeeder_(token) {
   var me = requireUser_(token);
-  if (!me.user.isBod && me.user.labels.indexOf('seeding_lead') < 0) throw new Error('Chỉ NS phụ trách seeding (hoặc BOD) mới ghi nhận seeding.');
+  if (!me.user.isBod && me.user.labels.indexOf('seeding_lead') < 0) throw new Error('Chỉ người phụ trách seeding (hoặc BOD) mới ghi nhận seeding.');
   return me;
 }
 

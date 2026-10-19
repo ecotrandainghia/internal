@@ -24,68 +24,84 @@ PAGES.notifications = function (main) {
   }).catch(function (err) { pageError('ntBody', err); });
 };
 
-/* ---------- Thông báo của tôi ---------- */
-function openMyNotify() {
-  openModal('<h2 id="boxTitle">Thông báo của tôi</h2>' + loadingHtml());
-  call('myNotify', TOKEN).then(drawMyNotify).catch(function (err) { failBox('Thông báo của tôi', err); });
+/* ---------- Thông báo của tôi (vẽ thẳng trong Cài đặt) ---------- */
+/** Từ trang khác (Trang chủ, trang Thông báo): mở Cài đặt ở mục Thông báo của tôi. */
+function openMyNotify() { openSettings(); openSection = 'my-notify'; renderSettings(''); }
+function loadMyNotify() {
+  call('myNotify', TOKEN).then(function (d) { drawMyNotify(d); })
+    .catch(function (err) { if ($('myNotify')) $('myNotify').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+/** Nút Bật/Tắt; off là lý do chưa dùng được (nút mờ, không bấm được). */
+function ntSwitch(key, on, off) {
+  var dis = off ? ' disabled' : '';
+  return '<span class="seg"><button type="button" data-nt-set="' + key + '" data-v="1" aria-pressed="' + !!on + '"' + dis + '>Bật</button>' +
+    '<button type="button" data-nt-set="' + key + '" data-v="0" aria-pressed="' + !on + '"' + dis + '>Tắt</button></span>';
+}
+/** Báo kết quả ở đầu mục, cuộn tới cho người dùng thấy. */
+function ntSay(kind, text) { setMsg('ntMsg', kind, text); var m = $('ntMsg'); if (m && m.scrollIntoView) m.scrollIntoView({ block: 'nearest' }); }
+function ntRow(title, note, control, off, extra) {
+  return '<div class="row nt-row' + (off ? ' off' : '') + '"><div><b>' + esc(title) + '</b><small>' + note + '</small>' + (extra || '') + '</div>' + control + '</div>';
 }
 
 function drawMyNotify(d, flash) {
   NT.me = d;
+  var box = $('myNotify');
+  if (!box) return;
   var push = WRAPPER_PUSH;
-  var appHint = !wrapper ? 'Mở app CLB ECO đã thêm vào màn hình chính điện thoại rồi bật ở đó. Trình duyệt thường không nhận được thông báo của app.'
-    : push === 'can-cai' ? 'Trên iPhone, thêm CLB ECO vào màn hình chính rồi mở từ đó mới bật được thông báo.'
-    : push === 'khong' ? 'Máy hoặc trình duyệt này không hỗ trợ thông báo của app.' : '';
-  wideModal('<h2 id="boxTitle">Thông báo của tôi</h2>' +
-    '<p class="hint">Nhắc hạn task, nhắc hẹn seeding, nhắc sinh nhật và các tin báo khác đều đi theo cách bạn chọn ở đây. Phải giữ ít nhất một đường.' +
-    (d.must ? ' Bạn là người phải nhận tin (BOD, NS phụ trách ban, seeding hoặc sinh nhật), nên cần cài xong ít nhất một đường.' : '') + '</p>' +
-    '<div class="nt-sec"><label class="check"><input type="checkbox" id="ntZalo"' + (d.zalo ? ' checked' : '') + '><span>Nhận qua Zalo' +
-      '<small>' + (d.linked ? 'Đã kết nối' + (d.zaloName ? ' với ' + esc(d.zaloName) : '') + '.' : 'Chưa kết nối.') + '</small></span></label>' +
-      (d.bot.has ? (d.linked ? '' : '<p>Mở Zalo, tìm bot <b>' + esc(d.bot.name || 'của CLB') + '</b>, nhắn mã <b class="nt-code">' + esc(d.code) + '</b> cho bot, rồi bấm Kiểm tra trong vòng 25 giây.</p>' +
-        '<div><button type="button" class="btn ghost sm" id="ntCheck">Kiểm tra kết nối</button></div>')
-        : '<p class="hint">CLB chưa có bot Zalo. Nhờ BOD nhập mã bot trong Cài đặt, Thông báo của CLB.</p>') + '</div>' +
-    '<div class="nt-sec"><label class="check"><input type="checkbox" id="ntApp"' + (d.app ? ' checked' : '') + '><span>Nhận qua app trên điện thoại' +
-      '<small>' + (d.devices.length ? d.devices.length + ' máy đã bật.' : 'Chưa bật trên máy nào.') + '</small></span></label>' +
-      (d.devices.length ? '<div class="list">' + d.devices.map(function (m) {
-        return '<div class="nt-dev"><span>' + esc(m.name) + (m.at ? ' <span class="soft small">· bật ' + fmtDay(m.at) + '</span>' : '') + '</span>' +
-          '<button type="button" class="btn ghost sm" data-nt-remove="' + esc(m.id) + '">Gỡ</button></div>';
-      }).join('') + '</div>' : '') +
-      (appHint ? '<p class="hint">' + esc(appHint) + '</p>' : '<div><button type="button" class="btn ghost sm" id="ntEnable">Bật trên máy này</button></div>') + '</div>' +
-    '<div class="nt-sec"><label class="check"><input type="checkbox" id="ntSelf"' + (d.selfRemind ? ' checked' : '') + '><span>Tự nhắc hạn task của tôi' +
-      '<small>Mặc định tắt vì NS phụ trách ban nhắc giúp.</small></span></label></div>' +
-    '<span class="msg" id="ntMsg" role="status"></span><div id="ntReport"></div>' +
-    '<div class="actions"><button type="button" class="btn ghost" id="ntTest">Gửi thử</button><button type="button" class="btn ghost" id="ntList">Xem tin 30 ngày qua</button>' +
-    '<button type="button" class="btn" data-act="close-modal">Xong</button></div>');
-  if (flash) setMsg('ntMsg', flash[0], flash[1]);
-  var saveCh = function () {
-    var z = $('ntZalo').checked, a = $('ntApp').checked;
-    call('saveMyChannels', TOKEN, { zalo: z, app: a }).then(function (x) { drawMyNotify(x, ['ok', 'Đã lưu cách nhận tin.']); })
-      .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
-  };
-  $('ntZalo').onchange = saveCh;
-  $('ntApp').onchange = saveCh;
-  $('ntSelf').onchange = function () {
-    call('saveSelfRemind', TOKEN, this.checked).then(function (x) { drawMyNotify(x, ['ok', x.selfRemind ? 'Đã bật tự nhắc hạn task.' : 'Đã tắt tự nhắc hạn task.']); })
-      .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
-  };
+  var appOff = !wrapper ? 'Chỉ bật được trong app CLB ECO đã thêm vào màn hình chính điện thoại.'
+    : push === 'can-cai' ? 'Trên iPhone, thêm CLB ECO vào màn hình chính rồi mở từ đó mới bật được.'
+    : push === 'khong' ? 'Máy này không hỗ trợ thông báo của app.' : '';
+  var zaloOff = d.bot.has ? '' : 'Chưa dùng được: CLB chưa có bot Zalo. BOD cài bot ở mục Thông báo của CLB.';
+  var zaloNote = zaloOff || (d.linked ? 'Đã kết nối' + (d.zaloName ? ' với ' + esc(d.zaloName) : '') + '.' : 'Chưa kết nối.');
+  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">Mở Zalo, tìm bot <b>' + esc(d.bot.name || 'của CLB') + '</b>, nhắn mã <b class="nt-code">' + esc(d.code) +
+    '</b> cho bot, rồi bấm Kiểm tra trong vòng 25 giây.</p><div><button type="button" class="btn-outline" id="ntCheck">Kiểm tra kết nối</button></div>' : '';
+  // Đã có máy bật thì vẫn đổi được, kể cả khi đang mở trên máy không bật được.
+  var appLock = appOff && !d.devices.length && !d.app;
+  var appNote = d.devices.length ? d.devices.length + ' máy đã bật.' + (appOff ? ' ' + esc(appOff) : '') : esc(appOff || 'Chưa bật trên máy nào.');
+  var devices = (d.devices.length ? '<div class="nt-devs">' + d.devices.map(function (m) {
+    return '<div class="nt-dev"><span>' + esc(m.name) + (m.at ? ' <span class="soft small">· bật ' + fmtDay(m.at) + '</span>' : '') + '</span>' +
+      '<button type="button" class="btn-outline" data-nt-remove="' + esc(m.id) + '">Gỡ</button></div>';
+  }).join('') + '</div>' : '') + (appOff ? '' : '<div><button type="button" class="btn-outline" id="ntEnable">Bật trên máy này</button></div>');
+  box.innerHTML = (d.must ? '<p class="hint">Bạn có việc cần nhận tin nhắc, nên hãy cài xong ít nhất một cách.</p>' : '') +
+    '<span class="msg" id="ntMsg" role="status"></span>' +
+    ntRow('Zalo', zaloNote, ntSwitch('zalo', d.zalo, zaloOff && !d.zalo), !!zaloOff, zaloSteps) +
+    ntRow('App trên điện thoại', appNote, ntSwitch('app', d.app, appLock), appLock, devices) +
+    ntRow('Tự nhắc hạn task', 'Nhắc cả task của chính bạn. Mặc định tắt vì người phụ trách ban đã nhắc giúp.', ntSwitch('self', d.selfRemind, '')) +
+    ntRow('Gửi thử', 'Gửi một tin thử qua mọi cách đang bật.', '<button type="button" class="btn-outline" id="ntTest">Gửi thử</button>', false, '<div id="ntReport"></div>') +
+    ntRow('Thông báo 30 ngày qua', 'Xem lại những tin app đã gửi bạn.', '<button type="button" class="btn-outline" data-act="notices">Xem</button>');
+  if (flash) ntSay(flash[0], flash[1]);
+  box.querySelectorAll('[data-nt-set]').forEach(function (b) {
+    b.onclick = function () {
+      var key = b.dataset.ntSet, on = b.dataset.v === '1';
+      if (key === 'self') {
+        if (on === !!d.selfRemind) return;
+        call('saveSelfRemind', TOKEN, on).then(function (x) { drawMyNotify(x, ['ok', x.selfRemind ? 'Đã bật tự nhắc hạn task.' : 'Đã tắt tự nhắc hạn task.']); })
+          .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
+        return;
+      }
+      if (on === !!d[key]) return;
+      var ch = { zalo: !!d.zalo, app: !!d.app }; ch[key] = on;
+      call('saveMyChannels', TOKEN, ch).then(function (x) { drawMyNotify(x, ['ok', 'Đã lưu cách nhận tin.']); })
+        .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
+    };
+  });
   if ($('ntCheck')) $('ntCheck').onclick = function () {
-    this.disabled = true; setMsg('ntMsg', '', 'Đang chờ tin nhắn của bạn tới bot (tối đa 25 giây)…');
+    this.disabled = true; ntSay('', 'Đang chờ tin nhắn của bạn tới bot (tối đa 25 giây)…');
     call('checkMyZalo', TOKEN).then(function (x) { drawMyNotify(x, [x.linked ? 'ok' : 'bad', x.checkText]); })
       .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
   };
   if ($('ntEnable')) $('ntEnable').onclick = function () {
-    this.disabled = true; setMsg('ntMsg', '', 'Bấm Cho phép khi điện thoại hỏi…');
+    this.disabled = true; ntSay('', 'Bấm Cho phép khi điện thoại hỏi…');
     toWrapper({ eco: 'bat-thong-bao', khoaCong: d.publicKey });
   };
   $('ntTest').onclick = function () {
-    this.disabled = true; setMsg('ntMsg', '', 'Đang gửi thử…');
+    this.disabled = true; ntSay('', 'Đang gửi thử…');
     call('sendMeTest', TOKEN).then(function (r) {
       $('ntTest').disabled = false;
-      setMsg('ntMsg', r.sent ? 'ok' : 'bad', r.sent ? 'Đã gửi. Bạn xem điện thoại nhé.' : 'Chưa gửi được qua đường nào.');
+      ntSay(r.sent ? 'ok' : 'bad', r.sent ? 'Đã gửi. Bạn xem điện thoại nhé.' : 'Chưa gửi được qua cách nào.');
       $('ntReport').innerHTML = reportHtml(r.report);
-    }).catch(function (err) { $('ntTest').disabled = false; setMsg('ntMsg', 'bad', err.message); });
+    }).catch(function (err) { $('ntTest').disabled = false; ntSay('bad', err.message); });
   };
-  $('ntList').onclick = function () { closeModal(); closeSettings(); page = 'notifications'; renderPage(); };
 }
 
 /* Trang vỏ báo kết quả bật thông báo trên máy. */
@@ -115,7 +131,7 @@ function drawClubNotify(d, flash, report) {
 function drawNotifyPeople(d) {
   var linked = d.people.filter(function (p) { return p.linked; }).length;
   wideModal('<h2 id="boxTitle">Thông báo của thành viên</h2>' +
-    '<p class="hint">' + linked + '/' + d.people.length + ' người đã kết nối Zalo. Đổi đường nhận giúp ai đó thì tick ở cột Zalo hoặc App; mỗi người phải giữ ít nhất một đường.</p>' +
+    '<p class="hint">' + linked + '/' + d.people.length + ' người đã kết nối Zalo. Đổi cách nhận giúp ai đó thì tick ở cột Zalo hoặc App; mỗi người phải giữ ít nhất một cách.</p>' +
     '<div class="nc-test"><span>Gửi thử tới mọi người qua</span><label class="check"><input type="checkbox" id="ncTZ" checked><span>Zalo</span></label>' +
     '<label class="check"><input type="checkbox" id="ncTA"><span>App</span></label><button type="button" class="btn ghost sm" data-nc-test="*">Gửi thử tất cả</button></div>' +
     '<span class="msg" id="ncMsg" role="status"></span><div id="ncReport"></div>' +
@@ -132,7 +148,7 @@ function drawNotifyPeople(d) {
 }
 
 function drawBodAlerts(d) {
-  openModal('<h2 id="boxTitle">Báo cho BOD</h2><p class="hint">Gửi cho mọi BOD qua đường mỗi người chọn. Kết quả duyệt thư luôn được báo cho UCV.</p>' +
+  openModal('<h2 id="boxTitle">Báo cho BOD</h2><p class="hint">Gửi cho mọi BOD qua cách mỗi người chọn. Kết quả duyệt thư luôn được báo cho UCV.</p>' +
     Object.keys(d.alerts).map(function (k) {
       return '<label class="check"><input type="checkbox" data-nc-alert="' + k + '"' + (d.alerts[k].on ? ' checked' : '') + '><span>' + esc(d.alerts[k].label) + '</span></label>';
     }).join('') + '<span class="msg" id="ncMsg" role="status"></span>' +

@@ -9,7 +9,7 @@ var NOTIFY_KEEP_DAYS = 30;
 var BOD_ALERTS = {
   mail: ['notify_bod_mail', 'Thư UCV chờ duyệt', '1'],
   feedback: ['notify_bod_feedback', 'Góp ý mới', '1'],
-  seeding: ['notify_bod_seeding', 'NS seeding ghi nhận một bài', '0']
+  seeding: ['notify_bod_seeding', 'Người phụ trách seeding ghi nhận một bài', '0']
 };
 
 /** Mã ngắn của một máy (từ địa chỉ nhận tin), để trang web gỡ máy mà không lộ địa chỉ hay mã máy. */
@@ -84,7 +84,7 @@ function notifyMembers_(items) {
   });
   items.forEach(function (x) {
     var p = people[x.memberId];
-    if (!p.zalo && !p.app) { out.failed.push({ id: p.id, name: p.name, why: 'chưa chọn đường nhận nào' }); return; }
+    if (!p.zalo && !p.app) { out.failed.push({ id: p.id, name: p.name, why: 'chưa chọn cách nhận nào' }); return; }
     var r = deliver_(p, x.title, x.body || '', { zalo: p.zalo, app: p.app }, token);
     gone = gone.concat(r.gone);
     if (r.sent) out.sent++;
@@ -187,13 +187,13 @@ function myNotify(token) {
 function saveMyChannels(token, ch) {
   var me = requireUser_(token);
   ch = ch || {};
-  if (!ch.zalo && !ch.app) throw new Error('Bạn cần giữ ít nhất một đường nhận: Zalo hoặc app.');
+  if (!ch.zalo && !ch.app) throw new Error('Bạn cần bật ít nhất một cách nhận: Zalo hoặc app.');
   withLock_(function () { updateRecord_('accounts', me.memberId, { notify_zalo: !!ch.zalo, notify_app: !!ch.app }); });
   ensureRemindersQuietly_();
   return myNotifyFor_(requireUser_(token));
 }
 
-/** Bật, tắt tự nhắc hạn task của mình (mặc định tắt vì NS phụ trách ban nhắc giúp). */
+/** Bật, tắt tự nhắc hạn task của mình (mặc định tắt vì người phụ trách ban nhắc giúp). */
 function saveSelfRemind(token, on) {
   var me = requireUser_(token);
   withLock_(function () { updateRecord_('accounts', me.memberId, { self_remind: !!on }); });
@@ -248,7 +248,7 @@ function removeDevice(token, id) {
 function sendMeTest(token) {
   var me = requireUser_(token);
   var p = notifyPeople_()[me.memberId];
-  if (!p.zalo && !p.app) return { sent: 0, report: ['Bạn chưa bật đường nhận nào.'] };
+  if (!p.zalo && !p.app) return { sent: 0, report: ['Bạn chưa bật cách nhận nào.'] };
   var title = 'Thông báo thử', body = 'Đây là tin thử. Bạn sẽ nhận thông báo của app CLB ECO theo cách này.';
   withLock_(function () { insertRecords_('notifications', [{ sent_at: new Date(), member_id: me.memberId, title: title, body: body }]); });
   var r = deliver_(p, title, body, { zalo: p.zalo, app: p.app }, zaloToken_());
@@ -319,7 +319,7 @@ function saveZaloBot(token, botToken) {
 function saveMemberChannels(token, memberId, ch) {
   requireUser_(token, 'bod');
   ch = ch || {};
-  if (!ch.zalo && !ch.app) throw new Error('Mỗi người cần ít nhất một đường nhận.');
+  if (!ch.zalo && !ch.app) throw new Error('Mỗi người cần ít nhất một cách nhận.');
   withLock_(function () {
     if (!findRecord_('accounts', String(memberId))) throw new Error('Không tìm thấy tài khoản này.');
     updateRecord_('accounts', String(memberId), { notify_zalo: !!ch.zalo, notify_app: !!ch.app });
@@ -338,7 +338,7 @@ function unlinkZalo(token, memberId) {
 function sendTest(token, memberId, ch) {
   var me = requireUser_(token, 'bod');
   ch = ch || {};
-  if (!ch.zalo && !ch.app) throw new Error('Bạn chọn ít nhất một đường gửi.');
+  if (!ch.zalo && !ch.app) throw new Error('Bạn chọn ít nhất một cách gửi.');
   var people = notifyPeople_(), ids = clubNotifyFor_().people.map(function (p) { return p.id; });
   if (memberId !== '*') ids = ids.filter(function (id) { return id === String(memberId); });
   if (!ids.length) throw new Error('Không tìm thấy người nhận.');

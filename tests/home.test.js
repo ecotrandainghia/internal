@@ -49,7 +49,7 @@ test('trang chủ thành viên: điểm và hạng GD1, KPI task, KPI log, task 
   assert.equal(d.lead, undefined);
 });
 
-test('NS phụ trách ban thấy số task trễ và sắp đến hạn của ban mình', () => {
+test('Người phụ trách ban thấy số task trễ và sắp đến hạn của ban mình', () => {
   const { app } = setUp();
   const d = plain(app.homeData(login(app, 'chi@gmail.com', 'chungCLB')));
   assert.deepEqual(d.lead, { late: 2, soon: 1 });

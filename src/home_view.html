@@ -106,7 +106,7 @@ function lateBy(ms) {
   return ms < 864e5 ? 'Trễ ' + Math.max(1, Math.ceil(ms / 36e5)) + ' giờ' : 'Trễ ' + Math.floor(ms / 864e5) + ' ngày';
 }
 
-/** Dòng thêm cho NS phụ trách ban và UCV. */
+/** Dòng thêm cho người phụ trách ban và UCV. */
 function extraRows(d) {
   var rows = [];
   if (d.lead && (d.lead.late || d.lead.soon)) {
@@ -143,7 +143,7 @@ function myTasksSection(d) {
   });
   return '<section class="sec" aria-labelledby="myTaskTitle"><h2 id="myTaskTitle">Task của bạn</h2><div class="list">' +
     (rows.length ? rows.join('') : '<div class="empty">Bạn chưa có task nào cần làm.</div>') + '</div>' +
-    '<p class="hint">Cần gia hạn? Nhắn BOD hoặc NS phụ trách ban qua Messenger.</p><span class="msg" id="taskMsg" role="status"></span></section>';
+    '<p class="hint">Cần gia hạn? Nhắn BOD hoặc người phụ trách ban qua Messenger.</p><span class="msg" id="taskMsg" role="status"></span></section>';
 }
 
 function linksSection(d) {
