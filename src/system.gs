@@ -137,7 +137,7 @@ function backups_() {
 /** Chép file dữ liệu vào thư mục Sao lưu, bỏ bớt bản cũ chỉ giữ BACKUP_KEEP bản. Trả về bản mới. */
 function backupNow_() {
   var now = new Date();
-  var name = '[ECO] Sao lưu ' + Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH.mm');
+  var name = '[APP] Sao lưu ' + Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH.mm');
   var copy = DriveApp.getFileById(dataFile_().getId()).makeCopy(name, appFolder_(BACKUP_FOLDER));
   var list = [{ id: copy.getId(), name: name, at: now.getTime() }].concat(backups_());
   list.slice(BACKUP_KEEP).forEach(function (b) { try { DriveApp.getFileById(b.id).setTrashed(true); } catch (x) { /* đã bị xoá tay */ } });
@@ -186,12 +186,12 @@ function archiveOldTerms_(now) {
 }
 
 /**
- * Tạo "[ECO] Lưu trữ nhiệm kỳ 2627" trong thư mục Lưu trữ, mỗi tab chép sang một tab cùng tên. Ghi sang trước, đếm lại
+ * Tạo "[APP] Lưu trữ nhiệm kỳ 2627" trong thư mục Lưu trữ, mỗi tab chép sang một tab cùng tên. Ghi sang trước, đếm lại
  * đủ dòng rồi mới bỏ ở file chính; thiếu thì dừng, file chính giữ nguyên.
  */
 function archiveTerm_(termId) {
   withLock_(function () {
-    var ends = termEnds_(readTable_('terms')), ss = SpreadsheetApp.create('[ECO] Lưu trữ nhiệm kỳ ' + termId);
+    var ends = termEnds_(readTable_('terms')), ss = SpreadsheetApp.create('[APP] Lưu trữ nhiệm kỳ ' + termId);
     DriveApp.getFileById(ss.getId()).moveTo(appFolder_(ARCHIVE_FOLDER));
     var first = ss.getSheets()[0], plans = [];
     ARCHIVE_TABLES.forEach(function (t) {

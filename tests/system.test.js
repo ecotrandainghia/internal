@@ -29,7 +29,7 @@ test('việc ban đêm: cài lúc cài đặt, chỉ lịch của dự án gọi
   assert.equal(app.runNightly({}), null);
 
   const r = app.runNightly({ triggerUid: nightly(app).id });
-  assert.match(r.text, /Sao lưu \[ECO\] Sao lưu/);
+  assert.match(r.text, /Sao lưu \[APP\] Sao lưu/);
   assert.match(r.text, /Lưu trữ nhiệm kỳ 2024-2025/);
   assert.equal(app.backups_().length, 1);
   const copy = app.__files[app.backups_()[0].id];
@@ -47,7 +47,7 @@ test('việc ban đêm: cài lúc cài đặt, chỉ lịch của dự án gọi
   const t = app.findRecord_('terms', '2425');
   assert.ok(t.archive_file_id && t.archived_at);
   const arch = app.__files[t.archive_file_id];
-  assert.equal(arch.name, '[ECO] Lưu trữ nhiệm kỳ 2425');
+  assert.equal(arch.name, '[APP] Lưu trữ nhiệm kỳ 2425');
   assert.equal(arch.folder, 'Lưu trữ');
   assert.deepEqual(arch.getSheets().map((s) => s.getName()).sort(), ['audit_log', 'events', 'point_entries', 'task_assignments', 'tasks']);
   assert.equal(arch.getSheetByName('tasks').getDataRange().getValues()[1][0], task);

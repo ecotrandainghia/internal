@@ -43,7 +43,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Sửa: `updateRecord_('tasks', 'T-2627-0042', { deadline: ngayMoi }, { actorId, action: 'change_deadline' })`. Có `action` thì mỗi cột đổi ghi một dòng Nhật ký.
 - Đọc rồi ghi mà không ai chen vào giữa: bọc trong `withLock_(function () { ... })`.
 - Cài đặt: `getSetting_`, `getNumberSetting_`, `setSetting_` (sửa trong app thì ghi Nhật ký).
-- Tạo file dữ liệu: trang cài đặt lần đầu làm việc này (xem dưới). App tạo file "[ECO] Dữ liệu app", đủ 29 tab, tô màu theo nhóm, khoá mọi tab trừ Cài đặt, thêm sẵn các ban và mức quy chế. Bản cập nhật sau có thêm cột thì app tự thêm, không cần chạy lại. Hàm `setupDataFile` vẫn chạy tay được trong trình sửa Apps Script.
+- Tạo file dữ liệu: trang cài đặt lần đầu làm việc này (xem dưới). App tạo file "[APP] Dữ liệu app", đủ 29 tab, tô màu theo nhóm, khoá mọi tab trừ Cài đặt, thêm sẵn các ban và mức quy chế. Bản cập nhật sau có thêm cột thì app tự thêm, không cần chạy lại. Hàm `setupDataFile` vẫn chạy tay được trong trình sửa Apps Script.
 
 ## Đăng nhập
 
@@ -88,7 +88,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 
 - Mỗi sự kiện một Google Sheet để thành viên tích buổi mình đi được. Link lưu ở Cài đặt, dòng `log_signup_<mã sự kiện>`.
 - Nút Sheet đăng ký trong Quản lý log: tạo sheet mới hoặc dán link sheet có sẵn. Sheet mới có tên thành viên (không có BOD, không có số điện thoại) xếp theo ban, mỗi buổi một cột ô tích, dòng đếm số người đăng ký và tab Kế hoạch (thời gian, địa điểm, mục tiêu, trạng thái từng buổi). Ai có link đều tích được; tên, ban và tiêu đề khoá dạng cảnh báo.
-- Có file mẫu (`log_template_url`, mẫu của tool cũ có tab Đăng ký log) thì app chép mẫu rồi điền như tool cũ. Sheet lưu vào thư mục `log_folder_url`, để trống là thư mục [ECO] Đăng ký log. Sửa ở Cài đặt, Hoạt động CLB, File mẫu log.
+- Có file mẫu (`log_template_url`, mẫu của tool cũ có tab Đăng ký log) thì app chép mẫu rồi điền như tool cũ. Sheet lưu vào thư mục `log_folder_url`, để trống là thư mục [APP] Đăng ký log. Sửa ở Cài đặt, Hoạt động CLB, File mẫu log.
 - Khi mở một buổi để điểm danh, app đọc cột trùng tên buổi (không phân biệt dấu, hoa thường) và tick sẵn người đã đăng ký; tên trong sheet không khớp thành viên nào thì app liệt kê ra. Buổi tạo sau khi đã có sheet thì bấm Thêm cột vào sheet.
 
 ## Góp ý
@@ -100,7 +100,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 ## Hộp thư
 
 - Người có nhãn UCV có trang Hộp thư: đọc Gmail của CLB theo thư mục và nhãn, tìm thư, tải tệp đính kèm. UCV soạn thư mới, trả lời, trả lời tất cả, chuyển tiếp, hoặc xin lưu trữ, về hộp thư đến, gắn hay bỏ nhãn, xoá, báo thư rác. Mọi việc đều thành yêu cầu ở tab Yêu cầu mail và chỉ chạy khi BOD duyệt.
-- Khung soạn thư: ô người nhận gợi ý từ danh bạ (thành viên CLB theo ban và tab Danh bạ), lấy email từ một Google Sheet, chữ đậm, nghiêng, danh sách, liên kết, chèn hoặc dán ảnh (tối đa 2 MB mỗi ảnh), tệp từ máy (10 MB mỗi tệp, 20 MB tổng) hoặc từ Drive. Tự lưu nháp mỗi 20 giây. Tệp và ảnh lưu vào thư mục Drive "ECO - Đính kèm mail"; ảnh trong thư ghi là `drive:<mã>` và được nhúng vào thư khi gửi.
+- Khung soạn thư: ô người nhận gợi ý từ danh bạ (thành viên CLB theo ban và tab Danh bạ), lấy email từ một Google Sheet, chữ đậm, nghiêng, danh sách, liên kết, chèn hoặc dán ảnh (tối đa 2 MB mỗi ảnh), tệp từ máy (10 MB mỗi tệp, 20 MB tổng) hoặc từ Drive. Tự lưu nháp mỗi 20 giây. Tệp và ảnh lưu vào thư mục Drive "[APP] Đính kèm mail"; ảnh trong thư ghi là `drive:<mã>` và được nhúng vào thư khi gửi.
 - Trang Hộp thư của BOD, tab Duyệt thư: yêu cầu chờ duyệt lên đầu. BOD xem thư, thư gốc, rồi Duyệt và gửi, Trả lại UCV sửa hoặc Từ chối (hai cách sau phải ghi chú). BOD tự sửa người nhận, tiêu đề, nội dung rồi duyệt được; chỗ sửa ghi Nhật ký và UCV thấy chữ "BOD đã sửa". Gmail báo lỗi thì yêu cầu chuyển sang Lỗi kèm lý do.
 - Chữ ký lấy từ Gmail của CLB, bật tắt ở Cài đặt, Hộp thư, Chữ ký (dòng `mail_signature`). Cần bật dịch vụ nâng cao Gmail trong `appsscript.json`, Google sẽ hỏi quyền Gmail ở lần triển khai tới.
 
@@ -139,7 +139,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - NS phụ trách seeding (nhãn `seeding_lead`) có trang Seeding; BOD mở từ Cài đặt, Hoạt động CLB, Báo cáo seeding. Thấy bài mới thì dán link và tự chọn lúc nhắc (có nút nhanh Sau 24 giờ, Sau 48 giờ, không có mức mặc định). Việc tự chạy `runSeedingReminders` (mỗi 15 phút, cài lúc đặt nhắc đầu tiên) nhắc người đặt qua Zalo hoặc app khi tới giờ, nhớ đã nhắc tới đâu để không nhắc lại.
 - Đến giờ, dán nguyên đoạn copy react và đoạn copy comment. App dò tên Facebook của thành viên (chưa có thì dò họ tên) và tên fanpage, bỏ dấu, không phân biệt hoa thường. Tên dài dò trước nên tên nằm trong tên khác không bị tính nhầm; tên một chữ chỉ khớp khi đứng riêng một dòng. Trùng tên giữa nhiều người hoặc tên chỉ nằm trong tên dài hơn thì hiện ra để người nhập tick.
 - Ghi nhận cộng điểm theo hai hoạt động `react_activity_id` (+1) và `comment_activity_id` (+2) trong Thang điểm, mỗi người một lần cho react và một lần cho comment của mỗi bài, dòng Cộng điểm có nguồn Seeding và mã bài. Giai đoạn giao thoa không cộng được. Huỷ ghi nhận (BOD hoặc người đã ghi nhận) gỡ điểm và đưa bài về Chờ dán.
-- Đoạn đã dán được chép nguyên văn sang file "[ECO] Bằng chứng seeding <nhiệm kỳ>" trong thư mục Bằng chứng seeding trên Drive, tab phase_1 hoặc phase_2 theo lúc tạo bài, mỗi bài một hàng, ô quá 50.000 ký tự thì nối xuống hàng dưới. Mã file lưu ở Script Property `SEEDING_EVIDENCE_<nhiệm kỳ>`.
+- Đoạn đã dán được chép nguyên văn sang file "[APP] Bằng chứng seeding <nhiệm kỳ>" trong thư mục Bằng chứng seeding trên Drive, tab phase_1 hoặc phase_2 theo lúc tạo bài, mỗi bài một hàng, ô quá 50.000 ký tự thì nối xuống hàng dưới. Mã file lưu ở Script Property `SEEDING_EVIDENCE_<nhiệm kỳ>`.
 - Fanpage (HS-04): mỗi thành viên thêm fanpage của mình ở Cài đặt, Tài khoản của tôi, Fanpage để seeding. Tên fanpage không trùng fanpage khác hay tên Facebook của thành viên khác.
 
 ## Sinh nhật
@@ -189,7 +189,7 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 
 ## Hệ thống: việc tự chạy, sao lưu, lưu trữ nhiệm kỳ cũ
 
-- Mỗi đêm lúc 2 giờ (`runNightly`, cài lúc cài đặt lần đầu và mỗi lần BOD mở Tình trạng hệ thống): sao lưu cả file dữ liệu vào thư mục Drive `Sao lưu` (giữ 30 bản, danh sách ở Script Properties `BACKUP_LIST`), chuyển dữ liệu nhiệm kỳ đã kết thúc hơn 365 ngày sang file `[ECO] Lưu trữ nhiệm kỳ ...` trong thư mục `Lưu trữ` (ghi sang trước, đếm đủ dòng rồi mới bỏ ở file chính), dọn phiên đăng nhập hết hạn, kiểm tra dung lượng (từ 70% thì báo BOD, mỗi tuần một lần).
+- Mỗi đêm lúc 2 giờ (`runNightly`, cài lúc cài đặt lần đầu và mỗi lần BOD mở Tình trạng hệ thống): sao lưu cả file dữ liệu vào thư mục Drive `Sao lưu` (giữ 30 bản, danh sách ở Script Properties `BACKUP_LIST`), chuyển dữ liệu nhiệm kỳ đã kết thúc hơn 365 ngày sang file `[APP] Lưu trữ nhiệm kỳ ...` trong thư mục `Lưu trữ` (ghi sang trước, đếm đủ dòng rồi mới bỏ ở file chính), dọn phiên đăng nhập hết hạn, kiểm tra dung lượng (từ 70% thì báo BOD, mỗi tuần một lần).
 - Mọi việc tự chạy (việc ban đêm, nhắc task, nhắc sinh nhật, nhắc seeding, gửi thư hẹn giờ) ghi lần chạy cuối vào Script Properties `JOB_STATUS`. Chạy lỗi thì báo mọi BOD qua Zalo hoặc app, mỗi việc tối đa một tin mỗi ngày.
 - Cài đặt, Hệ thống: Tình trạng hệ thống (các việc tự chạy, dung lượng, file lưu trữ); Sao lưu và khôi phục (Sao lưu ngay, Khôi phục). Khôi phục chép bản sao lưu thành file dữ liệu mới; file đang dùng đổi tên `(trước khôi phục ...)` và giữ lại. Sao lưu tay và khôi phục ghi Nhật ký (việc `backup_restore`).
 

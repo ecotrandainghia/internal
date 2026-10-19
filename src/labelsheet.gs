@@ -89,7 +89,7 @@ function applyLabelSheet(token, req) {
   var summary = withLock_(function () {
     var now = new Date(), plan = labelSheetPlan_(req, now), v = plan.view, ch = plan.changes;
     if (!v.ready) throw new Error(v.noChange ? 'Sheet giống hệt danh sách đang có, không có gì để tải.' : 'Chưa tải được. Bấm Xem trước để xem còn gì cần sửa.');
-    var copy = SpreadsheetApp.openById(DriveApp.getFileById(plan.src.ss.getId()).makeCopy('[ECO] Bản sao ' + v.typeName + ' ' + plan.termId, rosterFolder_()).getId());
+    var copy = SpreadsheetApp.openById(DriveApp.getFileById(plan.src.ss.getId()).makeCopy('[APP] Bản sao ' + v.typeName + ' ' + plan.termId, rosterFolder_()).getId());
     var added = ch.adds.length ? insertRecords_('member_labels', ch.adds, { termId: plan.termId }) : [];
     writeUndo_(copy, { labels: { added: added.map(function (l) { return l.label_id; }), ended: ch.ends, edits: ch.edits.map(function (e) { return { id: e.key, detail: e.old }; }) } });
     if (ch.ends.length) updateRecords_('member_labels', ch.ends.map(function (id) { return { key: id, patch: { end_date: new Date(now.getTime() - 1) } }; }), { actorId: me.memberId, action: 'upload_sheet' });

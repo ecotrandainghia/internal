@@ -171,7 +171,7 @@ function openLogFiles() {
       '<label class="field">File mẫu (không bắt buộc)<input id="lfTpl" type="url" placeholder="Dán link Google Sheet" value="' + esc(f.templateUrl) + '"></label>' +
       '<p class="hint">Mẫu của tool tạo file log cũ, có tab Đăng ký log. Để trống thì app tự kẻ bảng.</p>' +
       '<label class="field">Thư mục lưu (không bắt buộc)<input id="lfDir" type="url" placeholder="Dán link thư mục Google Drive" value="' + esc(f.folderUrl) + '"></label>' +
-      '<p class="hint">Để trống thì app lưu vào thư mục [ECO] Đăng ký log trong Drive của CLB.</p>' +
+      '<p class="hint">Để trống thì app lưu vào thư mục [APP] Đăng ký log trong Drive của CLB.</p>' +
       '<span class="msg" id="lfMsg" role="status"></span><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="lfBtn">Lưu</button></div></form>');
     $('lfForm').onsubmit = function (e) {
       e.preventDefault();

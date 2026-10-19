@@ -14,7 +14,7 @@
 
 var DATA_FILE_PROP = 'DATA_FILE_ID';
 var SCHEMA_PROP = 'SCHEMA_SIGNATURE';
-var DATA_FILE_NAME = '[ECO] Dữ liệu app';
+var DATA_FILE_NAME = '[APP] Dữ liệu app';
 var CELL_FORMATS = { text: '@', num: 'General', date: 'dd/MM/yyyy', time: 'dd/MM/yyyy HH:mm' };
 
 /* ===================== File dữ liệu ===================== */

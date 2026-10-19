@@ -74,7 +74,7 @@ test('dán react, comment: xem trước, ghi nhận +1 react +2 comment, mỗi n
   assert.deepEqual([d.recorded[0].id, d.recorded[0].entries], [id, 3]);
   assert.throws(() => app.recordSeeding(chi, id, reacts, comments, { react: ['M1'] }), /đã ghi nhận rồi/);
   const ss = app.SpreadsheetApp.openById(app.PropertiesService.getScriptProperties().getProperty('SEEDING_EVIDENCE_' + term));
-  assert.equal(ss.name, '[ECO] Bằng chứng seeding ' + term);
+  assert.equal(ss.name, '[APP] Bằng chứng seeding ' + term);
   assert.equal(ss.folder, 'Bằng chứng seeding');
   assert.deepEqual(plain(ss.getSheetByName('phase_1').getDataRange().getValues()), [['post_id', 'reacts', 'comments'], [id, reacts, comments]]);
 });

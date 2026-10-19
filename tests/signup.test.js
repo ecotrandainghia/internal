@@ -55,9 +55,9 @@ test('tạo sheet đăng ký: bảng app tự kẻ, ai có link sửa được, 
   assert.ok(d.event.signupUrl);
   assert.equal(d.notice, '');
   assert.throws(() => app.createSignupSheet(tok, ev), /đã có sheet đăng ký/);
-  const ss = Object.values(app.__files).find((f) => f.name === '[ECO] Đăng ký log · Ngày hội Xanh');
+  const ss = Object.values(app.__files).find((f) => f.name === '[APP] Đăng ký log · Ngày hội Xanh');
   assert.equal(ss.sharing, 'anyone_with_link:edit');
-  assert.equal(ss.folder, '[ECO] Đăng ký log');
+  assert.equal(ss.folder, '[APP] Đăng ký log');
   const sh = ss.getSheetByName('Đăng ký');
   // BOD không có trong sheet; người xếp theo ban (PR trước AD theo Cơ cấu ban)
   assert.deepEqual(sh.data[3], ['STT', 'Họ và tên', 'Lớp', 'Ban', 'Thứ 7', 'Chủ nhật', 'Ghi chú']);
