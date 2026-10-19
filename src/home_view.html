@@ -34,6 +34,8 @@ function dayPart() {
   var h = new Date().getHours();
   return h >= 5 && h < 11 ? 'buổi sáng' : h < 14 && h >= 11 ? 'buổi trưa' : h < 18 && h >= 14 ? 'buổi chiều' : h < 22 && h >= 18 ? 'buổi tối' : 'đêm khuya';
 }
+var WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+function todayText() { var d = new Date(); return WEEKDAYS[d.getDay()] + ', ' + p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + '/' + d.getFullYear(); }
 /** Số buổi log giữ tối đa 2 số lẻ: 1,17. */
 function fmtNum(n) { return String(Math.round(n * 100) / 100).replace('.', ','); }
 
@@ -49,19 +51,17 @@ function item(title, meta, right) {
 function goButton(pageId, text) { return '<button type="button" class="btn ghost sm" data-page="' + pageId + '">' + esc(text) + '</button>'; }
 
 PAGES.home = function (main) {
-  main.innerHTML = '<div class="home"><section class="hello" aria-label="Lời chào">' + seasonDecor() + '<small>Chào ' + dayPart() + ',</small><h1>' + esc(USER.name.split(' ').pop()) + ' ơi!</h1></section>' +
+  main.innerHTML = '<div class="home"><section class="hello" aria-label="Lời chào">' + seasonDecor() + '<h1>Chào ' + dayPart() + ', ' + esc(USER.name.trim().split(/\s+/).pop()) + '</h1><p>' + todayText() + '</p></section>' +
     '<div id="homeBody">' + loadingHtml() + '</div></div>';
   call('homeData', TOKEN).then(function (d) { if (currentPage() === 'home' && $('homeBody')) renderHome(d); })
     .catch(function (err) { if ($('homeBody')) $('homeBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 };
 
 function renderHome(d) {
-  var urgentMine = d.myTasks.filter(function (t) { return t.status === 'late' || t.status === 'due_soon'; }).length;
   var html = '';
   if (USER.isBod) {
     var b = d.bod;
     if (BADGES.mail !== b.counts.mail) { BADGES.mail = b.counts.mail; renderNav(); }
-    setHelloLine(b.todo.length ? 'Hôm nay có ' + b.todo.length + ' việc cần bạn xem. Làm nhanh rồi nghỉ nha.' : 'Hôm nay không có việc gấp. Nghỉ ngơi chút nha.');
     html += '<div class="note plain"><span>' + esc(b.nextStep) + '</span><button type="button" class="btn sm" data-act="roster">Mở</button></div>';
     html += notifyNote(d);
     html += '<div class="stats">' + stat(b.counts.tasks, 'Task trễ hạn hoặc sắp đến hạn', 'task', b.counts.tasks ? 'c-bad' : '') +
@@ -76,9 +76,7 @@ function renderHome(d) {
         return '<a href="#" data-page="' + x[0] + '">' + icon(x[2]) + esc(x[1]) + '</a>';
       }).join('') + '</div></section>';
   } else {
-    var m = d.member, need = m.kpiLog && m.kpiLog.needed;
-    var parts = [urgentMine ? 'còn ' + urgentMine + ' task sắp đến hạn hoặc trễ hạn' : '', need ? 'cần thêm ' + need + ' buổi log' : ''].filter(String);
-    setHelloLine(parts.length ? 'Bạn ' + parts.join(' và ') + '.' : 'Hôm nay bạn không có việc gấp.');
+    var m = d.member;
     if (!d.term || (d.term.phase !== 'phase_1' && d.term.phase !== 'phase_2')) {
       html += '<div class="note plain"><span>' + (d.term ? 'Đang ở giai đoạn giao thoa của nhiệm kỳ ' + esc(d.term.label) + ', chưa tính điểm và KPI.' : 'Nhiệm kỳ chưa bắt đầu, chưa tính điểm và KPI.') + '</span></div>';
     }
@@ -91,11 +89,6 @@ function renderHome(d) {
   $('homeBody').outerHTML = html;
 }
 
-/** Dòng thứ ba của lời chào: tóm tắt việc hôm nay. */
-function setHelloLine(line) {
-  var h = document.querySelector('.hello');
-  if (h) h.insertAdjacentHTML('beforeend', '<p>' + esc(line) + '</p>');
-}
 
 function notifyNote(d) {
   if (!d.notify) return '';

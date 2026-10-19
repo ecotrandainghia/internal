@@ -13,13 +13,13 @@
   <div class="app" id="app" hidden>
     <aside class="side" id="side" aria-label="Menu chính">
       <div class="brand">
-        <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l8-8"/></svg></span>
+        <span class="logo" aria-hidden="true"><img src="<?!= include('logo') ?>" alt=""></span>
         <b>CLB ECO</b>
+        <button class="side-fold only-desk" id="foldSide" type="button" title="Thu gọn menu" aria-label="Thu gọn menu"><svg viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
         <button class="icon-btn only-phone" id="closeSide" type="button" aria-label="Đóng menu"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <nav id="nav"></nav>
-      <div class="grow"></div>
-      <div class="me-wrap">
+      <div class="side-user">
         <button class="me" id="meBtn" type="button" aria-haspopup="menu" aria-expanded="false"></button>
       </div>
     </aside>
@@ -37,7 +37,7 @@
   <div class="menu" id="meMenu" role="menu" aria-label="Tài khoản" hidden></div>
   <div class="overlay" id="settings" hidden></div>
   <div class="overlay small" id="modal" hidden></div>
-  <script>var GOOGLE_CLIENT_ID = <?= googleClientId ?>; var SEASON = <?= season ?>;</script>
+  <script>var GOOGLE_CLIENT_ID = <?= googleClientId ?>; var SEASON = <?= season ?>; var LOGO = <?!= JSON.stringify(include('logo').trim()) ?>;</script>
   <?!= include('season_view') ?>
   <?!= include('home_view') ?>
   <?!= include('taskboard') ?>

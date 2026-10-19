@@ -14,6 +14,10 @@ var ICONS = {
   theme: 'M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18',
   help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01',
   logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
+  screen: 'M3 5h18v11H3zM8 20h8M12 16v4',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5',
   bell: 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 21h4',
   book: 'M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h8',
@@ -97,6 +101,7 @@ window.addEventListener('message', function (e) {
     var first = !wrapper;
     wrapper = e.source; wrapperOrigin = e.origin;
     if (!first) return;
+    if (d.trang) { if (USER) openPath(String(d.trang), true); else START_PATH = String(d.trang); }
     paintWrapper();
     // Phiên lưu ở trang vỏ bền hơn (điện thoại hay xoá dữ liệu của khung bên trong).
     if (!TOKEN && d.phien) openSession(String(d.phien));
@@ -104,6 +109,7 @@ window.addEventListener('message', function (e) {
     if (!USER && !TOKEN && !d.phien) showLogin();
     return;
   }
+  if (d.eco === 'vo-trang' && wrapper) { openPath(String(d.duong || ''), false); return; }
   if (d.eco === 'google-token' && d.token && !USER) {
     loginMsg('', 'Đang đăng nhập…');
     call('loginWithGoogle', d.token).then(loggedIn).catch(function (err) { loginMsg('bad', err.message); });
@@ -139,8 +145,8 @@ function enterApp(u) {
   if (local !== getTheme()) { try { localStorage.setItem('eco-theme', local); } catch (e) {} applyTheme(local); }
   $('screen').hidden = true; $('screen').innerHTML = '';
   $('app').hidden = false;
-  if (!navItems().some(function (x) { return x[0] === page; })) page = 'home';
-  renderPage();
+  if (!pageAllowed(page)) page = 'home';
+  if (START_PATH) { var p = START_PATH; START_PATH = ''; openPath(p, true); } else renderPage();
   if (u.firstLogin) startOnboarding();
 }
 function logOut() {
@@ -161,8 +167,8 @@ function showLogin() {
   $('app').hidden = true;
   var google = wrapper && GOOGLE_CLIENT_ID;
   $('screen').hidden = false;
-  $('screen').innerHTML = '<div class="login"><div class="login-art">' + seasonDecor() + '<span class="logo" aria-hidden="true">' + icon('leaf') + '</span></div><div class="login-side"><form class="login-card" id="loginForm">' +
-    '<div class="brand"><span class="logo" aria-hidden="true">' + icon('leaf') + '</span><b>CLB ECO</b></div>' +
+  $('screen').innerHTML = '<div class="login"><div class="login-art">' + seasonDecor() + logoHtml() + '</div><div class="login-side"><form class="login-card" id="loginForm">' +
+    '<div class="brand">' + logoHtml() + '<b>CLB ECO</b></div>' +
     '<div><h1>Đăng nhập</h1><p class="hint">Mọi thành viên CLB đều đăng nhập được, bằng email đã ghi trong danh sách thành viên.</p></div>' +
     (google ? '<button type="button" class="gbtn" id="googleBtn">' + G_LOGO + 'Đăng nhập bằng Google</button><div class="or">hoặc dùng mật khẩu</div>' : '') +
     '<label class="field">Email<input type="email" id="loginEmail" autocomplete="username" required></label>' +
@@ -180,6 +186,8 @@ function showLogin() {
       .catch(function (err) { $('loginBtn').disabled = false; loginMsg('bad', err.message); });
   };
 }
+/** Logo CLB: ảnh không nền trên hình tròn trắng. */
+function logoHtml() { return '<span class="logo" aria-hidden="true"><img src="' + esc(LOGO) + '" alt=""></span>'; }
 function loginMsg(kind, text) { var m = $('loginMsg'); if (m) { m.className = 'msg ' + kind; m.textContent = text; } }
 
 /* ---------- Hộp nhỏ (đổi mật khẩu, lần đăng nhập đầu) ---------- */
@@ -317,8 +325,8 @@ function setTheme(t) {
 }
 function themeSeg() {
   var t = getTheme();
-  return '<span class="seg">' + [['light', 'Sáng'], ['dark', 'Tối'], ['auto', 'Theo máy']].map(function (x) {
-    return '<button type="button" data-theme-set="' + x[0] + '" aria-pressed="' + (t === x[0]) + '">' + x[1] + '</button>';
+  return '<span class="seg">' + [['light', 'sun', 'Sáng'], ['dark', 'moon', 'Tối'], ['auto', 'screen', 'Theo máy']].map(function (x) {
+    return '<button type="button" data-theme-set="' + x[0] + '" aria-pressed="' + (t === x[0]) + '">' + icon(x[1]) + x[2] + '</button>';
   }).join('') + '</span>';
 }
 
@@ -334,7 +342,7 @@ function renderNav() {
       (BADGES[x[0]] ? '<span class="badge">' + BADGES[x[0]] + '</span>' : '') + '</a>';
   }).join('');
   var av = USER.avatarUrl ? '<img class="avatar" src="' + esc(USER.avatarUrl) + '" alt="">' : '<span class="avatar">' + esc(USER.name.split(' ').pop().charAt(0)) + '</span>';
-  $('meBtn').innerHTML = av + '<span class="who"><b>' + esc(USER.name) + '</b><small>' + esc(userSubtitle()) + '</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>';
+  $('meBtn').innerHTML = av + '<span class="who"><b>' + esc(USER.name) + '</b><small>' + esc(userSubtitle()) + '</small></span><span class="more">' + icon('more') + '</span>';
   $('meBtnPhone').innerHTML = av;
 }
 /* Trang không có trên thanh bên, mở từ menu avatar hoặc Cài đặt. */
@@ -345,10 +353,45 @@ function renderPage() {
   if (!item) { page = cur = 'home'; item = navItems()[0]; }
   $('topTitle').textContent = item[1];
   if (PAGES[cur]) PAGES[cur]($('main'));
-  else $('main').innerHTML = '<h1>' + esc(item[1]) + '</h1><p class="lead">Khung app mới. Nội dung trang này làm ở bước ' + item[3] + ' của kế hoạch.</p><div class="todo">Chưa có nội dung</div>';
+  else $('main').innerHTML = '<h1>' + esc(item[1]) + '</h1><div class="empty">Chưa có nội dung</div>';
   renderNav();
   closeSide();
+  reportPath();
 }
+function pageAllowed(k) { return !!EXTRA_PAGES[k] || navItems().some(function (x) { return x[0] === k; }); }
+
+/* ---------- Link riêng cho từng trang: #/task, #/points, #/settings/rules ---------- */
+var START_PATH = '', SENT_PATH = '', FROM_URL = false;
+function currentPath() { return USER && !$('settings').hidden ? 'settings' + (openSection ? '/' + openSection : '') : page; }
+/** Ghi đường dẫn trang đang mở lên thanh địa chỉ (trang vỏ, hoặc link Apps Script khi mở thẳng). */
+function reportPath(replace) {
+  var p = currentPath();
+  if (FROM_URL || !USER || !p || p === SENT_PATH) return;
+  SENT_PATH = p;
+  if (wrapper) return toWrapper({ eco: 'trang', duong: p, thay: !!replace });
+  try { google.script.history[replace ? 'replace' : 'push'](null, null, '/' + p); } catch (e) {}
+}
+/** Mở trang theo đường dẫn (link dán vào, nút quay lại của trình duyệt). Trang không có hoặc không được vào thì về Trang chủ. */
+function openPath(path, replace) {
+  var parts = String(path || '').replace(/^#?\/?/, '').split('/'), k = parts[0];
+  if (!USER) { START_PATH = path; return; }
+  FROM_URL = true;
+  try {
+    if (k === 'settings') {
+      if ($('settings').hidden) openSettings();
+      var all = [].concat.apply([], visibleGroups().map(function (g) { return g[2]; }));
+      openSection = all.some(function (x) { return x[0] === parts[1]; }) ? parts[1] : null;
+      renderSettings($('setQuery').value);
+    } else {
+      closeSettings();
+      page = pageAllowed(k) ? k : 'home';
+      renderPage();
+    }
+  } finally { FROM_URL = false; }
+  if (replace || currentPath() !== String(path || '').replace(/^#?\/?/, '')) { SENT_PATH = ''; reportPath(true); } else SENT_PATH = currentPath();
+}
+try { google.script.history.setChangeHandler(function (e) { if (!wrapper) openPath(e.location && e.location.hash, false); }); } catch (e) {}
+try { google.script.url.getLocation(function (l) { if (!wrapper && l && l.hash) { if (USER) openPath(l.hash, true); else START_PATH = l.hash; } }); } catch (e) {}
 
 /* ---------- Menu 3 gạch (điện thoại) ---------- */
 function openSide() { $('side').classList.add('open'); $('scrim').hidden = false; }
@@ -360,13 +403,13 @@ function openMenu(btn) {
   m.innerHTML = '<div class="email">' + esc(USER.email) + '</div>' +
     '<button class="menu-item" type="button" data-act="settings">' + icon('gear') + '<span>Cài đặt</span><kbd>Ctrl+,</kbd></button>' +
     '<button class="menu-item" type="button" data-act="notices">' + icon('bell') + '<span>Thông báo</span></button>' +
-    '<div class="menu-item">' + icon('theme') + '<span>Giao diện</span>' + themeSeg() + '</div>' +
+    '<div class="menu-sec">Giao diện</div>' + themeSeg() +
     '<button class="menu-item" type="button" data-act="tour">' + icon('help') + '<span>Xem lại hướng dẫn</span></button><hr>' +
     '<button class="menu-item danger" type="button" data-act="logout">' + icon('logout') + '<span>Đăng xuất</span></button>';
-  var r = $('meBtn').getBoundingClientRect();
-  m.style.left = r.left + 'px';
-  m.style.bottom = (window.innerHeight - r.top + 8) + 'px';
-  m.style.width = r.width + 'px';
+  var r = (btn.offsetParent ? btn : $('meBtn')).getBoundingClientRect(), w = Math.max(r.width, 264);
+  m.style.width = w + 'px';
+  if (btn.id === 'meBtnPhone') { m.style.left = Math.max(8, r.right - w) + 'px'; m.style.top = (r.bottom + 8) + 'px'; m.style.bottom = ''; }
+  else { m.style.left = r.left + 'px'; m.style.bottom = (window.innerHeight - r.top + 8) + 'px'; m.style.top = ''; }
   m.hidden = false; $('menuScrim').hidden = false;
   btn.setAttribute('aria-expanded', 'true');
   m.querySelector('[data-act]').focus();
@@ -410,9 +453,10 @@ function renderSettings(query) {
   $('setNav').innerHTML = nav || '<div class="set-group">Không thấy cài đặt nào</div>';
   $('setBody').innerHTML = body;
   box.classList.toggle('in-section', !!openSection);
+  reportPath();
 }
 function openSettings() { if (!USER) return; closeMenu(); closeSide(); openSection = null; $('settings').hidden = false; renderSettings(''); $('setQuery').focus(); }
-function closeSettings() { $('settings').hidden = true; }
+function closeSettings() { if ($('settings').hidden) return; $('settings').hidden = true; reportPath(); }
 
 /* ---------- Sự kiện ---------- */
 document.addEventListener('click', function (e) {
@@ -475,6 +519,15 @@ document.addEventListener('click', function (e) {
 $('meBtn').addEventListener('click', function () { $('meMenu').hidden ? openMenu(this) : closeMenu(); });
 $('meBtnPhone').addEventListener('click', function () { openMenu(this); });
 $('openSide').addEventListener('click', openSide);
+/* Thu gọn thanh bên trên máy tính, nhớ trên máy này */
+function setFolded(on) {
+  $('app').classList.toggle('folded', on);
+  $('foldSide').title = on ? 'Mở rộng menu' : 'Thu gọn menu';
+  $('foldSide').setAttribute('aria-label', $('foldSide').title);
+  try { localStorage.setItem('eco-side-folded', on ? '1' : '0'); } catch (e) {}
+}
+$('foldSide').addEventListener('click', function () { setFolded(!$('app').classList.contains('folded')); });
+try { if (localStorage.getItem('eco-side-folded') === '1') setFolded(true); } catch (e) {}
 $('closeSide').addEventListener('click', closeSide);
 $('scrim').addEventListener('click', closeSide);
 document.addEventListener('keydown', function (e) {
