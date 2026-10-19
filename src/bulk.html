@@ -1,0 +1,316 @@
+<script>
+/* Hộp thư của BOD, các tab Thư nháp, Gửi hàng loạt, Lịch gửi; và Danh bạ ở Cài đặt. Thư soạn trong Gmail CLB, app chỉ chọn người nhận và gửi. */
+var BK = { drafts: null, sources: null, draftId: '', src: 'members', dept: 'all', sel: {}, sheet: null, sheetUrl: '', emailCol: '', manual: '', check: null, schedule: null };
+var BK_SOURCES = [['members', 'Thành viên CLB'], ['contacts', 'Danh bạ'], ['sheet', 'Google Sheet'], ['manual', 'Nhập tay']];
+
+function bkOn(tab) { return mlOn() && ML.tab === tab; }
+function bkFail(err) { if (mlOn()) setMsg('mlMsg', 'bad', err.message); }
+function quotaLine(q) { return '<p class="hint">Hôm nay Gmail CLB còn gửi được <b>' + q + '</b> người. Gmail thường cho khoảng 100 người mỗi ngày.</p>'; }
+function localInput(ms) { var d = new Date(ms - new Date(ms).getTimezoneOffset() * 6e4); return d.toISOString().slice(0, 16); }
+function inputMs(v) { var t = new Date(v).getTime(); return isNaN(t) ? 0 : t; }
+function soonMs() { var d = new Date(Date.now() + 36e5); d.setMinutes(0, 0, 0); return d.getTime(); }
+function loadDrafts() { return call('mailDrafts', TOKEN).then(function (d) { BK.drafts = d; return d; }); }
+
+/* ---------- Thư nháp ---------- */
+function drawDraftsTab() {
+  if (!BK.drafts) { $('mlBody').innerHTML = loadingHtml(); loadDrafts().then(function () { if (bkOn('drafts')) drawDraftsTab(); }).catch(bkFail); return; }
+  var d = BK.drafts;
+  $('mlBody').innerHTML = '<div class="bk-head"><p class="lead">Soạn thư trong Gmail của CLB, để chỗ điền như <code>{Tên}</code> nếu muốn mỗi người nhận một thư riêng. App lấy 60 thư nháp mới sửa gần nhất.</p>' +
+    '<div class="actions"><a class="btn ghost sm" href="' + esc(d.newLink) + '" target="_blank" rel="noopener">' + icon('edit') + 'Soạn thư nháp mới</a><a class="btn ghost sm" href="' + esc(d.draftsLink) + '" target="_blank" rel="noopener">' + icon('ext') + 'Mở thư nháp trong Gmail</a>' +
+    '<button type="button" class="btn ghost sm" data-bk="reload-drafts">Tải lại</button></div></div>' +
+    (d.drafts.length ? '<div class="bk-list">' + d.drafts.map(function (x) {
+      return '<div class="bk-draft" id="dr-' + esc(x.id) + '"><div class="bk-draft-top"><b>' + esc(x.subject || '(chưa có tiêu đề)') + '</b><span class="hint">' + fmtWhen(x.at) + '</span></div>' +
+        '<span class="hint">' + (x.to ? 'Tới: ' + esc(x.to) : 'Chưa ghi người nhận') + '</span><span class="mb-snip hint">' + esc(x.snippet) + '</span>' +
+        ((x.fields.length || x.files.length) ? '<div class="chips">' + x.fields.map(function (f) { return pill('{' + f + '}', 'info'); }).join('') + x.files.map(function (f) { return '<span class="c-file">' + icon('attach') + '<span class="n">' + esc(f) + '</span></span>'; }).join('') + '</div>' : '') +
+        '<div class="actions bk-acts"><button type="button" class="btn ghost sm" data-bk="view" data-id="' + esc(x.id) + '">Xem</button><a class="btn ghost sm" href="' + esc(x.link) + '" target="_blank" rel="noopener">' + icon('ext') + 'Sửa trong Gmail</a>' +
+        (x.to ? '<button type="button" class="btn ghost sm" data-bk="plan" data-id="' + esc(x.id) + '">Hẹn giờ gửi</button>' : '') +
+        '<button type="button" class="btn sm" data-bk="use" data-id="' + esc(x.id) + '">' + icon('send') + 'Gửi hàng loạt</button></div><div class="bk-more"></div></div>';
+    }).join('') + '</div>' : '<div class="empty">Gmail của CLB chưa có thư nháp nào.</div>') + quotaLine(d.quota);
+}
+
+function draftBox(id) { return document.querySelector('#dr-' + CSS.escape(id) + ' .bk-more'); }
+function viewDraft(id) {
+  var box = draftBox(id);
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  box.innerHTML = loadingHtml();
+  call('mailDraft', TOKEN, id).then(function (v) { box.innerHTML = mailFrame(v.html); }).catch(function (err) { box.innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+function planDraft(id) {
+  var box = draftBox(id);
+  box.innerHTML = '<div class="bk-plan"><label class="field">Gửi lúc<input type="datetime-local" id="pl-at" value="' + localInput(soonMs()) + '"></label>' +
+    '<p class="hint">Gửi đúng như thư nháp, tới người nhận ghi trong thư. Đến giờ app mới đọc thư nháp, nên sửa trong Gmail trước giờ gửi vẫn kịp.</p>' +
+    '<div class="actions"><button type="button" class="btn ghost sm" data-bk="plan-cancel" data-id="' + esc(id) + '">Thôi</button><button type="button" class="btn sm" data-bk="plan-go" data-id="' + esc(id) + '">Hẹn giờ</button></div><span class="msg" id="pl-msg"></span></div>';
+}
+function planGo(id, b) {
+  b.disabled = true;
+  call('scheduleDraft', TOKEN, id, inputMs($('pl-at').value)).then(function (s) {
+    BK.schedule = s; BK.drafts = null; setMsg('mlMsg', 'ok', 'Đã hẹn giờ. Xem ở tab Lịch gửi.'); drawDraftsTab();
+  }).catch(function (err) { b.disabled = false; setMsg('pl-msg', 'bad', err.message); });
+}
+
+/* ---------- Gửi hàng loạt ---------- */
+function drawBulkTab() {
+  if (!BK.drafts || !BK.sources) {
+    $('mlBody').innerHTML = loadingHtml();
+    Promise.all([BK.drafts ? BK.drafts : loadDrafts(), BK.sources ? BK.sources : call('bulkSources', TOKEN)]).then(function (r) { BK.sources = r[1]; if (bkOn('bulk')) drawBulkTab(); }).catch(bkFail);
+    return;
+  }
+  var d = BK.drafts.drafts, dr = d.filter(function (x) { return x.id === BK.draftId; })[0];
+  $('mlBody').innerHTML = '<div class="bk-steps">' +
+    '<section class="bk-step"><h2><span class="bk-n">1</span>Thư nháp</h2>' + (d.length ? '<select class="pick bk-pick" id="bkDraft"><option value="">Chọn thư nháp trong Gmail CLB</option>' + d.map(function (x) {
+      return '<option value="' + esc(x.id) + '"' + (x.id === BK.draftId ? ' selected' : '') + '>' + esc(x.subject || '(chưa có tiêu đề)') + '</option>';
+    }).join('') + '</select>' : '<p class="hint">Gmail CLB chưa có thư nháp. <a href="' + esc(BK.drafts.newLink) + '" target="_blank" rel="noopener">Soạn thư nháp mới</a> rồi bấm Tải lại ở tab Thư nháp.</p>') +
+    (dr ? '<p class="hint">' + (dr.fields.length ? 'Chỗ điền: ' + dr.fields.map(function (f) { return '<code>{' + esc(f) + '}</code>'; }).join(' ') : 'Thư không có chỗ điền, mọi người nhận cùng một nội dung.') + (dr.files.length ? ' · Kèm ' + dr.files.length + ' tệp.' : '') + '</p>' : '') + '</section>' +
+    '<section class="bk-step"><h2><span class="bk-n">2</span>Người nhận</h2><div class="chips">' + BK_SOURCES.map(function (s) {
+      return '<button type="button" class="chip sm" data-bk-src="' + s[0] + '" aria-pressed="' + (BK.src === s[0]) + '">' + s[1] + '</button>';
+    }).join('') + '</div><div id="bkSrc"></div><p class="bk-count" id="bkCount"></p></section>' +
+    '<section class="bk-step"><h2><span class="bk-n">3</span>Kiểm tra và gửi</h2><div id="bkCheck"></div></section></div>';
+  if ($('bkDraft')) $('bkDraft').onchange = function () { BK.draftId = this.value; BK.check = null; drawBulkTab(); };
+  drawSource(); drawCheck();
+}
+
+function srcFields() {
+  if (BK.src === 'members') return BK.sources.memberFields;
+  if (BK.src === 'contacts') return BK.sources.contactFields;
+  if (BK.src === 'sheet') return BK.sheet ? BK.sheet.columns : [];
+  return [];
+}
+/** Người nhận đang chọn: [{ email, data }]. */
+function bkRecipients() {
+  if (BK.src === 'manual') {
+    var seen = {}, out = [];
+    BK.manual.split(/[,;\n]+/).forEach(function (part) {
+      var m = /<([^>]+)>/.exec(part), e = (m ? m[1] : part).trim();
+      if (e && !seen[e.toLowerCase()]) { seen[e.toLowerCase()] = true; out.push({ email: e, data: {} }); }
+    });
+    return out;
+  }
+  return Object.keys(BK.sel).map(function (k) { return BK.sel[k]; });
+}
+function bkSourceLabel(n) {
+  if (BK.src === 'members') return 'Thành viên CLB' + (BK.dept === 'all' ? '' : ' ban ' + BK.dept) + ' (' + n + ' người)';
+  if (BK.src === 'contacts') {
+    var groups = [];
+    bkRecipients().forEach(function (r) { if (groups.indexOf(r.data['Nhóm']) < 0) groups.push(r.data['Nhóm']); });
+    return 'Danh bạ: ' + groups.join(', ');
+  }
+  if (BK.src === 'sheet') return 'Sheet: ' + BK.sheet.file + ' / ' + BK.sheet.tab;
+  return 'Nhập tay';
+}
+function changedSel() { BK.check = null; drawCount(); drawCheck(); }
+function drawCount() { var n = bkRecipients().length; $('bkCount').textContent = n ? 'Đã chọn ' + n + ' người nhận.' : 'Chưa chọn người nhận.'; }
+
+function checkRow(key, on, main, sub) {
+  return '<label class="bk-row"><input type="checkbox" data-bk-pick="' + esc(key) + '"' + (on ? ' checked' : '') + '><span><b>' + esc(main) + '</b> <span class="hint">' + esc(sub) + '</span></span></label>';
+}
+
+function drawSource() {
+  var box = $('bkSrc'), S = BK.sources;
+  if (BK.src === 'members') {
+    var depts = [];
+    S.members.forEach(function (m) { if (depts.indexOf(m.dept) < 0) depts.push(m.dept); });
+    var list = S.members.filter(function (m) { return BK.dept === 'all' || m.dept === BK.dept; });
+    box.innerHTML = '<div class="bk-tools"><select class="pick" id="bkDept"><option value="all">Mọi ban</option>' + depts.map(function (x) { return '<option' + (x === BK.dept ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="link-btn" data-bk="all">Chọn tất cả</button><button type="button" class="link-btn" data-bk="none">Bỏ chọn</button></div>' +
+      '<div class="bk-rows">' + list.map(function (m) { return checkRow('m:' + m.id, BK.sel['m:' + m.id], m.data['Họ và tên'], m.dept + ' · ' + m.email); }).join('') + '</div>' +
+      '<p class="hint">Chỗ điền dùng được: ' + S.memberFields.map(function (f) { return '<code>{' + esc(f) + '}</code>'; }).join(' ') + '</p>';
+    $('bkDept').onchange = function () { BK.dept = this.value; drawSource(); };
+  } else if (BK.src === 'contacts') {
+    var groups = [];
+    S.contacts.forEach(function (c) { if (groups.indexOf(c.group) < 0) groups.push(c.group); });
+    box.innerHTML = '<div class="bk-tools"><button type="button" class="link-btn" data-bk="book">Sửa danh bạ</button></div>' + (groups.length ? groups.map(function (g) {
+      var list = S.contacts.filter(function (c) { return c.group === g; });
+      return '<div class="bk-group"><div class="bk-tools"><b>' + esc(g) + '</b><span class="hint">' + list.length + ' liên hệ</span><button type="button" class="link-btn" data-bk="group" data-g="' + esc(g) + '">Chọn cả nhóm</button></div>' +
+        '<div class="bk-rows">' + list.map(function (c) { return checkRow('c:' + c.id, BK.sel['c:' + c.id], c.name, c.email + (c.note ? ' · ' + c.note : '')); }).join('') + '</div></div>';
+    }).join('') : '<p class="hint">Danh bạ trống. Bấm Sửa danh bạ để thêm.</p>') +
+      '<p class="hint">Chỗ điền dùng được: ' + S.contactFields.map(function (f) { return '<code>{' + esc(f) + '}</code>'; }).join(' ') + '. Cần thêm thông tin riêng cho từng người thì dùng Google Sheet.</p>';
+  } else if (BK.src === 'sheet') {
+    var t = BK.sheet;
+    box.innerHTML = '<div class="bk-tools bk-sheet"><input class="pick" id="bkUrl" type="url" placeholder="Dán link Google Sheet" value="' + esc(BK.sheetUrl) + '"><button type="button" class="btn ghost sm" data-bk="read">Đọc sheet</button></div>' +
+      '<p class="hint">Sheet cần chia sẻ cho tài khoản Google của CLB. Dòng đầu có chữ là tiêu đề cột, mỗi cột dùng làm một chỗ điền, tối đa 2000 dòng.</p><span class="msg" id="bkSheetMsg"></span>' +
+      (t ? '<div class="bk-tools"><label class="hint">Tab <select class="pick" id="bkTab">' + t.tabs.map(function (x) { return '<option' + (x === t.tab ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></label>' +
+        '<label class="hint">Cột email <select class="pick" id="bkCol">' + t.columns.map(function (c) { return '<option' + (c === BK.emailCol ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
+        '<button type="button" class="link-btn" data-bk="all">Chọn tất cả</button><button type="button" class="link-btn" data-bk="none">Bỏ chọn</button></div>' +
+        '<div class="bk-rows">' + t.rows.map(function (r, i) {
+          var other = t.columns.filter(function (c) { return c !== BK.emailCol; }).slice(0, 3).map(function (c) { return r[c]; }).filter(String).join(' · ');
+          return checkRow('s:' + i, BK.sel['s:' + i], r[BK.emailCol] || '(trống)', other);
+        }).join('') + '</div><p class="hint">Chỗ điền dùng được: ' + t.columns.map(function (c) { return '<code>{' + esc(c) + '}</code>'; }).join(' ') + '</p>' : '');
+    if ($('bkTab')) $('bkTab').onchange = function () { readSheet(this.value); };
+    if ($('bkCol')) $('bkCol').onchange = function () { BK.emailCol = this.value; BK.sel = {}; changedSel(); drawSource(); };
+  } else {
+    box.innerHTML = '<label class="field">Email người nhận, mỗi dòng một email hoặc cách nhau bằng dấu phẩy<textarea id="bkManual" rows="5">' + esc(BK.manual) + '</textarea></label>' +
+      '<p class="hint">Nhập tay thì không có thông tin riêng từng người, nên thư không dùng được chỗ điền.</p>';
+    $('bkManual').oninput = function () { BK.manual = this.value; changedSel(); };
+  }
+  drawCount();
+}
+
+function pickItem(key) {
+  var S = BK.sources, id = key.slice(2);
+  if (key[0] === 'm') { var m = S.members.filter(function (x) { return x.id === id; })[0]; return { email: m.email, data: m.data }; }
+  if (key[0] === 'c') { var c = S.contacts.filter(function (x) { return x.id === id; })[0]; return { email: c.email, data: { 'Tên': c.name, 'Email': c.email, 'Nhóm': c.group, 'Ghi chú': c.note } }; }
+  var r = BK.sheet.rows[Number(id)]; return { email: String(r[BK.emailCol] || ''), data: r };
+}
+function setPicked(keys, on) {
+  keys.forEach(function (k) { if (on) BK.sel[k] = pickItem(k); else delete BK.sel[k]; });
+  $('bkSrc').querySelectorAll('[data-bk-pick]').forEach(function (x) { x.checked = !!BK.sel[x.dataset.bkPick]; });
+  changedSel();
+}
+function visibleKeys() { return Array.prototype.map.call($('bkSrc').querySelectorAll('[data-bk-pick]'), function (x) { return x.dataset.bkPick; }); }
+
+function readSheet(tab) {
+  BK.sheetUrl = $('bkUrl').value.trim();
+  if (!BK.sheetUrl) return setMsg('bkSheetMsg', 'bad', 'Bạn chưa dán link.');
+  setMsg('bkSheetMsg', '', 'Đang đọc sheet…');
+  call('readSendSheet', TOKEN, BK.sheetUrl, tab || '').then(function (t) {
+    BK.sheet = t; BK.emailCol = t.emailColumn || t.columns[0]; BK.sel = {}; changedSel(); drawSource();
+  }).catch(function (err) { setMsg('bkSheetMsg', 'bad', err.message); });
+}
+
+function drawCheck() {
+  var box = $('bkCheck'), n = bkRecipients().length, c = BK.check;
+  if (!BK.draftId || !n) { box.innerHTML = '<p class="hint">Chọn thư nháp và người nhận trước.</p>'; return; }
+  if (!c) { box.innerHTML = '<button type="button" class="btn ghost" data-bk="check">Kiểm tra thư</button><span class="msg" id="bkMsg"></span>'; return; }
+  var over = c.count > c.quota;
+  box.innerHTML = (c.error ? '<div class="note bad-note"><span>' + esc(c.error) + '</span></div>' : '') +
+    (c.empty.length ? '<div class="note warn-note"><span><b>Có người nhận bị trống ô, vẫn gửi được:</b>' + c.empty.map(function (e) {
+      return '<br><code>{' + esc(e.field) + '}</code> trống ở ' + e.emails.length + ' người: ' + esc(e.emails.slice(0, 8).join(', ')) + (e.emails.length > 8 ? '…' : '');
+    }).join('') + '</span></div>' : '') +
+    (c.error ? '' : (c.preview ? '<p class="hint">Xem trước thư gửi ' + esc(c.preview.to) + ':</p><b>' + esc(c.preview.subject) + '</b>' + mailFrame(c.preview.html) : '') +
+      (c.files.length ? '<p class="hint">Kèm tệp: ' + esc(c.files.join(', ')) + '</p>' : '') + quotaLine(c.quota) +
+      '<div class="bk-when"><label class="check"><input type="radio" name="bkWhen" value="now" checked><span>Gửi ngay</span></label><label class="check"><input type="radio" name="bkWhen" value="later"><span>Hẹn giờ</span></label>' +
+      '<input type="datetime-local" id="bkAt" class="pick" value="' + localInput(soonMs()) + '" hidden></div>' +
+      '<label class="check" id="bkSplitRow"' + (over || c.count > c.dailyQuota ? '' : ' hidden') + '><input type="checkbox" id="bkSplit"><span>Chia đợt<small id="bkSplitHint"></small></span></label>' +
+      '<div class="actions bk-acts"><button type="button" class="btn ghost" data-bk="check">Kiểm tra lại</button><button type="button" class="btn" data-bk="send">' + icon('send') + 'Gửi ' + c.count + ' thư</button></div>') +
+    '<span class="msg" id="bkMsg" role="status"></span>';
+  var hint = function () {
+    var later = document.querySelector('[name=bkWhen]:checked').value === 'later', first = later ? c.dailyQuota : c.quota;
+    $('bkAt').hidden = !later;
+    var need = c.count > first;
+    $('bkSplitRow').hidden = !need;
+    if (need) {
+      var now1 = Math.max(0, Math.min(first, c.count)), days = (now1 ? 1 : 0) + Math.ceil((c.count - now1) / c.dailyQuota);
+      $('bkSplitHint').textContent = (now1 ? 'Gửi ' + now1 + ' người ' + (later ? 'lúc hẹn' : 'ngay') + ', ' : '') + 'phần còn lại app tự gửi ' + (later ? 'cùng giờ' : 'lúc 7 giờ sáng') + ' các ngày sau, mỗi ngày tối đa ' + c.dailyQuota + ' người (tổng ' + days + ' ngày). Xem và huỷ ở tab Lịch gửi.';
+    }
+  };
+  if (!c.error) { box.querySelectorAll('[name=bkWhen]').forEach(function (r) { r.onchange = hint; }); hint(); }
+}
+
+function runCheck(b) {
+  b.disabled = true; setMsg('bkMsg', '', 'Đang kiểm tra…');
+  call('checkBulk', TOKEN, { draftId: BK.draftId, recipients: bkRecipients(), fields: srcFields() }).then(function (c) { BK.check = c; drawCheck(); })
+    .catch(function (err) { b.disabled = false; setMsg('bkMsg', 'bad', err.message); });
+}
+function runSend(b) {
+  var later = document.querySelector('[name=bkWhen]:checked').value === 'later', at = later ? inputMs($('bkAt').value) : null;
+  if (later && !at) return setMsg('bkMsg', 'bad', 'Bạn chọn giờ gửi nhé.');
+  var n = BK.check.count;
+  if (!confirm(later ? 'Hẹn gửi ' + n + ' thư lúc ' + fmtWhen(at) + '?' : 'Gửi ngay ' + n + ' thư từ Gmail CLB?')) return;
+  b.disabled = true; setMsg('bkMsg', '', later ? 'Đang hẹn giờ…' : 'Đang gửi, có thể mất vài phút…');
+  call('sendBulk', TOKEN, { draftId: BK.draftId, recipients: bkRecipients(), fields: srcFields(), source: bkSourceLabel(n), sendAt: at, split: $('bkSplit').checked }).then(function (r) {
+    BK.check = null; BK.sel = {}; BK.manual = ''; BK.schedule = null; BK.sources = null;
+    var text = (r.sent || r.errors.length ? 'Đã gửi ' + r.sent + ' thư' + (r.errors.length ? ', lỗi ' + r.errors.length + ': ' + r.errors.slice(0, 3).join('; ') : '') + '. ' : '') +
+      (r.scheduled ? 'Đã lên lịch ' + r.scheduled + ' đợt, xem ở tab Lịch gửi.' : '');
+    setMsg('mlMsg', r.errors.length ? 'bad' : 'ok', text); drawBulkTab();
+  }).catch(function (err) { b.disabled = false; setMsg('bkMsg', 'bad', err.message); });
+}
+
+/* ---------- Lịch gửi ---------- */
+var SEND_STATUS = { scheduled: ['Đã lên lịch', 'info'], sending: ['Đang gửi', 'warn'], sent: ['Đã gửi', 'good'], error: ['Lỗi', 'bad'], cancelled: ['Đã huỷ', ''] };
+function drawScheduleTab() {
+  if (!BK.schedule) { $('mlBody').innerHTML = loadingHtml(); call('sendSchedule', TOKEN).then(function (s) { BK.schedule = s; if (bkOn('scheduled')) drawScheduleTab(); }).catch(bkFail); return; }
+  var s = BK.schedule;
+  $('mlBody').innerHTML = quotaLine(s.quota) + (s.items.length ? '<div class="bk-list">' + s.items.map(function (x) {
+    var st = SEND_STATUS[x.status] || [x.status, ''];
+    return '<div class="bk-draft" id="sd-' + esc(x.id) + '"><div class="bk-draft-top"><b>' + esc(x.subject) + '</b>' + pill(st[0], st[1]) + '</div>' +
+      '<span class="hint">' + (x.status === 'scheduled' ? 'Gửi lúc ' : '') + (x.sendAt ? fmtFull(x.sendAt) : '') + ' · ' + (x.count ? x.count + ' người · ' : '') + esc(x.source) + ' · ' + esc(x.by) + '</span>' +
+      (x.result ? '<span class="hint">' + esc(x.result) + '</span>' : '') +
+      (x.status === 'scheduled' ? '<div class="actions bk-acts">' + (x.draftLink ? '<a class="btn ghost sm" href="' + esc(x.draftLink) + '" target="_blank" rel="noopener">' + icon('ext') + 'Sửa thư nháp</a>' : '') +
+        '<button type="button" class="btn ghost sm" data-bk="move" data-id="' + esc(x.id) + '">Đổi giờ</button><button type="button" class="btn ghost sm danger" data-bk="cancel" data-id="' + esc(x.id) + '">Huỷ</button></div><div class="bk-more"></div>' : '') + '</div>';
+  }).join('') + '</div>' : '<div class="empty">Chưa có thư nào được gửi hay hẹn giờ.</div>');
+}
+function moveSend(id) {
+  var x = BK.schedule.items.filter(function (i) { return i.id === id; })[0], box = document.querySelector('#sd-' + CSS.escape(id) + ' .bk-more');
+  box.innerHTML = '<div class="bk-plan"><label class="field">Giờ gửi mới<input type="datetime-local" id="mv-at" value="' + localInput(x.sendAt) + '"></label>' +
+    '<div class="actions"><button type="button" class="btn sm" data-bk="move-go" data-id="' + esc(id) + '">Lưu giờ mới</button></div><span class="msg" id="mv-msg"></span></div>';
+}
+
+/* ---------- Danh bạ (Cài đặt > Hộp thư > Danh bạ) ---------- */
+function openContactBook() {
+  openModal('<h2 id="boxTitle">Danh bạ</h2>' + loadingHtml());
+  call('contactBook', TOKEN).then(drawContactBook).catch(function (err) { openModal('<h2 id="boxTitle">Danh bạ</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
+}
+function drawContactBook(b, editing, flash) {
+  var e = editing || {};
+  openModal('<h2 id="boxTitle">Danh bạ</h2><p class="hint">Đối tác, nhà tài trợ và các địa chỉ khác. Thành viên CLB có sẵn, không cần thêm ở đây.</p>' +
+    '<form class="bk-cform" id="cbForm"><input type="hidden" id="cbId" value="' + esc(e.id || '') + '">' +
+    '<label class="field">Nhóm<input id="cbGroup" list="cbGroups" maxlength="100" value="' + esc(e.group || '') + '" placeholder="Ví dụ: Nhà tài trợ"></label>' +
+    '<label class="field">Tên<input id="cbName" maxlength="200" value="' + esc(e.name || '') + '"></label>' +
+    '<label class="field">Email<input id="cbEmail" type="email" maxlength="200" value="' + esc(e.email || '') + '"></label>' +
+    '<label class="field">Ghi chú<input id="cbNote" maxlength="500" value="' + esc(e.note || '') + '"></label>' +
+    '<datalist id="cbGroups">' + b.groups.map(function (g) { return '<option value="' + esc(g) + '">'; }).join('') + '</datalist>' +
+    '<div class="actions">' + (e.id ? '<button type="button" class="btn ghost sm" id="cbCancel">Thôi sửa</button>' : '') + '<button class="btn sm" id="cbSave">' + (e.id ? 'Lưu' : 'Thêm liên hệ') + '</button></div></form>' +
+    '<span class="msg" id="cbMsg" role="status"></span>' +
+    (b.contacts.length ? '<div class="bk-cbook">' + b.groups.map(function (g) {
+      return '<div class="bk-group"><b>' + esc(g) + '</b>' + b.contacts.filter(function (c) { return c.group === g; }).map(function (c) {
+        return '<div class="bk-crow"><span><b>' + esc(c.name) + '</b> <span class="hint">' + esc(c.email) + (c.note ? ' · ' + esc(c.note) : '') + '</span></span>' +
+          '<button type="button" class="link-btn" data-cb-edit="' + esc(c.id) + '">Sửa</button><button type="button" class="link-btn danger" data-cb-del="' + esc(c.id) + '">Xoá</button></div>';
+      }).join('') + '</div>';
+    }).join('') + '</div>' : '<p class="hint">Danh bạ trống.</p>') +
+    '<div class="actions"><button type="button" class="btn" data-act="close-modal">Xong</button></div>');
+  if (flash) setMsg('cbMsg', 'ok', flash);
+  var done = function (text) { return function (b2) { BK.sources = null; COMPOSE_SETUP = null; drawContactBook(b2, null, text); if (bkOn('bulk')) drawBulkTab(); }; };
+  var fail = function (err) { setMsg('cbMsg', 'bad', err.message); };
+  $('cbForm').onsubmit = function (ev) {
+    ev.preventDefault();
+    call('saveContact', TOKEN, { id: $('cbId').value, group: $('cbGroup').value, name: $('cbName').value, email: $('cbEmail').value, note: $('cbNote').value })
+      .then(done($('cbId').value ? 'Đã lưu.' : 'Đã thêm.')).catch(fail);
+  };
+  if ($('cbCancel')) $('cbCancel').onclick = function () { drawContactBook(b); };
+  $('modal').querySelectorAll('[data-cb-edit]').forEach(function (x) { x.onclick = function () { drawContactBook(b, b.contacts.filter(function (c) { return c.id === x.dataset.cbEdit; })[0]); $('cbName').focus(); }; });
+  $('modal').querySelectorAll('[data-cb-del]').forEach(function (x) {
+    x.onclick = function () { if (confirm('Xoá liên hệ này?')) call('deleteContacts', TOKEN, [x.dataset.cbDel]).then(done('Đã xoá.')).catch(fail); };
+  });
+}
+
+/** Cài đặt > Hộp thư > Khi vượt hạn mức gửi. */
+function openQuotaHelp() {
+  openModal('<h2 id="boxTitle">Khi vượt hạn mức gửi</h2><p>Gmail thường chỉ cho tài khoản CLB gửi khoảng 100 người nhận mỗi ngày khi gửi qua app. App hiện số còn lại trước khi gửi.</p>' +
+    '<ol><li><b>Chia đợt</b>: gửi số còn được hôm nay, phần còn lại app tự gửi lúc 7 giờ sáng các ngày sau, mỗi ngày tối đa 100 người. Mỗi đợt là một dòng ở tab Lịch gửi, huỷ hoặc đổi giờ được.</li>' +
+    '<li><b>Bớt người nhận</b> cho vừa số còn lại.</li><li><b>Hẹn giờ</b> sang ngày mai.</li></ol>' +
+    '<p class="hint">Đến giờ hẹn mà hạn mức đã hết (ví dụ hôm đó đã gửi nhiều thư khác) thì app tự dời đợt đó sang 7 giờ sáng hôm sau và ghi lý do.</p>' +
+    '<div class="actions"><button type="button" class="btn" data-act="close-modal">Đã hiểu</button></div>');
+}
+
+var BULK_TABS = { drafts: drawDraftsTab, bulk: drawBulkTab, scheduled: drawScheduleTab };
+
+document.addEventListener('click', function (e) {
+  if (!mlOn()) return;
+  var b = e.target.closest('[data-bk],[data-bk-src]');
+  if (b && b.dataset.bkSrc) { BK.src = b.dataset.bkSrc; BK.sel = {}; BK.check = null; return drawBulkTab(); }
+  if (!b) return;
+  var a = b.dataset.bk, id = b.dataset.id;
+  if (a === 'reload-drafts') { BK.drafts = null; return drawDraftsTab(); }
+  if (a === 'view') return viewDraft(id);
+  if (a === 'plan') return planDraft(id);
+  if (a === 'plan-cancel') { draftBox(id).innerHTML = ''; return; }
+  if (a === 'plan-go') return planGo(id, b);
+  if (a === 'use') { BK.draftId = id; BK.check = null; ML.tab = 'bulk'; drawMailTabs(); return drawBulkTab(); }
+  if (a === 'all') return setPicked(visibleKeys(), true);
+  if (a === 'none') return setPicked(visibleKeys(), false);
+  if (a === 'group') return setPicked(BK.sources.contacts.filter(function (c) { return c.group === b.dataset.g; }).map(function (c) { return 'c:' + c.id; }), true);
+  if (a === 'book') return openContactBook();
+  if (a === 'read') return readSheet('');
+  if (a === 'check') return runCheck(b);
+  if (a === 'send') return runSend(b);
+  if (a === 'move') return moveSend(id);
+  if (a === 'move-go') { b.disabled = true; return call('rescheduleSend', TOKEN, id, inputMs($('mv-at').value)).then(function (s) { BK.schedule = s; setMsg('mlMsg', 'ok', 'Đã đổi giờ gửi.'); drawScheduleTab(); }).catch(function (err) { b.disabled = false; setMsg('mv-msg', 'bad', err.message); }); }
+  if (a === 'cancel') { if (!confirm('Huỷ lượt gửi này?')) return; b.disabled = true; return call('cancelSend', TOKEN, id).then(function (s) { BK.schedule = s; setMsg('mlMsg', 'ok', 'Đã huỷ.'); drawScheduleTab(); }).catch(bkFail); }
+});
+document.addEventListener('change', function (e) {
+  var x = e.target.closest && e.target.closest('[data-bk-pick]');
+  if (!x || !mlOn()) return;
+  if (x.checked) BK.sel[x.dataset.bkPick] = pickItem(x.dataset.bkPick); else delete BK.sel[x.dataset.bkPick];
+  changedSel();
+});
+</script>

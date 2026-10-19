@@ -1,0 +1,59 @@
+<script>
+/* Cài đặt > Hệ thống: Tình trạng hệ thống, Sao lưu và khôi phục (system.gs). */
+function sysWhen(ms) { return fmtTime(ms) + ' ' + fmtDay(ms) + '/' + new Date(ms).getFullYear(); }
+
+function openSystemStatus() {
+  wideModal('<h2 id="boxTitle">Tình trạng hệ thống</h2>' + loadingHtml());
+  call('systemPage', TOKEN).then(drawSystemStatus).catch(function (err) { failBox('Tình trạng hệ thống', err); });
+}
+
+function drawSystemStatus(d) {
+  var row = function (j) {
+    var state = !j.installed && !j.onDemand ? pill('Chưa cài', 'bad') : j.last ? (j.last.ok ? pill('Ổn', 'good') : pill('Lỗi', 'bad')) : j.installed ? pill('Chưa chạy', '') : pill('Chưa cần', '');
+    var last = j.last ? 'Lần cuối ' + sysWhen(j.last.at) + ': ' + j.last.msg : j.onDemand && !j.installed ? 'Tự cài khi có người cần' : 'Chưa chạy lần nào';
+    return '<div class="fp-row"><div><b>' + esc(j.name) + '</b><small>' + esc(j.when + ' · ' + j.what) + '</small><small' + (j.last && !j.last.ok ? ' class="bad"' : '') + '>' + esc(last) + '</small></div>' + state + '</div>';
+  };
+  var s = d.size;
+  wideModal('<h2 id="boxTitle">Tình trạng hệ thống</h2>' +
+    '<p class="hint">Các việc app tự chạy. Việc nào chạy lỗi thì app báo BOD qua Zalo hoặc app (mỗi việc tối đa một tin mỗi ngày). Mở trang này thì app tự cài lại lịch chạy còn thiếu.</p>' +
+    '<div>' + d.jobs.map(row).join('') + '</div>' +
+    '<section class="sec"><h2>File dữ liệu</h2><p class="hint">Đang dùng ' + s.percent + '% sức chứa của Google Sheets (' + s.cells.toLocaleString('vi-VN') + ' trên ' + s.limit.toLocaleString('vi-VN') + ' ô). ' +
+    'Nhiệm kỳ đã kết thúc hơn ' + d.archiveAfterDays + ' ngày thì app tự chuyển sang file lưu trữ để app chạy nhanh.</p>' +
+    '<div><a class="btn ghost sm" href="' + esc(d.dataUrl) + '" target="_blank" rel="noopener">Mở file dữ liệu</a></div>' +
+    (d.archives.length ? '<div>' + d.archives.map(function (a) {
+      return '<div class="fp-row"><div><b>Nhiệm kỳ ' + esc(a.term) + '</b><small>Lưu trữ lúc ' + (a.at ? sysWhen(a.at) : '') + '</small></div><a class="btn ghost sm" href="' + esc(a.url) + '" target="_blank" rel="noopener">Mở</a></div>';
+    }).join('') + '</div>' : '<p class="hint">Chưa có nhiệm kỳ nào được lưu trữ.</p>') + '</section>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+}
+
+function openBackups() {
+  wideModal('<h2 id="boxTitle">Sao lưu và khôi phục</h2>' + loadingHtml());
+  call('systemPage', TOKEN).then(function (d) { drawBackups(d); }).catch(function (err) { failBox('Sao lưu và khôi phục', err); });
+}
+
+function drawBackups(d, flash) {
+  wideModal('<h2 id="boxTitle">Sao lưu và khôi phục</h2>' +
+    '<p class="hint">Mỗi đêm lúc 2 giờ app chép cả file dữ liệu vào thư mục Sao lưu trên Drive CLB, giữ ' + d.keep + ' bản mới nhất. ' +
+    'Khôi phục là dùng lại dữ liệu đúng như lúc sao lưu: mọi thay đổi sau lúc đó mất khỏi app, nhưng file đang dùng được đổi tên và giữ lại trên Drive để tra.</p>' +
+    '<span class="msg" id="bkMsg" role="status"></span>' +
+    (d.backups.length ? '<div class="rp-list">' + d.backups.map(function (b, i) {
+      return '<div class="fp-row"><div><b>' + esc(sysWhen(b.at)) + (i === 0 ? ' · mới nhất' : '') + '</b><small>' + esc(b.name) + '</small></div>' +
+        '<button type="button" class="btn ghost sm" data-bk="' + esc(b.id) + '" data-bk-at="' + b.at + '">Khôi phục</button></div>';
+    }).join('') + '</div>' : '<p class="hint">Chưa có bản sao lưu nào. Bản đầu tiên có sau 2 giờ sáng đêm nay, hoặc bấm Sao lưu ngay.</p>') +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="bkNow">Sao lưu ngay</button></div>');
+  if (flash) setMsg('bkMsg', 'ok', flash);
+  $('bkNow').onclick = function () {
+    this.disabled = true; setMsg('bkMsg', '', 'Đang sao lưu…');
+    call('backupNowByBod', TOKEN).then(function (x) { drawBackups(x, 'Đã sao lưu.'); })
+      .catch(function (err) { $('bkNow').disabled = false; setMsg('bkMsg', 'bad', err.message); });
+  };
+  document.querySelectorAll('[data-bk]').forEach(function (b) {
+    b.onclick = function () {
+      if (!confirm('Khôi phục dữ liệu về lúc ' + sysWhen(Number(b.dataset.bkAt)) + '? Mọi thay đổi sau lúc đó sẽ mất khỏi app.')) return;
+      b.disabled = true; setMsg('bkMsg', '', 'Đang khôi phục…');
+      call('restoreBackup', TOKEN, b.dataset.bk).then(function () { closeModal(); closeSettings(); USER = null; openSession(TOKEN); })
+        .catch(function (err) { b.disabled = false; setMsg('bkMsg', 'bad', err.message); });
+    };
+  });
+}
+</script>

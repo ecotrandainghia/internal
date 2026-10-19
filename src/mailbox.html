@@ -1,0 +1,202 @@
+<script>
+/* Trang Hộp thư của UCV: đọc Gmail của CLB, soạn thư, xin trả lời, chuyển tiếp, lưu trữ, gắn nhãn... Mọi việc đều chờ BOD duyệt mới làm thật. */
+var MB = { folder: 'inbox', query: '', box: null, thread: null, threadId: '', reqs: null, reqId: '', req: null, view: 'box', reading: false, flash: '', busy: false };
+
+PAGES.mailbox = function (main) {
+  MB.box = null; MB.thread = null; MB.threadId = ''; MB.req = null; MB.reqId = ''; MB.reading = false;
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Hộp thư</h1><p class="lead">Hộp thư Gmail của CLB. Thư bạn soạn và việc bạn xin làm với thư đều chờ BOD duyệt.</p></div>' +
+    '<button type="button" class="btn" id="mbNew">' + icon('edit') + 'Soạn thư</button></div><span class="msg" id="mbMsg" role="status"></span>' +
+    '<div class="mb" id="mb"><nav class="mb-nav" id="mbNav" aria-label="Thư mục"></nav><section class="mb-list" id="mbList">' + loadingHtml() + '</section><section class="mb-read" id="mbRead"></section></div></div>';
+  $('mbNew').onclick = function () { openComposer({ action: 'compose' }, composerDone); };
+  loadMyRequests();
+  if (MB.view === 'box') loadBox(0); else { drawNav(); drawRequests(); }
+};
+
+function mbOn() { return currentPage() === 'mailbox' && $('mb'); }
+function mbFail(id) { return function (err) { MB.busy = false; if (mbOn() && $(id)) $(id).innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; }; }
+function mbFlash(kind, text) { setMsg('mbMsg', kind, text); }
+
+/** Yêu cầu cần UCV để ý: BOD trả lại sửa, hoặc Gmail lỗi. */
+function mbAttention() { return (MB.reqs || []).filter(function (r) { return r.status === 'needs_changes' || r.status === 'error'; }).length; }
+function loadMyRequests() {
+  return call('myMailRequests', TOKEN).then(function (list) {
+    MB.reqs = list;
+    var n = mbAttention();
+    if ((BADGES.mailbox || 0) !== n) { BADGES.mailbox = n; renderNav(); }
+    if (!mbOn()) return;
+    drawNav();
+    if (MB.view === 'requests') drawRequests();
+  }).catch(function (err) { if (mbOn()) mbFlash('bad', err.message); });
+}
+
+function loadBox(start) {
+  if (MB.busy) return;
+  MB.busy = true;
+  if (!start) $('mbList').innerHTML = loadingHtml();
+  call('mailbox', TOKEN, MB.folder, MB.query, start).then(function (d) {
+    MB.busy = false;
+    if (!mbOn()) return;
+    if (start && MB.box) { d.threads = MB.box.threads.concat(d.threads); }
+    d.start = start;
+    MB.box = d; MB.folder = d.folder;
+    drawNav(); drawThreads();
+  }).catch(mbFail('mbList'));
+}
+
+function drawNav() {
+  var d = MB.box || { folders: [{ id: 'inbox', name: 'Hộp thư đến' }], labels: [] };
+  var n = mbAttention(), folderIcons = { inbox: 'inbox', sent: 'send', archive: 'archive', spam: 'spam', trash: 'trash' };
+  var item = function (key, text, ic, on, extra) {
+    return '<button type="button" class="mb-folder" data-mb-folder="' + esc(key) + '"' + (on ? ' aria-current="true"' : '') + '>' + icon(ic) + '<span>' + esc(text) + '</span>' + (extra || '') + '</button>';
+  };
+  $('mbNav').innerHTML = item('@requests', 'Yêu cầu của tôi', 'send', MB.view === 'requests', n ? '<span class="badge">' + n + '</span>' : '') +
+    '<span class="mb-sep">Thư mục</span>' + d.folders.map(function (f) { return item(f.id, f.name, folderIcons[f.id] || 'inbox', MB.view === 'box' && MB.folder === f.id); }).join('') +
+    (d.labels.length ? '<span class="mb-sep">Nhãn</span>' + d.labels.map(function (l) { return item('label:' + l, l, 'tag', MB.view === 'box' && MB.folder === 'label:' + l); }).join('') : '');
+}
+
+function drawThreads() {
+  var d = MB.box;
+  $('mbList').innerHTML = '<label class="search">' + icon('search') + '<input id="mbQuery" type="search" placeholder="Tìm thư rồi bấm Enter" aria-label="Tìm thư" value="' + esc(MB.query) + '"></label>' +
+    (d.threads.length ? '<div class="mb-items">' + d.threads.map(function (t) {
+      return '<button type="button" class="mb-item' + (t.unread ? ' unread' : '') + '" data-mb-thread="' + esc(t.id) + '"' + (t.id === MB.threadId ? ' aria-current="true"' : '') + '>' +
+        '<span class="mb-top"><b>' + esc(t.from.replace(/<.*>/, '').replace(/"/g, '').trim() || t.from) + '</b>' + (t.count > 1 ? '<span class="hint">' + t.count + '</span>' : '') + '<span class="hint">' + fmtDay(t.at) + '</span></span>' +
+        '<span class="mb-subj">' + esc(t.subject) + '</span><span class="hint mb-snip">' + esc(t.snippet) + '</span></button>';
+    }).join('') + '</div>' : '<div class="empty">' + (MB.query ? 'Không thấy thư nào khớp.' : 'Thư mục này trống.') + '</div>') +
+    (d.more ? '<button type="button" class="btn ghost sm" id="mbMore">Xem thêm</button>' : '');
+  $('mbQuery').onkeydown = function (e) { if (e.key === 'Enter') { MB.query = this.value.trim(); MB.threadId = ''; loadBox(0); } };
+  if ($('mbMore')) $('mbMore').onclick = function () { this.disabled = true; loadBox(d.threads.length); };
+  setReading(!!MB.threadId);
+  if (!MB.threadId) $('mbRead').innerHTML = '<div class="mb-blank">Chọn một thư để đọc.</div>';
+}
+
+function setReading(on) { MB.reading = on; $('mb').classList.toggle('reading', on); }
+function backBtn() { return '<button type="button" class="btn ghost sm only-phone mb-back" data-mb-back>' + icon('back') + 'Quay lại</button>'; }
+
+function openThread(id) {
+  MB.threadId = id; MB.thread = null;
+  $('mbList').querySelectorAll('[data-mb-thread]').forEach(function (b) { b.toggleAttribute('aria-current', b.dataset.mbThread === id); if (b.dataset.mbThread === id) b.classList.remove('unread'); });
+  $('mbRead').innerHTML = loadingHtml(); setReading(true);
+  call('mailThread', TOKEN, id).then(function (t) {
+    if (!mbOn() || MB.threadId !== id) return;
+    MB.thread = t; drawThread();
+  }).catch(mbFail('mbRead'));
+}
+
+function drawThread() {
+  var t = MB.thread, labels = (MB.box && MB.box.labels) || [];
+  var a = function (act, text, ic, cls) { return '<button type="button" class="btn ghost sm' + (cls ? ' ' + cls : '') + '" data-mb-act="' + act + '">' + icon(ic) + text + '</button>'; };
+  $('mbRead').innerHTML = backBtn() + '<div class="mb-acts">' + a('reply', 'Trả lời', 'reply') + a('reply_all', 'Trả lời tất cả', 'reply') + a('forward', 'Chuyển tiếp', 'forward') +
+    (t.inInbox ? a('archive', 'Lưu trữ', 'archive') : a('move_to_inbox', 'Về hộp thư đến', 'inbox')) +
+    a('add_label', 'Gắn nhãn', 'tag') + (t.labels.length ? a('remove_label', 'Bỏ nhãn', 'tag') : '') +
+    (t.inTrash ? '' : a('trash', 'Xoá', 'trash', 'danger')) + (t.inSpam ? '' : a('report_spam', 'Thư rác', 'spam', 'danger')) + '</div>' +
+    '<div id="mbAsk"></div>' + threadHtml(t) +
+    '<datalist id="mbLabels">' + labels.map(function (l) { return '<option value="' + esc(l) + '">'; }).join('') + '</datalist>';
+}
+
+/** Xin BOD làm một việc với luồng thư đang mở. */
+function askThreadAction(act) {
+  var t = MB.thread;
+  if (act === 'reply' || act === 'reply_all' || act === 'forward') {
+    var last = t.messages[t.messages.length - 1];
+    return openComposer({ action: act, threadId: t.id, threadSubject: t.subject, subject: act === 'forward' ? 'Fwd: ' + t.subject : '', orig: last }, composerDone);
+  }
+  var needLabel = act === 'add_label' || act === 'remove_label';
+  $('mbAsk').innerHTML = '<div class="mb-ask"><b>Xin BOD: ' + esc(MAIL_ACTIONS[act]) + '</b>' +
+    (act === 'add_label' ? '<label class="field">Tên nhãn (chọn nhãn có sẵn hoặc gõ nhãn mới)<input id="mbLabel" list="mbLabels" maxlength="100"></label>' : '') +
+    (act === 'remove_label' ? '<label class="field">Nhãn cần bỏ<select id="mbLabel" class="pick">' + t.labels.map(function (l) { return '<option>' + esc(l) + '</option>'; }).join('') + '</select></label>' : '') +
+    '<span class="hint">Việc này chỉ làm khi BOD duyệt.</span><div class="actions"><button type="button" class="btn ghost sm" data-mb-ask="cancel">Thôi</button><button type="button" class="btn sm" data-mb-ask="go">Gửi BOD duyệt</button></div>' +
+    '<span class="msg" id="mbAskMsg" role="status"></span></div>';
+  $('mbAsk').querySelector('[data-mb-ask="cancel"]').onclick = function () { $('mbAsk').innerHTML = ''; };
+  $('mbAsk').querySelector('[data-mb-ask="go"]').onclick = function () {
+    var b = this, label = needLabel ? $('mbLabel').value.trim() : '';
+    if (needLabel && !label) return setMsg('mbAskMsg', 'bad', 'Bạn chưa chọn nhãn.');
+    b.disabled = true; setMsg('mbAskMsg', '', 'Đang gửi…');
+    call('saveMailRequest', TOKEN, { action: act, threadId: t.id, label: label }, true, '').then(function () {
+      if (!mbOn()) return;
+      $('mbAsk').innerHTML = ''; mbFlash('ok', 'Đã gửi BOD duyệt: ' + MAIL_ACTIONS[act] + '.'); loadMyRequests();
+    }).catch(function (err) { b.disabled = false; setMsg('mbAskMsg', 'bad', err.message); });
+  };
+  if ($('mbLabel')) $('mbLabel').focus();
+}
+
+function composerDone(text) {
+  if (!mbOn()) return;
+  if (text) mbFlash('ok', text);
+  MB.req = null;
+  loadMyRequests().then(function () { if (mbOn() && MB.view === 'requests' && MB.reqId) openRequest(MB.reqId); });
+}
+
+/* ---------- Yêu cầu của tôi ---------- */
+function drawRequests() {
+  var list = MB.reqs;
+  if (!list) { $('mbList').innerHTML = loadingHtml(); return; }
+  $('mbList').innerHTML = list.length ? '<div class="mb-items">' + list.map(function (r) {
+    return '<button type="button" class="mb-item" data-mb-req="' + esc(r.id) + '"' + (r.id === MB.reqId ? ' aria-current="true"' : '') + '>' +
+      '<span class="mb-top"><b>' + esc(MAIL_ACTIONS[r.action]) + '</b><span class="hint">' + (r.at ? fmtDay(r.at) : '') + '</span></span>' +
+      '<span class="mb-subj">' + esc(requestTitle(r)) + '</span><span class="mb-top">' + mailPill(r.status) + (r.editedByBod ? '<span class="hint">BOD đã sửa</span>' : '') + '</span></button>';
+  }).join('') + '</div>' : '<div class="empty">Bạn chưa gửi yêu cầu nào.</div>';
+  if (!MB.reqId) { $('mbRead').innerHTML = '<div class="mb-blank">Chọn một yêu cầu để xem.</div>'; setReading(false); }
+}
+
+function openRequest(id) {
+  MB.reqId = id; MB.req = null;
+  $('mbList').querySelectorAll('[data-mb-req]').forEach(function (b) { b.toggleAttribute('aria-current', b.dataset.mbReq === id); });
+  $('mbRead').innerHTML = loadingHtml(); setReading(true);
+  call('mailRequest', TOKEN, id).then(function (v) {
+    if (!mbOn() || MB.reqId !== id) return;
+    MB.req = v; drawRequest();
+  }).catch(mbFail('mbRead'));
+}
+
+function drawRequest() {
+  var v = MB.req, editable = v.status === 'draft' || v.status === 'needs_changes', deletable = editable || v.status === 'rejected';
+  var send = ['compose', 'reply', 'reply_all', 'forward'].indexOf(v.action) >= 0;
+  $('mbRead').innerHTML = backBtn() + '<div class="mb-req-head"><h2 class="mail-subject">' + esc(requestTitle(v)) + '</h2>' + mailPill(v.status) + '</div>' +
+    '<p class="hint">' + esc(MAIL_ACTIONS[v.action]) + (v.threadSubject && v.subject ? ' · thư "' + esc(v.threadSubject) + '"' : '') + (v.at ? ' · tạo lúc ' + fmtWhen(v.at) : '') +
+    (v.reviewedBy ? ' · ' + esc(v.reviewedBy) + ' xử lý lúc ' + fmtWhen(v.reviewedAt) : '') + '</p>' +
+    (v.note ? '<div class="note' + (v.status === 'approved' ? ' plain' : '') + '"><span><b>BOD nhắn:</b> ' + esc(v.note) + '</span></div>' : '') +
+    (v.editedByBod ? '<div class="note plain"><span>BOD đã sửa thư này trước khi gửi. Nội dung dưới đây là bản BOD đã sửa.</span></div>' : '') +
+    (v.label ? '<p>Nhãn: ' + pill(v.label, 'info') + '</p>' : '') +
+    (send ? (v.to ? '<div class="hint">Tới: ' + esc(v.to) + '</div>' : '') + (v.cc ? '<div class="hint">Cc: ' + esc(v.cc) + '</div>' : '') + (v.bcc ? '<div class="hint">Bcc: ' + esc(v.bcc) + '</div>' : '') +
+      (v.body ? mailFrame(v.body) : '<p class="hint">Chưa có nội dung.</p>') +
+      (v.files.length ? '<div class="chips">' + v.files.map(function (f) { return '<span class="c-file">' + icon('attach') + '<span class="n">' + esc(f.name) + '</span><span class="hint">' + fileSize(f.size) + '</span></span>'; }).join('') + '</div>' : '') : '') +
+    '<div class="actions mb-req-acts">' + (v.gmailLink && v.status === 'approved' ? '<a class="btn ghost sm" href="' + esc(v.gmailLink) + '" target="_blank" rel="noopener">' + icon('ext') + 'Mở trong Gmail</a>' : '') +
+    (deletable ? '<button type="button" class="btn ghost sm danger" data-mb-req-act="delete">' + icon('trash') + 'Xoá</button>' : '') +
+    (editable && send ? '<button type="button" class="btn sm" data-mb-req-act="edit">' + icon('edit') + 'Mở để sửa</button>' : '') +
+    (editable && !send ? '<button type="button" class="btn sm" data-mb-req-act="resend">Gửi BOD duyệt lại</button>' : '') + '</div><span class="msg" id="mbReqMsg" role="status"></span>';
+}
+
+function requestAction(act, b) {
+  var v = MB.req;
+  if (act === 'edit') return openComposer(v, composerDone);
+  if (act === 'delete') {
+    if (!confirm('Xoá yêu cầu này?')) return;
+    b.disabled = true;
+    return call('deleteMailRequest', TOKEN, v.id).then(function (list) {
+      MB.reqs = list; MB.reqId = ''; MB.req = null; mbFlash('ok', 'Đã xoá yêu cầu.'); loadMyRequests();
+    }).catch(function (err) { b.disabled = false; setMsg('mbReqMsg', 'bad', err.message); });
+  }
+  if (act === 'resend') {
+    b.disabled = true;
+    call('saveMailRequest', TOKEN, { action: v.action, threadId: v.threadId, label: v.label }, true, v.id).then(function () {
+      mbFlash('ok', 'Đã gửi BOD duyệt lại.'); loadMyRequests().then(function () { if (mbOn()) openRequest(v.id); });
+    }).catch(function (err) { b.disabled = false; setMsg('mbReqMsg', 'bad', err.message); });
+  }
+}
+
+document.addEventListener('click', function (e) {
+  if (!mbOn()) return;
+  var b = e.target.closest('[data-mb-folder],[data-mb-thread],[data-mb-act],[data-mb-req],[data-mb-req-act],[data-mb-back]');
+  if (!b) return;
+  if (b.dataset.mbBack !== undefined) { setReading(false); return; }
+  if (b.dataset.mbFolder) {
+    MB.threadId = ''; MB.reqId = ''; mbFlash('', '');
+    if (b.dataset.mbFolder === '@requests') { MB.view = 'requests'; drawNav(); drawRequests(); loadMyRequests(); return; }
+    MB.view = 'box'; MB.folder = b.dataset.mbFolder; MB.query = ''; drawNav(); loadBox(0); return;
+  }
+  if (b.dataset.mbThread) return openThread(b.dataset.mbThread);
+  if (b.dataset.mbAct) return askThreadAction(b.dataset.mbAct);
+  if (b.dataset.mbReq) return openRequest(b.dataset.mbReq);
+  if (b.dataset.mbReqAct) return requestAction(b.dataset.mbReqAct, b);
+});
+</script>

@@ -1,0 +1,173 @@
+<script>
+/* Trang Hộp thư của BOD: duyệt thư và việc UCV xin làm với Gmail của CLB. Tab Thư nháp, Gửi hàng loạt, Lịch gửi ở bulk.html. */
+var ML = { data: null, tab: 'review', filter: 'pending', id: '', req: null, editing: false };
+var ML_TABS = [['review', 'Duyệt thư'], ['drafts', 'Thư nháp'], ['bulk', 'Gửi hàng loạt'], ['scheduled', 'Lịch gửi']];
+
+PAGES.mail = function (main) {
+  ML.data = null; ML.id = ''; ML.req = null; ML.editing = false; ML.tab = 'review';
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Hộp thư</h1><p class="lead">Thư UCV soạn và việc UCV xin làm với Gmail của CLB chỉ chạy khi BOD duyệt.</p></div>' +
+    '<a class="btn ghost" id="mlGmail" href="https://mail.google.com/" target="_blank" rel="noopener">' + icon('ext') + 'Mở Gmail CLB</a></div>' +
+    '<div class="chips" id="mlTabs"></div><span class="msg" id="mlMsg" role="status"></span><div id="mlBody">' + loadingHtml() + '</div></div>';
+  drawMailTabs();
+  loadReview();
+};
+
+function mlOn() { return currentPage() === 'mail' && $('mlBody'); }
+function loadReview(keepId) {
+  return call('mailReview', TOKEN).then(function (d) { setReview(d, keepId); })
+    .catch(function (err) { if (mlOn()) $('mlBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+function setReview(d, keepId) {
+  ML.data = d;
+  if (BADGES.mail !== d.pending) { BADGES.mail = d.pending; renderNav(); }
+  if (!mlOn()) return;
+  $('mlGmail').href = d.gmail;
+  drawMailTabs();
+  if (ML.tab !== 'review') return;
+  drawReview();
+  if (keepId) openReview(keepId);
+}
+
+function drawMailTabs() {
+  var n = ML.data ? ML.data.pending : 0;
+  $('mlTabs').innerHTML = ML_TABS.map(function (t) {
+    return '<button type="button" class="chip" data-ml-tab="' + t[0] + '" aria-pressed="' + (ML.tab === t[0]) + '">' + t[1] + (t[0] === 'review' && n ? ' <span>' + n + '</span>' : '') + '</button>';
+  }).join('');
+}
+
+function mlShown() {
+  return ML.data.requests.filter(function (r) { return ML.filter === 'all' || r.status === 'pending'; });
+}
+
+function drawReview() {
+  var list = mlShown();
+  $('mlBody').innerHTML = '<div class="ml" id="ml"><section class="mb-list"><div class="chips">' +
+    [['pending', 'Chờ duyệt', ML.data.pending], ['all', 'Tất cả', ML.data.requests.length]].map(function (f) {
+      return '<button type="button" class="chip sm" data-ml-filter="' + f[0] + '" aria-pressed="' + (ML.filter === f[0]) + '">' + f[1] + ' <span>' + f[2] + '</span></button>';
+    }).join('') + '</div>' +
+    (list.length ? '<div class="mb-items">' + list.map(function (r) {
+      return '<button type="button" class="mb-item" data-ml-req="' + esc(r.id) + '"' + (r.id === ML.id ? ' aria-current="true"' : '') + '>' +
+        '<span class="mb-top"><b>' + esc(r.by) + '</b><span class="hint">' + (r.at ? fmtWhen(r.at) : '') + '</span></span>' +
+        '<span class="mb-subj">' + esc(requestTitle(r)) + '</span><span class="mb-top"><span class="hint">' + esc(MAIL_ACTIONS[r.action]) + '</span>' + mailPill(r.status) + '</span></button>';
+    }).join('') + '</div>' : '<div class="empty">' + (ML.filter === 'pending' ? 'Không có thư nào chờ duyệt.' : 'Chưa có yêu cầu nào.') + '</div>') +
+    '</section><section class="mb-read" id="mlRead"><div class="mb-blank">Chọn một yêu cầu để xem và duyệt.</div></section></div>';
+}
+
+function openReview(id) {
+  ML.id = id; ML.req = null; ML.editing = false;
+  document.querySelectorAll('[data-ml-req]').forEach(function (b) { b.toggleAttribute('aria-current', b.dataset.mlReq === id); });
+  $('mlRead').innerHTML = loadingHtml(); $('ml').classList.add('reading');
+  call('mailRequest', TOKEN, id).then(function (v) {
+    if (!mlOn() || ML.id !== id) return;
+    ML.req = v; drawReviewDetail();
+  }).catch(function (err) { if ($('mlRead')) $('mlRead').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+
+function isSendAction(a) { return ['compose', 'reply', 'reply_all', 'forward'].indexOf(a) >= 0; }
+
+function drawReviewDetail() {
+  var v = ML.req, send = isSendAction(v.action), pending = v.status === 'pending';
+  var what = send ? '' : '<div class="note plain"><span><b>' + esc(v.by) + '</b> xin <b>' + esc(MAIL_ACTIONS[v.action].toLowerCase()) + '</b>' + (v.label ? ' "' + esc(v.label) + '"' : '') +
+    ' cho thư "' + esc(v.threadSubject) + '".</span></div>';
+  var head = '<button type="button" class="btn ghost sm only-phone mb-back" data-ml-back>' + icon('back') + 'Quay lại</button>' +
+    '<div class="mb-req-head"><h2 class="mail-subject">' + esc(requestTitle(v)) + '</h2>' + mailPill(v.status) + '</div>' +
+    '<p class="hint">' + esc(MAIL_ACTIONS[v.action]) + ' · ' + esc(v.by) + (v.at ? ' gửi duyệt lúc ' + fmtWhen(v.at) : '') +
+    (v.reviewedBy ? ' · ' + esc(v.reviewedBy) + ' xử lý lúc ' + fmtWhen(v.reviewedAt) : '') + (v.editedByBod ? ' · BOD đã sửa' : '') + '</p>';
+  var body = send ? (v.action === 'reply' || v.action === 'reply_all' ? '<div class="hint">Trả lời thư "' + esc(v.threadSubject) + '"' + (v.quote ? ', kèm trích dẫn thư gốc' : '') + '</div>' : '') +
+    (v.to ? '<div class="hint">Tới: ' + esc(v.to) + '</div>' : '') + (v.cc ? '<div class="hint">Cc: ' + esc(v.cc) + '</div>' : '') + (v.bcc ? '<div class="hint">Bcc: ' + esc(v.bcc) + '</div>' : '') +
+    (v.body ? mailFrame(v.body) : '<p class="hint">Không có lời nhắn.</p>') +
+    (v.files.length ? '<div class="chips">' + v.files.map(function (f) { return '<span class="c-file">' + icon('attach') + '<span class="n">' + esc(f.name) + '</span><span class="hint">' + fileSize(f.size) + '</span></span>'; }).join('') + '</div>' : '') : what;
+  var orig = v.threadId ? '<details class="ml-orig" id="mlOrig"><summary>Xem thư gốc</summary><div id="mlOrigBody"></div></details>' : '';
+  var link = v.gmailLink ? '<a class="link-btn ml-link" href="' + esc(v.gmailLink) + '" target="_blank" rel="noopener">' + icon('ext') + 'Mở luồng thư trong Gmail</a>' : '';
+  var decide = pending ? '<div class="ml-decide"><label class="field">Ghi chú cho UCV (bắt buộc khi trả lại hoặc từ chối)<textarea id="mlNote" rows="3" maxlength="2000"></textarea></label>' +
+    '<div class="actions"><button type="button" class="btn ghost sm" data-ml-do="needs_changes">Trả lại UCV sửa</button><button type="button" class="btn ghost sm danger" data-ml-do="rejected">Từ chối</button>' +
+    (send ? '<button type="button" class="btn ghost sm" data-ml-do="edit">' + icon('edit') + 'BOD tự sửa</button>' : '') +
+    '<button type="button" class="btn sm" data-ml-do="approved">' + (send ? icon('send') + 'Duyệt và gửi' : 'Duyệt và làm') + '</button></div><span class="msg" id="mlDoMsg" role="status"></span></div>'
+    : (v.note ? '<div class="note' + (v.status === 'error' ? '' : ' plain') + '"><span><b>Ghi chú:</b> ' + esc(v.note) + '</span></div>' : '');
+  $('mlRead').innerHTML = head + body + orig + link + decide;
+  if ($('mlOrig')) $('mlOrig').addEventListener('toggle', function () {
+    if (!this.open || $('mlOrigBody').dataset.done) return;
+    $('mlOrigBody').dataset.done = '1'; $('mlOrigBody').innerHTML = loadingHtml();
+    call('mailThread', TOKEN, v.threadId).then(function (t) { if ($('mlOrigBody')) $('mlOrigBody').innerHTML = threadHtml(t); })
+      .catch(function (err) { if ($('mlOrigBody')) $('mlOrigBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+  });
+}
+
+/** BOD sửa thẳng người nhận, tiêu đề, nội dung rồi duyệt. Chỉ gửi những chỗ đã đổi để Nhật ký ghi đúng. */
+function drawReviewEdit() {
+  var v = ML.req, hasTo = v.action === 'compose' || v.action === 'forward', dirty = {};
+  var field = function (k, label) { return '<label class="field">' + label + '<input id="mlE-' + k + '" value="' + esc(v[k] || '') + '" data-k="' + k + '"></label>'; };
+  $('mlRead').innerHTML = '<div class="mb-req-head"><h2 class="mail-subject">Sửa rồi duyệt</h2></div><p class="hint">Thư của ' + esc(v.by) + '. Chỗ bạn sửa được ghi vào Nhật ký và UCV thấy thư đã được BOD sửa.</p>' +
+    '<div class="ml-edit">' + (hasTo ? field('to', 'Tới') : '') + field('cc', 'Cc') + field('bcc', 'Bcc') + (hasTo ? field('subject', 'Tiêu đề') : '') +
+    '<div class="ml-ed">' + editorHtml('mlE-body', 'Nội dung thư') + '</div></div>' +
+    '<label class="field">Ghi chú cho UCV (không bắt buộc)<textarea id="mlNote" rows="2" maxlength="2000"></textarea></label>' +
+    '<div class="actions"><button type="button" class="btn ghost sm" data-ml-do="cancel-edit">Thôi</button><button type="button" class="btn sm" data-ml-do="approve-edit">' + icon('send') + 'Duyệt và gửi bản đã sửa</button></div>' +
+    '<span class="msg" id="mlDoMsg" role="status"></span>';
+  var ed = $('mlE-body');
+  ed.innerHTML = safeHtml(v.body || '');
+  bindEditor(ed, function () { dirty.body = true; }, 2);
+  $('mlRead').querySelectorAll('[data-k]').forEach(function (i) { i.oninput = function () { dirty[i.dataset.k] = true; }; });
+  ML.edits = function () {
+    var out = {};
+    Object.keys(dirty).forEach(function (k) { out[k] = k === 'body' ? (htmlEmpty(ed.innerHTML) ? '' : safeHtml(ed.innerHTML)) : $('mlE-' + k).value; });
+    return out;
+  };
+}
+
+function decideReview(decision, b) {
+  var v = ML.req, note = $('mlNote') ? $('mlNote').value.trim() : '', edits = null;
+  if (decision === 'approve-edit') { edits = ML.edits(); decision = 'approved'; }
+  if (decision !== 'approved' && !note) { setMsg('mlDoMsg', 'bad', 'Bạn ghi vài chữ cho UCV biết cần sửa gì hoặc vì sao từ chối nhé.'); $('mlNote').focus(); return; }
+  if (decision === 'approved' && !confirm(isSendAction(v.action) ? 'Gửi thư này từ Gmail CLB?' : 'Làm việc này với thư trong Gmail CLB?')) return;
+  $('mlRead').querySelectorAll('[data-ml-do]').forEach(function (x) { x.disabled = true; });
+  setMsg('mlDoMsg', '', decision === 'approved' ? 'Đang làm với Gmail…' : 'Đang lưu…');
+  var label = { approved: isSendAction(v.action) ? 'Đã gửi thư.' : 'Đã làm xong.', needs_changes: 'Đã trả lại UCV sửa.', rejected: 'Đã từ chối.' }[decision];
+  call('decideMailRequest', TOKEN, v.id, decision, note, edits).then(function (d) {
+    setMsg('mlMsg', 'ok', label + (d.pending ? ' Còn ' + d.pending + ' yêu cầu chờ duyệt.' : ''));
+    var next = d.requests.filter(function (r) { return r.status === 'pending'; })[0];
+    setReview(d, next ? next.id : '');
+  }).catch(function (err) {
+    if (/Gmail báo lỗi/.test(err.message)) { setMsg('mlMsg', 'bad', err.message); loadReview(v.id); return; }
+    $('mlRead').querySelectorAll('[data-ml-do]').forEach(function (x) { x.disabled = false; });
+    setMsg('mlDoMsg', 'bad', err.message);
+  });
+}
+
+document.addEventListener('click', function (e) {
+  if (!mlOn()) return;
+  var b = e.target.closest('[data-ml-tab],[data-ml-filter],[data-ml-req],[data-ml-do],[data-ml-back]');
+  if (!b) return;
+  if (b.dataset.mlTab) {
+    ML.tab = b.dataset.mlTab; drawMailTabs(); setMsg('mlMsg', '', '');
+    if (ML.tab === 'review') { if (ML.data) drawReview(); else loadReview(); return; }
+    return BULK_TABS[ML.tab]();
+  }
+  if (b.dataset.mlFilter) { ML.filter = b.dataset.mlFilter; ML.id = ''; return drawReview(); }
+  if (b.dataset.mlBack !== undefined) { $('ml').classList.remove('reading'); return; }
+  if (b.dataset.mlReq) return openReview(b.dataset.mlReq);
+  var act = b.dataset.mlDo;
+  if (act === 'edit') { ML.editing = true; return drawReviewEdit(); }
+  if (act === 'cancel-edit') { ML.editing = false; return drawReviewDetail(); }
+  decideReview(act, b);
+});
+
+/* ---------- Cài đặt > Hộp thư > Chữ ký ---------- */
+function openSignatureBox(refresh) {
+  openModal('<h2 id="boxTitle">Chữ ký thư</h2>' + loadingHtml());
+  call('signatureSettings', TOKEN, !!refresh).then(drawSignatureBox)
+    .catch(function (err) { openModal('<h2 id="boxTitle">Chữ ký thư</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
+}
+function drawSignatureBox(s) {
+  openModal('<h2 id="boxTitle">Chữ ký thư</h2><p class="hint">App lấy chữ ký đang đặt trong Gmail của CLB và thêm vào cuối mỗi thư UCV gửi. Muốn đổi chữ ký thì sửa trong Gmail rồi bấm Đọc lại.</p>' +
+    '<label class="check"><input type="checkbox" id="sigOn"' + (s.on ? ' checked' : '') + '><span>Tự thêm chữ ký vào thư</span></label>' +
+    (s.error ? '<p class="msg bad">Chưa đọc được chữ ký từ Gmail: ' + esc(s.error) + '</p>' : s.html ? '<div class="c-sig">' + safeHtml(s.html) + '</div>' : '<p class="hint">Gmail của CLB chưa đặt chữ ký.</p>') +
+    '<div class="actions"><a class="btn ghost sm" href="' + esc(s.editLink) + '" target="_blank" rel="noopener">' + icon('ext') + 'Sửa trong Gmail</a><button type="button" class="btn ghost sm" id="sigRefresh">Đọc lại</button>' +
+    '<button type="button" class="btn" data-act="close-modal">Xong</button></div><span class="msg" id="sigMsg" role="status"></span>');
+  $('sigRefresh').onclick = function () { openSignatureBox(true); };
+  $('sigOn').onchange = function () {
+    var box = this; box.disabled = true;
+    call('saveSignatureSetting', TOKEN, box.checked).then(function (s2) { COMPOSE_SETUP = null; drawSignatureBox(s2); setMsg('sigMsg', 'ok', s2.on ? 'Đã bật chữ ký.' : 'Đã tắt chữ ký.'); })
+      .catch(function (err) { box.disabled = false; box.checked = !box.checked; setMsg('sigMsg', 'bad', err.message); });
+  };
+}
+</script>

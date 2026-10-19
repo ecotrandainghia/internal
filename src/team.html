@@ -1,0 +1,146 @@
+<script>
+/* Trang Ban phụ trách (NS phụ trách ban): Cần nhắc, Task của ban (dùng chung danh sách Quản lý task), Log của ban.
+   Và Cài đặt > Thông báo của CLB > Lịch nhắc task (BOD). */
+var TEAM = { tab: 'remind', remind: null };
+var TEAM_TABS = [['remind', 'Cần nhắc'], ['task', 'Task của ban'], ['log', 'Log của ban']];
+
+PAGES['my-team'] = function (main) {
+  TEAM.remind = null; TEAM.seenBoard = false;
+  openTaskBoard(main, 'my-team', 'Ban phụ trách · ' + USER.leadDepts.join(', '),
+    'Task và log của các bạn trong ban bạn phụ trách. Xin gia hạn vẫn nhắn Messenger, bạn sửa hạn ở đây.', 'Nhập task giúp BOD');
+  $('tbBody').insertAdjacentHTML('beforebegin', '<span class="tabs team-tabs" id="teamTabs"></span>');
+  drawTeamTab();
+};
+
+function drawTeamTabs() {
+  var n = TEAM.remind ? TEAM.remind.groups.reduce(function (s, g) { return s + g.late.length + g.soon.length; }, 0) : null;
+  $('teamTabs').innerHTML = TEAM_TABS.map(function (t) {
+    return '<button type="button" data-team-tab="' + t[0] + '" aria-pressed="' + (TEAM.tab === t[0]) + '">' + t[1] + (t[0] === 'remind' && n ? ' ' + n : '') + '</button>';
+  }).join('');
+}
+
+function drawTeamTab() {
+  if (!$('teamTabs')) return;
+  drawTeamTabs();
+  if (TB.data) TEAM.seenBoard = true;
+  if (TEAM.tab === 'task') { if (TB.data) renderBoard(); else $('tbBody').innerHTML = loadingHtml(); return; }
+  $('tbBody').innerHTML = loadingHtml();
+  if (TEAM.tab === 'remind') loadTeamReminders();
+  else call('teamLog', TOKEN).then(function (d) { if (currentPage() === 'my-team' && TEAM.tab === 'log') drawTeamLog(d); })
+    .catch(function (err) { pageError('tbBody', err); });
+}
+
+function loadTeamReminders() {
+  call('teamReminders', TOKEN).then(function (d) {
+    TEAM.remind = d;
+    if (currentPage() !== 'my-team' || TEAM.tab !== 'remind') return;
+    drawTeamTabs();
+    drawTeamReminders(d);
+  }).catch(function (err) { pageError('tbBody', err); });
+}
+
+/* Danh sách task đổi (sửa hạn, xác nhận thay...) khi đang ở tab Cần nhắc: đọc lại danh sách. */
+function teamDataChanged() {
+  var first = !TEAM.seenBoard; // lần đầu danh sách task tải xong thì không cần đọc lại
+  TEAM.seenBoard = true;
+  if (!first && TEAM.tab === 'remind' && TEAM.remind) loadTeamReminders();
+}
+
+function teamPerson(r) {
+  var fb = r.facebook ? (r.facebookUrl ? '<a href="' + esc(r.facebookUrl) + '" target="_blank" rel="noopener">' + esc(r.facebook) + '</a>' : esc(r.facebook)) : '<span class="soft">Chưa có tên Facebook</span>';
+  return esc(r.name) + ' <span class="soft small">' + esc([r.subTeam, r.className].filter(String).join(' · ')) + '</span><small>Facebook: ' + fb + '</small>';
+}
+
+function drawTeamReminders(d) {
+  var rows = function (list, kind) {
+    return list.map(function (r) {
+      var left = r.deadline - d.now, text = kind === 'late' ? 'Trễ ' + lateText(-left) : 'Còn ' + lateText(left);
+      return '<div class="tm-row"><div class="tm-task"><b>' + esc(r.task) + '</b><small>' + esc(r.event) + ' · ' + esc(fmtDeadline(r.deadline)) + '</small></div>' +
+        '<div class="tm-who">' + teamPerson(r) + '</div>' + pill(text, kind === 'late' ? 'bad' : 'warn') +
+        '<span class="acts"><button type="button" class="btn ghost sm" data-team-open="' + esc(r.taskId) + '">Xem task</button>' +
+        '<button type="button" class="btn ghost sm" data-tb="deadline" data-id="' + esc(r.taskId) + '">Sửa hạn</button></span></div>';
+    }).join('');
+  };
+  $('tbBody').innerHTML = '<p class="hint">Các bạn chưa bấm “Đã xong”: trễ hạn và còn dưới ' + d.dueSoonDays + ' ngày tới hạn. Bạn nhắc qua Messenger; app cũng gửi danh sách này cho bạn theo lịch nhắc.</p>' +
+    d.groups.map(function (g) {
+      var none = !g.late.length && !g.soon.length;
+      return '<section class="sec"><h2>Ban ' + esc(g.dept) + '</h2>' + (none ? '<div class="empty">Không có ai cần nhắc.</div>' :
+        (g.late.length ? '<h3 class="tm-h">Trễ hạn (' + g.late.length + ')</h3><div class="list">' + rows(g.late, 'late') + '</div>' : '') +
+        (g.soon.length ? '<h3 class="tm-h">Sắp đến hạn (' + g.soon.length + ')</h3><div class="list">' + rows(g.soon, 'soon') + '</div>' : '')) + '</section>';
+    }).join('');
+}
+
+function lateText(ms) {
+  var h = Math.max(0, Math.round(ms / 36e5));
+  return h < 24 ? h + ' giờ' : Math.round(h / 24) + ' ngày';
+}
+
+function drawTeamLog(d) {
+  if (!d.people.length) { $('tbBody').innerHTML = '<div class="empty">Ban bạn phụ trách chưa có ai, hoặc chưa có nhiệm kỳ.</div>'; return; }
+  $('tbBody').innerHTML = '<p class="hint">Số buổi đã đi so với số buổi được giao (buổi 90 phút), tính các sự kiện có giao log. Đạt khi từ ' + d.threshold + '% trở lên.</p>' +
+    '<div class="table-wrap"><table class="mtable tm-log"><thead><tr><th>Thành viên</th><th class="r">Đã đi / giao</th><th class="r">KPI log</th><th>Từng sự kiện</th></tr></thead><tbody>' +
+    d.people.map(function (p) {
+      var low = p.percent !== null && p.percent < d.threshold;
+      return '<tr><td>' + esc(p.name) + ' <span class="soft small">' + esc([p.dept, p.subTeam, p.className].filter(String).join(' · ')) + '</span></td>' +
+        '<td class="r num">' + p.attended + ' / ' + p.quota + '</td>' +
+        '<td class="r">' + (p.percent === null ? '–' : pill(p.percent + '%', low ? 'bad' : 'good')) + (low && p.needed ? '<small>cần thêm ' + p.needed + ' buổi</small>' : '') + '</td>' +
+        '<td class="small">' + (p.events.length ? p.events.map(function (e) { return esc(e.name) + ': ' + e.attended + '/' + e.quota + (e.closed ? '' : ' (chưa chốt)'); }).join('<br>') : '–') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+document.addEventListener('click', function (e) {
+  if (currentPage() !== 'my-team') return;
+  var b = e.target.closest('[data-team-tab],[data-team-open]');
+  if (!b) return;
+  if (b.dataset.teamTab) { TEAM.tab = b.dataset.teamTab; return drawTeamTab(); }
+  if (!TB.data) return;
+  TEAM.tab = 'task'; TB.tab = 'open'; drawTeamTab();
+  TB.open = b.dataset.teamOpen; TB.gradeFor = null; renderDetail();
+});
+
+/* ---------- Cài đặt > Thông báo của CLB > Lịch nhắc task ---------- */
+var REMIND_DAYS = [[-3, '3 ngày trước hạn'], [-2, '2 ngày trước hạn'], [-1, 'Hôm trước hạn'], [0, 'Ngày hạn chót'], [1, 'Hôm sau hạn'], [2, '2 ngày sau hạn'], [3, '3 ngày sau hạn']];
+
+function openReminderBox() {
+  openModal('<h2 id="boxTitle">Lịch nhắc task</h2>' + loadingHtml());
+  call('taskReminderSettings', TOKEN).then(function (d) { drawReminderBox(d); }).catch(function (err) { failBox('Lịch nhắc task', err); });
+}
+
+function drawReminderBox(d, flash) {
+  var row = function (x, i) {
+    return '<div class="rm-row" data-rm-row="' + i + '"><select class="pick" aria-label="Ngày nhắc">' + REMIND_DAYS.map(function (o) {
+      return '<option value="' + o[0] + '"' + (o[0] === x.day ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('') + '</select><input type="time" aria-label="Giờ nhắc" value="' + esc(x.time) + '">' +
+      '<button type="button" class="icon-btn" data-rm-del="' + i + '" aria-label="Bỏ mốc này">' + icon('close') + '</button></div>';
+  };
+  var last = d.last ? 'Lần chạy gần nhất ' + fmtTime(d.last.at) + ' ' + fmtDay(d.last.at) + ': ' + d.last.people + ' người cần nhắc, gửi được ' + d.last.sent + '.' +
+    (d.last.failed.length ? ' Chưa gửi được: ' + d.last.failed.join('; ') : '') : 'Chưa chạy lần nào.';
+  openModal('<h2 id="boxTitle">Lịch nhắc task</h2>' +
+    '<p class="hint">Mỗi mốc là một ngày so với ngày hạn chót và một giờ. Chỉ nhắc người chưa bấm “Đã xong”. Tin gửi tới NS phụ trách ban để nhắc qua Messenger; task của BOD gửi thẳng cho BOD; ban chưa có NS phụ trách thì gửi thẳng người được giao. Tối đa ' + d.maxHours + ' giờ khác nhau.</p>' +
+    '<div id="rmRows">' + d.times.map(row).join('') + '</div>' +
+    '<div><button type="button" class="btn ghost sm" id="rmAdd">' + icon('plus') + 'Thêm mốc</button></div>' +
+    '<p class="hint">' + esc(last) + '</p><span class="msg" id="rmMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" id="rmNow">Gửi nhắc ngay</button><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="rmSave">Lưu</button></div>');
+  if (flash) setMsg('rmMsg', flash[0], flash[1]);
+  var read = function () {
+    return Array.prototype.map.call(document.querySelectorAll('[data-rm-row]'), function (r) {
+      return { day: Number(r.querySelector('select').value), time: r.querySelector('input').value };
+    });
+  };
+  $('rmAdd').onclick = function () { var t = read(); t.push({ day: 0, time: '18:00' }); drawReminderBox({ times: t, last: d.last, maxHours: d.maxHours }); };
+  document.querySelectorAll('[data-rm-del]').forEach(function (b) {
+    b.onclick = function () { var t = read(); t.splice(Number(b.dataset.rmDel), 1); drawReminderBox({ times: t, last: d.last, maxHours: d.maxHours }); };
+  });
+  $('rmSave').onclick = function () {
+    this.disabled = true;
+    call('saveTaskReminders', TOKEN, read()).then(function (x) { drawReminderBox(x, ['ok', 'Đã lưu lịch nhắc.']); })
+      .catch(function (err) { $('rmSave').disabled = false; setMsg('rmMsg', 'bad', err.message); });
+  };
+  $('rmNow').onclick = function () {
+    if (!confirm('Gửi ngay tin nhắc của mọi mốc hôm nay?')) return;
+    this.disabled = true; setMsg('rmMsg', '', 'Đang gửi…');
+    call('sendRemindersNow', TOKEN).then(function (x) { drawReminderBox(x, ['ok', 'Đã gửi.']); })
+      .catch(function (err) { $('rmNow').disabled = false; setMsg('rmMsg', 'bad', err.message); });
+  };
+}
+</script>

@@ -1,91 +1,137 @@
 const test = require('node:test');
-const assert = require('node:assert');
-const L = require('./load-logic');
-const T = L.THAO_TAC_MAIL;
+const assert = require('node:assert/strict');
+const plain = (x) => JSON.parse(JSON.stringify(x));
 
-test('quyền mail: BOD duyệt, UCV dùng hộp thư', () => {
-  assert.strictEqual(L.coQuyen('BOD', 'duyetmail'), true);
-  assert.strictEqual(L.coQuyen('BOD', 'hopthu'), false);
-  assert.strictEqual(L.coQuyen('UCV', 'hopthu'), true);
-  assert.strictEqual(L.coQuyen('UCV', 'duyetmail'), false);
+const { setUp } = require('./sample');
+const { fakeGmail } = require('./gmail');
+
+const login = (app, email, pw) => app.login(email, pw).token;
+const asBod = (app) => login(app, 'an@gmail.com', 'matkhauAn');
+
+/** App mẫu, Chi là UCV, hộp thư có hai thư. */
+function withMail() {
+  const s = setUp();
+  const { app, term } = s;
+  app.insertRecords_('member_labels', [{ member_id: 'M2', term_id: term, label_type: 'ucv' }], { termId: term });
+  const g = fakeGmail();
+  app.GmailApp = g.GmailApp;
+  app.Gmail = g.Gmail;
+  const t1 = g.add('Hỏi về tài trợ', 'Cty Xanh <xanh@cty.vn>', '<p>Chào CLB</p>', { files: [{ name: 'baogia.txt', bytes: [104, 105] }] });
+  const t2 = g.add('Quảng cáo', 'spam@ads.vn', '<p>Mua ngay</p>');
+  return { ...s, g, t1, t2, ucv: login(app, 'chi@gmail.com', 'chungCLB'), bodTok: asBod(app) };
+}
+
+test('pure: tách email, kiểm tra yêu cầu, lọc HTML, ảnh dán', () => {
+  const { app } = setUp();
+  assert.deepEqual(plain(app.splitEmails_('A <a@x.vn>; b@x.vn, a@x.vn sai@\nmailto:c@x.vn')), { list: ['a@x.vn', 'b@x.vn', 'c@x.vn'], bad: ['sai@'] });
+  assert.equal(app.mailRequestError_({ action: 'compose', to: '', subject: 'x', body: 'y' }), 'Bạn chưa nhập người nhận.');
+  assert.equal(app.mailRequestError_({ action: 'compose', to: 'a@x.vn', subject: '', body: 'y' }), 'Bạn chưa nhập tiêu đề.');
+  assert.equal(app.mailRequestError_({ action: 'reply', threadId: 't', body: '<p> </p>' }), 'Bạn chưa nhập nội dung.');
+  assert.equal(app.mailRequestError_({ action: 'forward', threadId: 't', to: 'a@x.vn' }), '');
+  assert.equal(app.mailRequestError_({ action: 'add_label', threadId: 't' }), 'Bạn chưa chọn nhãn.');
+  assert.equal(app.mailRequestError_({ action: 'delete_all' }), 'Thao tác không hợp lệ.');
+  assert.equal(app.cleanHtml_('<p onclick="x()">Hi<script>alert(1)</script><a href="javascript:x">l</a></p>'), '<p>Hi<a href="#">l</a></p>');
+  const t = plain(app.takeDataImages_('<img src="data:image/png;base64,AAAA"> và <img src=\'data:image/jpeg;base64,BB BB\'>'));
+  assert.equal(t.html, '<img src="{{img0}}"> và <img src=\'{{img1}}\'>');
+  assert.deepEqual(t.images, [{ mime: 'image/png', base64: 'AAAA' }, { mime: 'image/jpeg', base64: 'BBBB' }]);
 });
 
-test('tachEmail bỏ trùng, nhận dạng "Tên <email>", báo email sai', () => {
-  const kq = L.tachEmail('a@x.com, A@x.com; Ten <b@y.vn>\nsai@ , c@z.org');
-  assert.deepStrictEqual(kq.ds, ['a@x.com', 'b@y.vn', 'c@z.org']);
-  assert.deepStrictEqual(kq.sai, ['Ten', 'sai@']);
-  assert.deepStrictEqual(L.tachEmail('Nguyễn <n@x.com>').ds, ['n@x.com']);
+test('UCV xem hộp thư, đọc thư, tải tệp; người khác không vào được', () => {
+  const { app, t1, ucv, bodTok } = withMail();
+  assert.throws(() => app.mailbox(login(app, 'binh@gmail.com', 'chungCLB'), 'inbox'), /Chỉ UCV/);
+  assert.throws(() => app.mailbox(bodTok, 'inbox'), /Chỉ UCV/);
+  const box = plain(app.mailbox(ucv, 'inbox', '', 0));
+  assert.deepEqual(box.threads.map((t) => t.subject), ['Hỏi về tài trợ', 'Quảng cáo']);
+  assert.deepEqual(box.labels, ['Tài trợ']);
+  const th = plain(app.mailThread(ucv, t1));
+  assert.equal(th.messages[0].files[0].name, 'baogia.txt');
+  const f = plain(app.mailAttachment(ucv, t1, th.messages[0].id, 0));
+  assert.deepEqual([f.name, f.base64], ['baogia.txt', 'aGk=']);
+  assert.ok(plain(app.mailThread(bodTok, t1)).messages.length);
 });
 
-test('kiemTraViecMail', () => {
-  assert.strictEqual(L.kiemTraViecMail({ thaoTac: T.SOAN, den: 'a@x.com', tieuDe: 'Chào', noiDung: 'Hi' }), '');
-  assert.match(L.kiemTraViecMail({ thaoTac: T.SOAN, den: '', tieuDe: 'Chào', noiDung: 'Hi' }), /người nhận/);
-  assert.match(L.kiemTraViecMail({ thaoTac: T.SOAN, den: 'a@x.com', tieuDe: '', noiDung: 'Hi' }), /tiêu đề/);
-  assert.match(L.kiemTraViecMail({ thaoTac: T.TRA_LOI, noiDung: 'Hi' }), /Thiếu thư/);
-  assert.strictEqual(L.kiemTraViecMail({ thaoTac: T.LUU_TRU, maThu: 't1' }), '');
-  assert.match(L.kiemTraViecMail({ thaoTac: T.GAN_NHAN, maThu: 't1' }), /nhãn/);
-  assert.match(L.kiemTraViecMail({ thaoTac: 'Xoá sạch', maThu: 't1' }), /không hợp lệ/);
-  assert.match(L.kiemTraViecMail({ thaoTac: T.CHUYEN_TIEP, maThu: 't1', den: 'x@' }), /chưa đúng/);
+test('UCV soạn thư: lưu nháp, tệp và ảnh vào Drive, gửi duyệt; chỉ sửa, xoá đúng trạng thái', () => {
+  const { app, ucv } = withMail();
+  const img = Buffer.from('anh').toString('base64');
+  let r = plain(app.saveMailRequest(ucv, { action: 'compose', to: 'a@x.vn', subject: 'Thư mời', body: '<p>Kính gửi<img src="data:image/png;base64,' + img + '"></p>',
+    files: [{ name: 'moi.pdf', type: 'application/pdf', base64: Buffer.from('pdf').toString('base64') }] }, false));
+  assert.equal(r.status, 'draft');
+  assert.deepEqual(r.files.map((f) => f.name), ['moi.pdf']);
+  const rec = app.findRecord_('mail_requests', r.id);
+  assert.match(rec.body, /src="drive:blob\w+"/);
+  assert.equal(Object.values(app.__blobs).filter((b) => b.folder === 'ECO - Đính kèm mail').length, 2);
+  // xem lại: ảnh hiện được
+  assert.match(plain(app.mailRequest(ucv, r.id)).body, /data:image\/png;base64,/);
+  assert.throws(() => app.saveMailRequest(ucv, { action: 'compose', to: '', subject: 'Thư mời', body: 'x' }, true, r.id), /người nhận/);
+  r = plain(app.saveMailRequest(ucv, { action: 'compose', to: 'a@x.vn', subject: 'Thư mời', body: rec.body, keep: [r.files[0].id] }, true, r.id));
+  assert.equal(r.status, 'pending');
+  assert.equal(app.findRecord_('mail_requests', r.id).drafted_by, 'M2');
+  assert.throws(() => app.saveMailRequest(ucv, { action: 'compose', to: 'a@x.vn', subject: 'Sửa', body: 'x' }, false, r.id), /không sửa được/);
+  assert.throws(() => app.deleteMailRequest(ucv, r.id), /Chỉ xoá được/);
+  const mine = plain(app.myMailRequests(ucv));
+  assert.ok(mine.some((x) => x.id === r.id && x.status === 'pending'));
+  assert.throws(() => app.mailRequest(asBod(app), mine.find((x) => x.status === 'draft')?.id || 'none'), /nháp|Không tìm thấy/);
 });
 
-test('thayTheMau khớp tên cột không phân biệt dấu, hoa thường, khoảng trắng', () => {
-  const kq = L.thayTheMau('Chào {Họ và tên}, ban {BAN}. {Lạ}', { HoVaTen: 'An', Ban: 'PG' });
-  assert.strictEqual(kq.chu, 'Chào An, ban PG. {Lạ}');
-  assert.deepStrictEqual(kq.thieu, ['Lạ']);
-  assert.deepStrictEqual(L.timChoTrong('{A} {B} {A}'), ['A', 'B']);
+test('BOD duyệt: gửi thư mới kèm chữ ký và ảnh nhúng, trả lời có trích dẫn, gắn nhãn; trả lại sửa và từ chối cần ghi chú', () => {
+  const { app, g, t1, t2, ucv, bodTok, bod } = withMail();
+  const img = Buffer.from('anh').toString('base64');
+  const a = plain(app.saveMailRequest(ucv, { action: 'compose', to: 'a@x.vn', cc: 'b@x.vn', subject: 'Thư mời', body: '<p>Kính gửi<img src="data:image/png;base64,' + img + '"></p>' }, true)).id;
+  const b = plain(app.saveMailRequest(ucv, { action: 'reply', threadId: t1, body: '<p>Cảm ơn anh</p>', quote: true }, true)).id;
+  const c = plain(app.saveMailRequest(ucv, { action: 'add_label', threadId: t1, label: 'Đối tác' }, true)).id;
+  const d = plain(app.saveMailRequest(ucv, { action: 'trash', threadId: t2 }, true)).id;
+  let rv = plain(app.mailReview(bodTok));
+  assert.equal(rv.pending, 5); // 4 yêu cầu mới và 1 có sẵn trong dữ liệu mẫu
+  assert.throws(() => app.decideMailRequest(bodTok, a, 'needs_changes', ''), /ghi vài chữ/);
+  app.decideMailRequest(bodTok, a, 'approved', '');
+  const sent = g.sent[0];
+  assert.deepEqual([sent.kind, sent.to, sent.subject, sent.opts.cc], ['compose', 'a@x.vn', 'Thư mời', 'b@x.vn']);
+  assert.match(sent.opts.htmlBody, /src="cid:img0"/);
+  assert.match(sent.opts.htmlBody, /<b>CLB ECO<\/b>/);
+  assert.ok(sent.opts.inlineImages.img0);
+  app.decideMailRequest(bodTok, b, 'approved', 'Ok');
+  assert.equal(g.sent[1].kind, 'reply');
+  assert.match(g.sent[1].opts.htmlBody, /gmail_quote[\s\S]*Chào CLB/);
+  app.decideMailRequest(bodTok, c, 'approved', '');
+  assert.ok(g.threads.find((t) => t.id === t1).labels.includes('Đối tác'));
+  rv = plain(app.decideMailRequest(bodTok, d, 'rejected', 'Thư này cần giữ'));
+  assert.equal(g.threads.find((t) => t.id === t2).box, 'inbox');
+  assert.equal(rv.pending, 1);
+  const row = app.findRecord_('mail_requests', d);
+  assert.deepEqual([row.status, row.review_note, row.reviewed_by], ['rejected', 'Thư này cần giữ', bod]);
+  assert.throws(() => app.decideMailRequest(bodTok, d, 'approved', ''), /đã được xử lý/);
+  assert.equal(app.findRecord_('mail_requests', a).status, 'approved');
+  // UCV xoá được yêu cầu bị từ chối
+  assert.ok(!plain(app.deleteMailRequest(ucv, d)).some((x) => x.id === d));
 });
 
-test('chuSangHtml thoát ký tự và giữ xuống dòng', () => {
-  const h = L.chuSangHtml('<b>x</b>\nxem https://a.vn/?q=1');
-  assert.ok(h.includes('&lt;b&gt;x&lt;/b&gt;<br>xem <a href="https://a.vn/?q=1">'));
+test('BOD sửa trực tiếp rồi duyệt: ghi Nhật ký, UCV thấy đã được BOD sửa; Gmail lỗi thì chuyển Lỗi', () => {
+  const { app, g, t1, ucv, bodTok } = withMail();
+  const a = plain(app.saveMailRequest(ucv, { action: 'compose', to: 'a@x.vn', subject: 'Thư moi', body: '<p>Xin chao</p>' }, true)).id;
+  app.decideMailRequest(bodTok, a, 'approved', '', { subject: 'Thư mời', body: '<p>Xin chào</p>' });
+  assert.equal(g.sent[0].subject, 'Thư mời');
+  const mine = plain(app.myMailRequests(ucv)).find((x) => x.id === a);
+  assert.deepEqual([mine.status, mine.editedByBod], ['approved', true]);
+  const log = app.readTable_('audit_log').filter((x) => x.action === 'approve_mail' && x.row_id === a).map((x) => x.column_name);
+  assert.ok(log.includes('subject') && log.includes('body') && log.includes('status'));
+  // thư gốc bị xoá hẳn trước khi duyệt
+  const b = plain(app.saveMailRequest(ucv, { action: 'archive', threadId: t1 }, true)).id;
+  g.threads.splice(0, 1);
+  assert.throws(() => app.decideMailRequest(bodTok, b, 'approved', ''), /Gmail báo lỗi.*Không tìm thấy thư/);
+  const row = app.findRecord_('mail_requests', b);
+  assert.equal(row.status, 'error');
+  assert.match(row.review_note, /Lỗi: Không tìm thấy thư/);
 });
 
-test('docBangNgoai tìm tiêu đề và cột email', () => {
-  const kq = L.docBangNgoai([['', ''], ['Tên đơn vị', 'Địa chỉ mail', 'SĐT'], ['Quỹ A', 'a@x.com', '09'], ['', '', ''], ['Quỹ B', 'b@x.com', '08']]);
-  assert.deepStrictEqual(kq.cot, ['Tên đơn vị', 'Địa chỉ mail', 'SĐT']);
-  assert.strictEqual(kq.dong.length, 2);
-  assert.strictEqual(kq.cotEmail, 'Địa chỉ mail');
-  assert.strictEqual(L.docBangNgoai([['Ten', 'Lien he'], ['A', 'a@x.com']]).cotEmail, 'Lien he');
-});
-
-test('chuanBiGuiHangLoat', () => {
-  const nn = [{ email: 'a@x.com', duLieu: { Ten: 'A' } }, { email: 'A@x.com', duLieu: { Ten: 'A2' } }, { email: 'b@x.com', duLieu: { Ten: 'B' } }];
-  const ok = L.chuanBiGuiHangLoat('Mời {Ten}', 'Chào {ten}', nn, 10);
-  assert.strictEqual(ok.loi, '');
-  assert.deepStrictEqual(ok.ds, [{ email: 'a@x.com', tieuDe: 'Mời A', noiDung: 'Chào A' }, { email: 'b@x.com', tieuDe: 'Mời B', noiDung: 'Chào B' }]);
-  assert.match(L.chuanBiGuiHangLoat('x', 'Chào {Lop}', nn, 10).loi, /\{Lop\}/);
-  assert.match(L.chuanBiGuiHangLoat('x', 'y', nn, 1).loi, /chỉ còn gửi được 1/);
-  assert.match(L.chuanBiGuiHangLoat('x', 'y', [{ email: 'sai' }], 10).loi, /chưa đúng/);
-  assert.match(L.chuanBiGuiHangLoat('', 'y', nn, 10).loi, /tiêu đề/);
-});
-
-test('htmlSangChu và lamSachHtml', () => {
-  assert.strictEqual(L.htmlSangChu('<div>Chào <b>bạn</b></div><div><br></div><p>A &amp; B</p>'), 'Chào bạn\n\nA & B');
-  assert.strictEqual(L.htmlSangChu('<div><br></div>'), '');
-  const s = L.lamSachHtml('<p onclick="x()">Hi</p><script>alert(1)</script><a href="javascript:alert(1)">l</a><img src="data:image/png;base64,AA"><iframe src="x"></iframe>');
-  assert.doesNotMatch(s, /onclick|script|javascript|iframe/i);
-  assert.match(s, /<p>Hi<\/p>/);
-  assert.match(s, /data:image\/png/);
-});
-
-test('chuanBiGuiTuNhap thay chỗ trống, escape giá trị trong HTML', () => {
-  const mau = { tieuDe: 'Chào {HoVaTen}', html: '<p>Bạn {Họ và tên} ở ban {Ban}</p>' };
-  const kq = L.chuanBiGuiTuNhap(mau, [{ email: 'a@x.com', duLieu: { HoVaTen: 'A <B>', Ban: 'PG' } }, { email: 'A@x.com', duLieu: {} }], 10);
-  assert.strictEqual(kq.loi, '');
-  assert.strictEqual(kq.ds.length, 1);
-  assert.strictEqual(kq.ds[0].tieuDe, 'Chào A <B>');
-  assert.strictEqual(kq.ds[0].html, '<p>Bạn A &lt;B&gt; ở ban PG</p>');
-  assert.strictEqual(kq.ds[0].chu, 'Bạn A <B> ở ban PG');
-  assert.match(L.chuanBiGuiTuNhap(mau, [{ email: 'a@x.com', duLieu: { HoVaTen: 'A' } }], 10).loi, /\{Ban\}/);
-  assert.match(L.chuanBiGuiTuNhap({ tieuDe: '', html: '<p>x</p>' }, [], 10).loi, /tiêu đề/);
-  assert.match(L.chuanBiGuiTuNhap({ tieuDe: 'x', html: '<div><br></div>' }, [], 10).loi, /nội dung/);
-  assert.match(L.chuanBiGuiTuNhap({ tieuDe: 'x', html: 'y' }, [{ email: 'a@x.com' }, { email: 'b@x.com' }], 1).loi, /chỉ còn/);
-});
-
-test('chỗ chèn viết {Tên cột} hay {{Tên cột}}, có dấu hay không dấu đều khớp', () => {
-  const L2 = require('./load-logic');
-  assert.deepStrictEqual(L2.timChoTrong('Chào {{Họ và tên}} ban {Ban}, {{ Lớp }}'), ['Họ và tên', 'Ban', 'Lớp']);
-  const kq = L2.thayTheMau('Chào {{Họ và tên}} ({HoVaTen}) ban {Ban} {Lạ}', { 'Họ và tên': 'An', Ban: 'PG' });
-  assert.strictEqual(kq.chu, 'Chào An (An) ban PG {Lạ}');
-  assert.deepStrictEqual(kq.thieu, ['Lạ']);
+test('chữ ký: bật tắt, đọc lại; khung soạn thư có danh bạ thành viên và Danh bạ', () => {
+  const { app, ucv, bodTok } = withMail();
+  app.insertRecords_('contacts', [{ group_name: 'Đối tác', name: 'Cty Xanh', email: 'xanh@cty.vn' }]);
+  app.updateRecord_('members', 'M1', { email: 'binh@gmail.com' });
+  let s = plain(app.signatureSettings(bodTok, true));
+  assert.deepEqual([s.on, s.html], [true, '<b>CLB ECO</b>']);
+  s = plain(app.saveSignatureSetting(bodTok, false));
+  assert.equal(s.on, false);
+  const c = plain(app.composeSetup(ucv));
+  assert.equal(c.signature, '');
+  assert.deepEqual(c.contacts.map((x) => [x.group, x.name]), [['Thành viên · AD', 'Lê Chi'], ['Thành viên · BOD', 'Nguyễn Văn An'], ['Thành viên · PR', 'Trần Thị Bình'], ['Đối tác', 'Cty Xanh']]);
 });

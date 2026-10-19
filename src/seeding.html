@@ -1,0 +1,209 @@
+<script>
+/* Trang Seeding (NS phụ trách seeding; BOD mở từ Cài đặt > Hoạt động CLB > Báo cáo seeding).
+   Đặt nhắc hẹn cho một bài, đến giờ dán react và comment, xem trước ai được cộng, rồi ghi nhận.
+   Và Cài đặt > Tài khoản của tôi > Fanpage để seeding. */
+var SD = { data: null, flash: null, paste: null };
+
+PAGES.seeding = function (main) {
+  SD.data = null; SD.flash = null;
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Seeding</h1><p class="lead">Thấy bài mới thì đặt nhắc hẹn. Đến giờ, copy toàn bộ react và comment của bài rồi dán vào đây, app tự dò tên và cộng điểm.</p></div></div>' +
+    '<div id="sdBody">' + loadingHtml() + '</div></div>';
+  call('seedingPage', TOKEN).then(setSeeding).catch(function (err) { pageError('sdBody', err); });
+};
+
+function setSeeding(d, flash) {
+  SD.data = d;
+  if (flash) SD.flash = flash;
+  if (currentPage() === 'seeding') drawSeeding();
+}
+
+function hoursLater(h) { return toLocalInput(Date.now() + h * 36e5); }
+
+function drawSeeding() {
+  var d = SD.data, warn = [];
+  if (!d.react || !d.comment) warn.push('Thang điểm chưa có hoạt động dùng cho ' + (!d.react && !d.comment ? 'react và comment' : !d.react ? 'react' : 'comment') + ', nên chưa ghi nhận được. BOD kiểm tra Cài đặt, Quy tắc CLB, Thang điểm.');
+  if (!d.canRecord) warn.push('Đang ở giai đoạn giao thoa (hoặc chưa có nhiệm kỳ) nên chưa cộng điểm được. Vẫn đặt nhắc hẹn được.');
+  if (d.noFacebook) warn.push(d.noFacebook + ' thành viên chưa có tên Facebook trong danh sách. Với họ, app dò theo họ và tên.');
+  $('sdBody').innerHTML = warn.map(function (w) { return '<p class="hint sd-warn">' + icon('help') + esc(w) + '</p>'; }).join('') +
+    '<form class="sec sd-form" id="sdForm"><h2>Đặt nhắc hẹn</h2>' +
+    '<label class="field">Link bài đăng<input type="url" id="sdUrl" required placeholder="https://www.facebook.com/..."></label>' +
+    '<div class="sd-when"><label class="field">Nhắc tôi lúc<input type="datetime-local" id="sdAt" required></label>' +
+    '<span class="chips"><button type="button" class="chip" data-sd-quick="24">Sau 24 giờ</button><button type="button" class="chip" data-sd-quick="48">Sau 48 giờ</button></span></div>' +
+    '<p class="hint">Bạn tự chọn lúc nhắc. Ví dụ bài đã lên được 24 giờ thì chỉ cần hẹn thêm 24 giờ. Tin nhắc đi theo cách nhận thông báo bạn chọn ở Cài đặt.</p>' +
+    '<div class="actions sd-go"><button class="btn" id="sdAdd">' + icon('bell') + 'Đặt nhắc hẹn</button><span class="msg" id="sdMsg" role="status"></span></div></form>' +
+    '<section class="sec"><h2>Chờ dán (' + d.waiting.length + ')</h2>' + (d.waiting.length ? '<div class="list">' + d.waiting.map(waitingRow).join('') + '</div>' : '<div class="empty">Không có bài nào đang chờ.</div>') + '</section>' +
+    '<section class="sec"><h2>Đã ghi nhận gần đây</h2>' + (d.recorded.length ? '<div class="list">' + d.recorded.map(recordedRow).join('') + '</div>' : '<div class="empty">Chưa ghi nhận bài nào.</div>') + '</section>';
+  if (SD.flash) { setMsg('sdMsg', SD.flash[0], SD.flash[1]); SD.flash = null; }
+  $('sdForm').onsubmit = function (e) {
+    e.preventDefault();
+    var at = $('sdAt').value ? new Date($('sdAt').value).getTime() : NaN;
+    if (isNaN(at)) return setMsg('sdMsg', 'bad', 'Bạn chọn lúc nhắc nhé.');
+    $('sdAdd').disabled = true; setMsg('sdMsg', '', 'Đang lưu…');
+    call('addSeedingPost', TOKEN, { url: $('sdUrl').value.trim(), remindAt: at })
+      .then(function (x) { setSeeding(x, ['ok', 'Đã đặt nhắc. Đến giờ app nhắc bạn.']); })
+      .catch(function (err) { $('sdAdd').disabled = false; setMsg('sdMsg', 'bad', err.message); });
+  };
+}
+
+function postLink(p) { return '<a class="sd-link" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.url.replace(/^https:\/\/(www\.)?/, '')) + '</a>'; }
+
+function waitingRow(p) {
+  var due = p.remindAt && p.remindAt <= SD.data.now;
+  return '<div class="sd-row"><div class="sd-main">' + postLink(p) + '<small>' + (SD.data.isBod || !p.mine ? esc(p.by) + ' · ' : '') + 'Nhắc lúc ' + esc(fmtTime(p.remindAt) + ' ' + fmtDay(p.remindAt)) + '</small></div>' +
+    (due ? pill('Đến giờ dán', 'warn') : pill('Đang chờ', '')) +
+    '<span class="acts"><button type="button" class="btn sm" data-sd="paste" data-id="' + esc(p.id) + '"' + (SD.data.canRecord ? '' : ' disabled') + '>Dán react, comment</button>' +
+    '<button type="button" class="btn ghost sm" data-sd="remind" data-id="' + esc(p.id) + '">Đổi giờ nhắc</button>' +
+    '<button type="button" class="icon-btn" data-sd="delete" data-id="' + esc(p.id) + '" aria-label="Xoá bài này">' + icon('trash') + '</button></span></div>';
+}
+
+function recordedRow(p) {
+  return '<div class="sd-row"><div class="sd-main">' + postLink(p) + '<small>' + esc(p.by) + ' ghi nhận lúc ' + esc(fmtTime(p.recordedAt) + ' ' + fmtDay(p.recordedAt)) + '</small></div>' +
+    pill(p.entries + ' lượt cộng', 'good') +
+    '<span class="acts">' + (SD.data.isBod || p.mine ? '<button type="button" class="btn ghost sm" data-sd="cancel" data-id="' + esc(p.id) + '">Huỷ ghi nhận</button>' : '') + '</span></div>';
+}
+
+function sdPost(id) { return SD.data.waiting.concat(SD.data.recorded).filter(function (p) { return p.id === id; })[0]; }
+
+/* ---------- Dán react, comment ---------- */
+function openPaste(id, back) {
+  var p = sdPost(id);
+  if (!back) SD.paste = { id: id, reacts: '', comments: '' };
+  wideModal('<h2 id="boxTitle">Dán react và comment</h2><p class="hint">' + postLink(p) + '</p>' +
+    '<p class="hint">Mở bài trên Facebook, mở danh sách người react (mọi loại), chọn hết rồi copy và dán vào ô dưới. Làm tương tự với phần comment. Dán nguyên đoạn, không cần sửa.</p>' +
+    '<label class="field">Những người đã react<textarea id="sdReacts" rows="7"></textarea></label>' +
+    '<label class="field">Những người đã comment<textarea id="sdComments" rows="7"></textarea></label>' +
+    '<span class="msg" id="sdPasteMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="sdPreview">Xem trước</button></div>');
+  $('sdReacts').value = SD.paste.reacts; $('sdComments').value = SD.paste.comments;
+  $('sdPreview').onclick = function () {
+    SD.paste.reacts = $('sdReacts').value; SD.paste.comments = $('sdComments').value;
+    if (!SD.paste.reacts.trim() && !SD.paste.comments.trim()) return setMsg('sdPasteMsg', 'bad', 'Bạn chưa dán gì.');
+    this.disabled = true; setMsg('sdPasteMsg', '', 'Đang dò tên…');
+    call('previewSeeding', TOKEN, id, SD.paste.reacts, SD.paste.comments).then(drawPreview)
+      .catch(function (err) { $('sdPreview').disabled = false; setMsg('sdPasteMsg', 'bad', err.message); });
+  };
+}
+
+var SD_KINDS = [['react', 'React'], ['comment', 'Comment']];
+
+function drawPreview(m) {
+  var p = sdPost(SD.paste.id);
+  var part = function (kind, label) {
+    var x = m[kind], n = x.sure.length;
+    var sure = x.sure.map(function (s) {
+      return '<label class="check"><input type="checkbox" data-sd-pick="' + kind + '" value="' + esc(s.id) + '" checked><span>' + esc(s.name) +
+        ' <span class="soft small">' + esc(s.dept) + '</span>' + (nameKey(s.via) !== nameKey(s.name) ? '<small>Tên trên Facebook: ' + esc(s.via) + '</small>' : '') + '</span></label>';
+    }).join('');
+    var unsure = x.unsure.map(function (u) {
+      var why = u.why === 'same_name' ? 'Tên “' + u.label + '” trùng của ' + u.people.length + ' người. Tick đúng người đã ' + label.toLowerCase() + '.'
+        : 'Tên “' + u.label + '” chỉ thấy nằm trong tên dài hơn: ' + u.inside.join(', ') + '. Tick nếu đúng là người này.';
+      return '<div class="sd-unsure"><p class="hint">' + esc(why) + '</p>' + u.people.map(function (x) {
+        return '<label class="check"><input type="checkbox" data-sd-pick="' + kind + '" value="' + esc(x.id) + '"><span>' + esc(x.name) + ' <span class="soft small">' + esc(x.dept) + '</span></span></label>';
+      }).join('') + '</div>';
+    }).join('');
+    return '<section class="sec sd-pick"><h2>' + label + ' · +' + x.points + ' điểm mỗi người</h2>' +
+      (n || x.unsure.length ? (sure ? '<div class="sd-checks">' + sure + '</div>' : '') + unsure : '<div class="empty">Không thấy tên thành viên nào.</div>') + '</section>';
+  };
+  wideModal('<h2 id="boxTitle">Xem trước</h2><p class="hint">' + postLink(p) + '</p>' +
+    '<p class="hint">Người khớp chắc đã được tick sẵn. Người trùng tên hoặc tên nằm trong tên khác thì bạn xem lại rồi tick. Mỗi người chỉ được cộng một lần cho react và một lần cho comment của bài này.</p>' +
+    SD_KINDS.map(function (k) { return part(k[0], k[1]); }).join('') +
+    '<p class="hint" id="sdTotal"></p><span class="msg" id="sdPasteMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" id="sdBack">Sửa đoạn dán</button><button type="button" class="btn" id="sdRecord">' + icon('star') + 'Ghi nhận và cộng điểm</button></div>');
+  var picked = function () {
+    var out = { react: [], comment: [] };
+    document.querySelectorAll('[data-sd-pick]').forEach(function (c) { if (c.checked && out[c.dataset.sdPick].indexOf(c.value) < 0) out[c.dataset.sdPick].push(c.value); });
+    return out;
+  };
+  var total = function () {
+    var c = picked(), pts = c.react.length * m.react.points + c.comment.length * m.comment.points;
+    $('sdTotal').textContent = 'Ghi nhận sẽ cộng ' + (c.react.length + c.comment.length) + ' lượt (' + c.react.length + ' react, ' + c.comment.length + ' comment), tổng ' + pts + ' điểm.';
+  };
+  total();
+  document.querySelectorAll('[data-sd-pick]').forEach(function (c) { c.onchange = total; });
+  $('sdBack').onclick = function () { openPaste(SD.paste.id, true); };
+  $('sdRecord').onclick = function () {
+    this.disabled = true; setMsg('sdPasteMsg', '', 'Đang ghi nhận…');
+    call('recordSeeding', TOKEN, SD.paste.id, SD.paste.reacts, SD.paste.comments, picked()).then(function (x) {
+      closeModal(); SD.paste = null;
+      setSeeding(x, [x.done.warn ? 'bad' : 'ok', 'Đã ghi nhận, cộng điểm cho ' + x.done.people + ' người (' + x.done.entries + ' lượt).' + (x.done.warn ? ' ' + x.done.warn : '')]);
+    }).catch(function (err) { $('sdRecord').disabled = false; setMsg('sdPasteMsg', 'bad', err.message); });
+  };
+}
+
+/** Giống nameKey_ ở máy chủ, chỉ để biết tên Facebook có khác họ tên không. */
+function nameKey(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+/* ---------- Đổi giờ nhắc, xoá, huỷ ---------- */
+function openRemindChange(id) {
+  var p = sdPost(id);
+  openModal('<h2 id="boxTitle">Đổi giờ nhắc</h2><p class="hint">' + postLink(p) + '</p>' +
+    '<label class="field">Nhắc tôi lúc<input type="datetime-local" id="sdNewAt" value="' + toLocalInput(Math.max(p.remindAt || 0, Date.now() + 36e5)) + '"></label>' +
+    '<span class="chips"><button type="button" class="chip" data-sd-quick="24" data-for="sdNewAt">Sau 24 giờ</button><button type="button" class="chip" data-sd-quick="48" data-for="sdNewAt">Sau 48 giờ</button></span>' +
+    '<span class="msg" id="sdRmMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="sdRmSave">Lưu</button></div>');
+  $('sdRmSave').onclick = function () {
+    var at = $('sdNewAt').value ? new Date($('sdNewAt').value).getTime() : NaN;
+    if (isNaN(at)) return setMsg('sdRmMsg', 'bad', 'Bạn chọn lúc nhắc nhé.');
+    this.disabled = true;
+    call('setSeedingRemind', TOKEN, id, at).then(function (x) { closeModal(); setSeeding(x, ['ok', 'Đã đổi giờ nhắc.']); })
+      .catch(function (err) { $('sdRmSave').disabled = false; setMsg('sdRmMsg', 'bad', err.message); });
+  };
+}
+
+function sdAction(fn, id, ask, done) {
+  if (!confirm(ask)) return;
+  setMsg('sdMsg', '', 'Đang làm…');
+  call(fn, TOKEN, id).then(function (x) { setSeeding(x, ['ok', done]); window.scrollTo(0, 0); })
+    .catch(function (err) { setMsg('sdMsg', 'bad', err.message); window.scrollTo(0, 0); });
+}
+
+document.addEventListener('click', function (e) {
+  var q = e.target.closest('[data-sd-quick]');
+  if (q) { var input = $(q.dataset.for || 'sdAt'); if (input) input.value = hoursLater(Number(q.dataset.sdQuick)); return; }
+  if (currentPage() !== 'seeding' || !SD.data) return;
+  var b = e.target.closest('[data-sd]');
+  if (!b) return;
+  var id = b.dataset.id;
+  if (b.dataset.sd === 'paste') openPaste(id);
+  else if (b.dataset.sd === 'remind') openRemindChange(id);
+  else if (b.dataset.sd === 'delete') sdAction('deleteSeedingPost', id, 'Xoá bài này khỏi danh sách chờ? Chỉ nên xoá khi dán nhầm link.', 'Đã xoá bài.');
+  else if (b.dataset.sd === 'cancel') sdAction('cancelSeeding', id, 'Huỷ ghi nhận bài này? Điểm đã cộng từ bài này sẽ bị gỡ, bài quay về Chờ dán để dán lại.', 'Đã huỷ ghi nhận, bài quay về Chờ dán.');
+});
+
+/* ---------- Cài đặt > Tài khoản của tôi > Fanpage để seeding (HS-04) ---------- */
+function openFanpages() {
+  openModal('<h2 id="boxTitle">Fanpage để seeding</h2>' + loadingHtml());
+  call('myFanpages', TOKEN).then(function (d) { drawFanpages(d); }).catch(function (err) { failBox('Fanpage để seeding', err); });
+}
+
+function drawFanpages(d, flash) {
+  if (d.isBod) {
+    openModal('<h2 id="boxTitle">Fanpage để seeding</h2><p class="hint">BOD không được cộng điểm seeding nên không cần thêm fanpage.</p><div class="actions"><button type="button" class="btn" data-act="close-modal">Đóng</button></div>');
+    return;
+  }
+  openModal('<h2 id="boxTitle">Fanpage để seeding</h2>' +
+    '<p class="hint">Fanpage bạn tạo từ tài khoản chính và dùng để react, comment. Thêm ở đây thì khi page đó seeding, app vẫn cộng điểm cho bạn. Tên Facebook của bạn: ' + (d.facebook ? '<b>' + esc(d.facebook) + '</b>' : 'chưa có, app dò theo họ tên') + '.</p>' +
+    (d.pages.length ? '<div class="list">' + d.pages.map(function (p) {
+      return '<div class="fp-row"><div><b>' + esc(p.name) + '</b>' + (p.url ? '<small><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.url) + '</a></small>' : '') + '</div>' +
+        '<button type="button" class="icon-btn" data-fp-del="' + esc(p.name) + '" aria-label="Bỏ fanpage ' + esc(p.name) + '">' + icon('trash') + '</button></div>';
+    }).join('') + '</div>' : '<div class="empty">Bạn chưa thêm fanpage nào.</div>') +
+    '<form id="fpForm" style="display:flex;flex-direction:column;gap:12px"><label class="field">Tên fanpage (đúng như khi page react, comment)<input id="fpName" maxlength="100" required></label>' +
+    '<label class="field">Link fanpage (không bắt buộc)<input type="url" id="fpUrl" placeholder="https://www.facebook.com/..."></label>' +
+    '<span class="msg" id="fpMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="fpAdd">' + icon('plus') + 'Thêm fanpage</button></div></form>');
+  if (flash) setMsg('fpMsg', 'ok', flash);
+  $('fpForm').onsubmit = function (e) {
+    e.preventDefault();
+    $('fpAdd').disabled = true;
+    call('addFanpage', TOKEN, { name: $('fpName').value, url: $('fpUrl').value }).then(function (x) { drawFanpages(x, 'Đã thêm fanpage.'); })
+      .catch(function (err) { $('fpAdd').disabled = false; setMsg('fpMsg', 'bad', err.message); });
+  };
+  document.querySelectorAll('[data-fp-del]').forEach(function (b) {
+    b.onclick = function () {
+      if (!confirm('Bỏ fanpage ' + b.dataset.fpDel + '? Điểm đã cộng trước đây vẫn giữ.')) return;
+      call('removeFanpage', TOKEN, b.dataset.fpDel).then(function (x) { drawFanpages(x, 'Đã bỏ fanpage.'); })
+        .catch(function (err) { setMsg('fpMsg', 'bad', err.message); });
+    };
+  });
+}
+</script>

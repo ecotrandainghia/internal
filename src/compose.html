@@ -1,0 +1,336 @@
+<script>
+/* Phần dùng chung của Hộp thư (UCV) và Duyệt thư (BOD): lọc HTML, khung xem thư, thanh định dạng, ô người nhận, khung soạn thư. */
+var MAIL_STATUS = { draft: ['Nháp', ''], pending: ['Chờ duyệt', 'warn'], approved: ['Đã duyệt', 'good'], needs_changes: ['Cần sửa lại', 'bad'], rejected: ['Từ chối', ''], error: ['Lỗi', 'bad'] };
+var MAIL_ACTIONS = { compose: 'Soạn thư mới', reply: 'Trả lời', reply_all: 'Trả lời tất cả', forward: 'Chuyển tiếp', archive: 'Lưu trữ',
+  move_to_inbox: 'Chuyển về hộp thư đến', trash: 'Chuyển vào thùng rác', report_spam: 'Báo cáo thư rác', add_label: 'Gắn nhãn', remove_label: 'Bỏ nhãn' };
+var COMPOSE_SETUP = null;
+
+function mailPill(status) { var p = MAIL_STATUS[status] || [status, '']; return pill(p[0], p[1]); }
+function fileSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function fmtWhen(ms) { return fmtTime(ms) + ' ' + fmtDay(ms); }
+function requestTitle(v) { return v.subject || (MAIL_ACTIONS[v.action] + (v.threadSubject ? ': ' + v.threadSubject : '')); }
+
+/** Lọc HTML dán vào hoặc lấy từ thư: bỏ thẻ chạy được, thuộc tính on..., link javascript:. */
+function safeHtml(raw) {
+  var doc = new DOMParser().parseFromString(String(raw || ''), 'text/html');
+  doc.querySelectorAll('script,style,noscript,iframe,frame,frameset,object,embed,applet,form,input,button,textarea,select,option,meta,base,link,title').forEach(function (n) { n.remove(); });
+  doc.body.querySelectorAll('*').forEach(function (el) {
+    Array.prototype.slice.call(el.attributes).forEach(function (a) {
+      var n = a.name.toLowerCase();
+      if (n.indexOf('on') === 0) { el.removeAttribute(a.name); return; }
+      if (['href', 'src', 'background', 'srcset', 'xlink:href'].indexOf(n) >= 0) {
+        var v = a.value.replace(/[\u0000- ]/g, '').toLowerCase();
+        if (v.indexOf('javascript:') === 0 || v.indexOf('vbscript:') === 0 || (v.indexOf('data:') === 0 && !(n === 'src' && v.indexOf('data:image/') === 0))) el.removeAttribute(a.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+function htmlEmpty(html) { var d = document.createElement('div'); d.innerHTML = html || ''; return !d.textContent.trim() && !d.querySelector('img'); }
+
+/** Nội dung thư trong khung riêng: không chạy được mã, không ảnh hưởng giao diện app. */
+function mailFrame(html) {
+  var doc = '<base target="_blank"><style>body{font-family:Arial,sans-serif;font-size:14px;line-height:1.5;margin:12px;word-break:break-word;color:#1b2416;background:#fff}img{max-width:100%;height:auto}blockquote{margin:0 0 0 .8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555}table{max-width:100%}</style>' + html;
+  return '<iframe class="mail-frame" title="Nội dung thư" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="' + esc(doc) + '" onload="try{this.style.height=(this.contentDocument.documentElement.scrollHeight+4)+\'px\'}catch(e){}"></iframe>';
+}
+
+/** Một luồng thư: các thư, tệp đính kèm (bấm tải về). */
+function threadHtml(t) {
+  return '<h2 class="mail-subject">' + esc(t.subject) + '</h2><div class="chips">' + t.labels.map(function (l) { return pill(l, 'info'); }).join('') +
+    (t.inTrash ? pill('Thùng rác', '') : '') + (t.inSpam ? pill('Thư rác', 'bad') : '') + '</div>' +
+    t.messages.map(function (m) {
+      return '<div class="mail-msg"><div class="mail-from"><b>' + esc(m.from) + '</b><span class="hint">' + fmtWhen(m.at) + '</span></div>' +
+        '<div class="hint">Tới: ' + esc(m.to) + (m.cc ? ' · Cc: ' + esc(m.cc) : '') + '</div>' + mailFrame(m.html) +
+        (m.files.length ? '<div class="chips">' + m.files.map(function (f, i) {
+          return '<button type="button" class="btn ghost sm" data-mail-dl="' + esc(m.id) + '" data-i="' + i + '" data-th="' + esc(t.id) + '">' + icon('attach') + esc(f.name) + ' · ' + fileSize(f.size) + '</button>';
+        }).join('') + '</div>' : '') + '</div>';
+    }).join('');
+}
+
+function saveBase64(f) {
+  var bin = atob(f.base64), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([bytes], { type: f.type || 'application/octet-stream' }));
+  a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-mail-dl]');
+  if (!b) return;
+  b.disabled = true;
+  call('mailAttachment', TOKEN, b.dataset.th, b.dataset.mailDl, Number(b.dataset.i)).then(function (f) { b.disabled = false; saveBase64(f); })
+    .catch(function (err) { b.disabled = false; alert(err.message); });
+});
+
+/* ---------- Thanh định dạng và ô soạn nội dung ---------- */
+var EDITOR_TOOLS = [['bold', '<b>B</b>', 'Đậm'], ['italic', '<i>I</i>', 'Nghiêng'], ['underline', '<u>U</u>', 'Gạch chân'], ['|'],
+  ['insertUnorderedList', '•', 'Danh sách dấu chấm'], ['insertOrderedList', '1.', 'Danh sách đánh số'], ['|'],
+  ['link', 'link', 'Chèn liên kết'], ['image', 'image', 'Chèn ảnh'], ['removeFormat', '✕', 'Xoá định dạng']];
+function editorHtml(id, placeholder) {
+  return '<div class="ed-bar" role="toolbar" aria-label="Định dạng">' + EDITOR_TOOLS.map(function (t) {
+    if (t[0] === '|') return '<span class="ed-sep"></span>';
+    return '<button type="button" class="ed-btn" data-cmd="' + t[0] + '" title="' + t[2] + '" aria-label="' + t[2] + '">' + (ICONS[t[1]] ? icon(t[1]) : t[1]) + '</button>';
+  }).join('') + '<input type="file" accept="image/*" hidden data-ed-img></div>' +
+    '<div class="editor" id="' + id + '" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung thư" data-ph="' + esc(placeholder || 'Soạn nội dung thư') + '"></div>';
+}
+/** Gắn thanh định dạng ngay trước ô soạn. onChange gọi mỗi lần nội dung đổi. */
+function bindEditor(ed, onChange, imageMb) {
+  var bar = ed.previousElementSibling, saved = null;
+  var keep = function () { var s = getSelection(); if (s.rangeCount && ed.contains(s.getRangeAt(0).commonAncestorContainer)) saved = s.getRangeAt(0).cloneRange(); };
+  var restore = function () { ed.focus(); if (saved) { var s = getSelection(); s.removeAllRanges(); s.addRange(saved); } };
+  var run = function (cmd, val) { restore(); document.execCommand(cmd, false, val); onChange(); };
+  bar.addEventListener('mousedown', function (e) { if (e.target.closest('.ed-btn')) { keep(); e.preventDefault(); } });
+  bar.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-cmd]'); if (!b) return;
+    var c = b.dataset.cmd;
+    if (c === 'link') {
+      var url = prompt('Địa chỉ liên kết (https://...)'); if (!url) return;
+      if (!/^(https?:|mailto:|tel:)/i.test(url)) url = (url.indexOf('@') > 0 && url.indexOf('/') < 0 ? 'mailto:' : 'https://') + url.trim();
+      var s = saved && !saved.collapsed;
+      if (s) run('createLink', url); else run('insertHTML', '<a href="' + esc(url) + '">' + esc(url) + '</a>&nbsp;');
+      return;
+    }
+    if (c === 'image') { bar.querySelector('[data-ed-img]').click(); return; }
+    run(c);
+  });
+  var addImage = function (file) {
+    if (!/^image\//.test(file.type)) return;
+    if (file.size > (imageMb || 2) * 1048576) { alert('Ảnh lớn hơn ' + (imageMb || 2) + ' MB. Bạn đính kèm ảnh thành tệp nhé.'); return; }
+    var r = new FileReader();
+    r.onload = function () { run('insertHTML', '<img src="' + r.result + '" alt="" style="max-width:100%">'); };
+    r.readAsDataURL(file);
+  };
+  bar.querySelector('[data-ed-img]').onchange = function () { if (this.files[0]) addImage(this.files[0]); this.value = ''; };
+  ed.addEventListener('input', onChange);
+  ed.addEventListener('paste', function (e) {
+    var dt = e.clipboardData; if (!dt) return;
+    var img = Array.prototype.filter.call(dt.files || [], function (f) { return /^image\//.test(f.type); })[0];
+    if (img) { e.preventDefault(); keep(); addImage(img); return; }
+    var h = dt.getData('text/html');
+    if (h) { e.preventDefault(); document.execCommand('insertHTML', false, safeHtml(h).replace(/<img[^>]+src="data:[^"]*"[^>]*>/gi, '')); onChange(); }
+  });
+}
+
+/* ---------- Ô người nhận: thẻ email, gợi ý từ danh bạ ---------- */
+var EMAIL_RE = /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]+$/;
+function foldVi(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+function recipientBox(box, contacts, initial, onChange) {
+  var input = box.querySelector('input'), list = [], menu = null;
+  var draw = function () {
+    box.querySelectorAll('.rchip').forEach(function (n) { n.remove(); });
+    list.forEach(function (e, i) {
+      var c = document.createElement('span');
+      c.className = 'rchip' + (EMAIL_RE.test(e) ? '' : ' bad');
+      c.innerHTML = esc(e) + '<button type="button" aria-label="Bỏ ' + esc(e) + '">' + icon('close') + '</button>';
+      c.querySelector('button').onclick = function (ev) { ev.stopPropagation(); list.splice(i, 1); draw(); onChange(); };
+      box.insertBefore(c, input);
+    });
+  };
+  var add = function (text) {
+    String(text || '').split(/[,;\n]+/).forEach(function (part) {
+      var m = /<([^>]+)>/.exec(part);
+      (m ? [m[1]] : part.trim().split(/\s+/)).forEach(function (x) {
+        var e = x.replace(/^mailto:/i, '').trim();
+        if (e && !list.some(function (y) { return y.toLowerCase() === e.toLowerCase(); })) list.push(e);
+      });
+    });
+    draw(); onChange();
+  };
+  var close = function () { if (menu) { menu.remove(); menu = null; } };
+  var commit = function () { if (input.value.trim()) { var t = input.value; input.value = ''; add(t); } close(); };
+  var suggest = function () {
+    close();
+    var q = foldVi(input.value.trim());
+    if (q.length < 2) return;
+    var hits = contacts.filter(function (c) { return foldVi(c.name + ' ' + c.email).indexOf(q) >= 0; }).slice(0, 8);
+    if (!hits.length) return;
+    menu = document.createElement('div'); menu.className = 'rmenu'; menu.setAttribute('role', 'listbox');
+    menu.innerHTML = hits.map(function (c, i) { return '<button type="button" role="option" data-e="' + esc(c.email) + '"' + (i ? '' : ' class="on"') + '><b>' + esc(c.name) + '</b> <span class="hint">' + esc(c.email) + ' · ' + esc(c.group) + '</span></button>'; }).join('');
+    menu.addEventListener('mousedown', function (e) { var b = e.target.closest('[data-e]'); if (!b) return; e.preventDefault(); input.value = ''; add(b.dataset.e); close(); input.focus(); });
+    box.appendChild(menu);
+  };
+  box.addEventListener('click', function (e) { if (e.target === box) input.focus(); });
+  input.addEventListener('keydown', function (e) {
+    if (menu && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      var bs = Array.prototype.slice.call(menu.querySelectorAll('button')), i = bs.indexOf(menu.querySelector('.on'));
+      bs[i].classList.remove('on'); bs[(i + (e.key === 'ArrowDown' ? 1 : bs.length - 1)) % bs.length].classList.add('on'); return;
+    }
+    if (menu && e.key === 'Enter') { e.preventDefault(); input.value = ''; add(menu.querySelector('.on').dataset.e); close(); return; }
+    if ((e.key === 'Enter' || e.key === ',' || e.key === ';') && input.value.trim()) { e.preventDefault(); commit(); }
+    else if (e.key === 'Backspace' && !input.value && list.length) { list.pop(); draw(); onChange(); }
+    else if (e.key === 'Escape' && menu) { e.stopPropagation(); close(); }
+  });
+  input.addEventListener('blur', function () { setTimeout(commit, 150); });
+  input.addEventListener('input', function () { if (/[,;]/.test(input.value)) commit(); else suggest(); });
+  input.addEventListener('paste', function (e) { var t = e.clipboardData.getData('text'); if (/[,;\s]/.test(t.trim())) { e.preventDefault(); add(t); } });
+  add(initial);
+  return { list: function () { commit(); return list.slice(); }, add: add };
+}
+
+/**
+ * Khung soạn thư của UCV. v: yêu cầu đang sửa (có id) hoặc mới { action, threadId, threadSubject, subject, orig }.
+ * done(text): gọi sau khi lưu nháp, gửi duyệt hoặc xoá, để trang vẽ lại.
+ */
+function openComposer(v, done) {
+  if (!COMPOSE_SETUP) {
+    openModal('<h2 id="boxTitle">Soạn thư</h2>' + loadingHtml());
+    call('composeSetup', TOKEN).then(function (c) { COMPOSE_SETUP = c; openComposer(v, done); })
+      .catch(function (err) { openModal('<h2 id="boxTitle">Soạn thư</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
+    return;
+  }
+  var C = COMPOSE_SETUP, S = { id: v.id || '', files: (v.files || []).map(function (f) { return { id: f.id, name: f.name, size: f.size, keep: true }; }), drive: [], ver: 0, saved: 0, busy: false };
+  var hasTo = v.action === 'compose' || v.action === 'forward', isReply = v.action === 'reply' || v.action === 'reply_all';
+  var row = function (k, label, hidden) {
+    return '<div class="c-row" id="row-' + k + '"' + (hidden ? ' hidden' : '') + '><label for="in-' + k + '">' + label + '</label><div class="recip" id="rc-' + k + '"><input id="in-' + k + '" autocomplete="off" spellcheck="false"></div></div>';
+  };
+  openModal('<div class="c-head"><h2 id="boxTitle">' + esc(v.id ? 'Sửa thư' : v.action === 'compose' ? 'Thư mới' : MAIL_ACTIONS[v.action] + (v.threadSubject ? ': ' + v.threadSubject : '')) + '</h2><span class="hint" id="cSaved"></span><button type="button" class="icon-btn" id="cClose" aria-label="Đóng khung soạn thư">' + icon('close') + '</button></div>' +
+    (v.note ? '<div class="note plain"><span><b>BOD nhắn:</b> ' + esc(v.note) + '</span></div>' : '') +
+    (isReply ? '<div class="c-row"><span class="c-lbl">Tới</span><span class="hint">' + esc(v.orig ? v.orig.from : 'Người gửi thư gốc') + (v.action === 'reply_all' ? ' và những người cùng nhận' : '') + '</span></div>' : '') +
+    (hasTo ? row('to', 'Tới') : '') + row('cc', 'Cc', !v.cc) + row('bcc', 'Bcc', !v.bcc) +
+    '<div class="c-links">' + (v.cc ? '' : '<button type="button" class="link-btn" data-show="cc">Thêm Cc</button>') + (v.bcc ? '' : '<button type="button" class="link-btn" data-show="bcc">Thêm Bcc</button>') +
+    (hasTo ? '<button type="button" class="link-btn" id="cBook">Danh bạ</button><button type="button" class="link-btn" id="cSheet">Lấy email từ Google Sheet</button>' : '') + '</div>' +
+    '<div id="cPanel"></div>' +
+    (hasTo ? '<input id="cSubject" class="c-subject" maxlength="250" placeholder="Tiêu đề" aria-label="Tiêu đề" value="' + esc(v.subject || '') + '">' : '') +
+    editorHtml('cBody', v.action === 'forward' ? 'Lời nhắn kèm (không bắt buộc), thư gốc được kèm phía dưới' : 'Soạn nội dung thư') +
+    (isReply ? '<label class="check"><input type="checkbox" id="cQuote"' + (v.quote === false ? '' : ' checked') + '><span>Kèm trích dẫn thư gốc</span></label>' : '') +
+    (v.action === 'forward' ? '<p class="hint">Nội dung và tệp của thư gốc được kèm phía dưới khi gửi.</p>' : '') +
+    (C.signature ? '<div class="c-sig"><span class="hint">Chữ ký CLB tự thêm khi gửi</span>' + safeHtml(C.signature) + '</div>' : '') +
+    '<div class="c-files" id="cFiles"></div>' +
+    '<div class="c-foot"><input type="file" id="cPick" multiple hidden>' +
+    '<button type="button" class="btn ghost sm" id="cAttach">' + icon('attach') + 'Tệp từ máy</button><button type="button" class="btn ghost sm" id="cDrive">Tệp từ Drive</button>' +
+    '<button type="button" class="btn ghost sm" id="cPreview">Xem trước</button><span class="grow"></span>' +
+    (S.id ? '<button type="button" class="btn ghost sm danger" id="cDelete">Xoá</button>' : '') +
+    '<button type="button" class="btn ghost" id="cDraft">Lưu nháp</button><button type="button" class="btn" id="cSend">' + icon('send') + 'Gửi BOD duyệt</button></div>' +
+    '<span class="msg" id="cMsg" role="status"></span>');
+  $('modal').firstChild.classList.add('composer');
+  var ed = $('cBody'), changed = function () { S.ver++; $('cSaved').textContent = ''; };
+  ed.innerHTML = v.body ? safeHtml(v.body) : '';
+  bindEditor(ed, changed, C.imageMb);
+  var R = {};
+  ['to', 'cc', 'bcc'].forEach(function (k) { if ($('rc-' + k)) R[k] = recipientBox($('rc-' + k), C.contacts, v[k] || '', changed); });
+  S.ver = 0;
+  $('modal').querySelectorAll('[data-show]').forEach(function (b) { b.onclick = function () { $('row-' + b.dataset.show).hidden = false; b.remove(); $('in-' + b.dataset.show).focus(); }; });
+  if ($('cSubject')) $('cSubject').oninput = changed;
+  if ($('cQuote')) $('cQuote').onchange = changed;
+
+  /* Danh bạ và Google Sheet */
+  if ($('cBook')) $('cBook').onclick = function () {
+    var groups = [];
+    C.contacts.forEach(function (c) { if (groups.indexOf(c.group) < 0) groups.push(c.group); });
+    $('cPanel').innerHTML = '<div class="c-book"><div class="c-book-head"><b>Danh bạ</b><button type="button" class="link-btn" data-close-panel>Đóng</button></div>' + (groups.length ? groups.map(function (g) {
+      var list = C.contacts.filter(function (c) { return c.group === g; });
+      return '<details><summary>' + esc(g) + ' <span class="hint">(' + list.length + ')</span> <button type="button" class="link-btn" data-add-group="' + esc(g) + '">Thêm cả nhóm</button></summary>' +
+        list.map(function (c) { return '<button type="button" class="c-contact" data-add="' + esc(c.email) + '"><span>' + esc(c.name) + '</span><span class="hint">' + esc(c.email) + '</span></button>'; }).join('') + '</details>';
+    }).join('') : '<p class="hint">Danh bạ trống. BOD thêm ở Cài đặt, Hộp thư, Danh bạ.</p>') + '</div>';
+  };
+  if ($('cSheet')) $('cSheet').onclick = function () {
+    $('cPanel').innerHTML = '<div class="c-book"><label class="field">Link Google Sheet<input id="cSheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/..."></label>' +
+      '<p class="hint">App đọc tab đầu tiên, lấy cột có chữ "email" ở dòng tiêu đề (không có thì lấy mọi ô là email), tối đa 2000 dòng. Sheet cần chia sẻ cho tài khoản Google của CLB.</p>' +
+      '<div class="actions"><button type="button" class="btn ghost sm" data-close-panel>Thôi</button><button type="button" class="btn sm" id="cSheetGo">Thêm vào ô Tới</button></div><span class="msg" id="cSheetMsg"></span></div>';
+    $('cSheetGo').onclick = function () {
+      var b = this; b.disabled = true; setMsg('cSheetMsg', '', 'Đang đọc sheet…');
+      call('recipientsFromSheet', TOKEN, $('cSheetUrl').value).then(function (r) { R.to.add(r.emails.join(',')); $('cPanel').innerHTML = ''; setMsg('cMsg', 'ok', 'Đã thêm ' + r.emails.length + ' email từ sheet.'); })
+        .catch(function (err) { b.disabled = false; setMsg('cSheetMsg', 'bad', err.message); });
+    };
+  };
+  $('cPanel').onclick = function (e) {
+    var b = e.target.closest('[data-add],[data-add-group],[data-close-panel]'); if (!b) return;
+    if (b.dataset.closePanel !== undefined) { $('cPanel').innerHTML = ''; return; }
+    if (b.dataset.add) { R.to.add(b.dataset.add); b.classList.add('done'); return; }
+    e.preventDefault();
+    R.to.add(C.contacts.filter(function (c) { return c.group === b.dataset.addGroup; }).map(function (c) { return c.email; }).join(','));
+    b.textContent = 'Đã thêm';
+  };
+
+  /* Tệp đính kèm */
+  var drawFiles = function () {
+    $('cFiles').innerHTML = S.files.map(function (f, i) {
+      return '<span class="c-file' + (f.reading ? ' busy' : '') + '">' + icon('attach') + '<span class="n">' + esc(f.name) + '</span><span class="hint">' + (f.size ? fileSize(f.size) : '') + '</span>' +
+        '<button type="button" aria-label="Bỏ tệp ' + esc(f.name) + '" data-drop="' + i + '">' + icon('close') + '</button></span>';
+    }).join('');
+  };
+  var total = function () { return S.files.reduce(function (s, f) { return s + (f.size || 0); }, 0); };
+  var addFiles = function (files) {
+    Array.prototype.forEach.call(files || [], function (f) {
+      if (f.size > C.fileMb * 1048576) return setMsg('cMsg', 'bad', 'Tệp "' + f.name + '" lớn hơn ' + C.fileMb + ' MB.');
+      if (total() + f.size > C.totalMb * 1048576) return setMsg('cMsg', 'bad', 'Tổng tệp đính kèm lớn hơn ' + C.totalMb + ' MB.');
+      var t = { name: f.name, size: f.size, reading: true };
+      S.files.push(t);
+      var r = new FileReader();
+      r.onload = function () { t.type = f.type || 'application/octet-stream'; t.base64 = String(r.result).split(',')[1] || ''; t.reading = false; drawFiles(); };
+      r.readAsDataURL(f);
+    });
+    drawFiles(); changed();
+  };
+  $('cFiles').onclick = function (e) { var b = e.target.closest('[data-drop]'); if (b) { S.files.splice(Number(b.dataset.drop), 1); drawFiles(); changed(); } };
+  $('cAttach').onclick = function () { $('cPick').click(); };
+  $('cPick').onchange = function () { addFiles(this.files); this.value = ''; };
+  $('cDrive').onclick = function () {
+    var url = prompt('Dán link tệp trên Google Drive (đã chia sẻ cho tài khoản Google của CLB)');
+    if (!url) return;
+    setMsg('cMsg', '', 'Đang kiểm tra tệp…');
+    call('driveFileInfo', TOKEN, url).then(function (f) {
+      if (total() + f.size > C.totalMb * 1048576) return setMsg('cMsg', 'bad', 'Tổng tệp đính kèm lớn hơn ' + C.totalMb + ' MB.');
+      S.files.push({ name: f.name, size: f.size, drive: f.id }); drawFiles(); changed(); setMsg('cMsg', '', '');
+    }).catch(function (err) { setMsg('cMsg', 'bad', err.message); });
+  };
+  var box = $('modal').firstChild;
+  box.addEventListener('dragover', function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); box.classList.add('drop'); } });
+  box.addEventListener('dragleave', function (e) { if (!box.contains(e.relatedTarget)) box.classList.remove('drop'); });
+  box.addEventListener('drop', function (e) { box.classList.remove('drop'); if (e.dataTransfer.files.length) { e.preventDefault(); addFiles(e.dataTransfer.files); } });
+  drawFiles();
+
+  /* Xem trước, lưu, gửi */
+  var collect = function () {
+    var html = ed.innerHTML.trim();
+    return {
+      action: v.action, threadId: v.threadId || '', to: R.to ? R.to.list().join(', ') : '', cc: R.cc.list().join(', '), bcc: R.bcc.list().join(', '),
+      subject: $('cSubject') ? $('cSubject').value : '', body: htmlEmpty(html) ? '' : safeHtml(html), quote: $('cQuote') ? $('cQuote').checked : true,
+      keep: S.files.filter(function (f) { return f.keep; }).map(function (f) { return f.id; }),
+      files: S.files.filter(function (f) { return !f.keep && f.base64; }).map(function (f) { return { name: f.name, type: f.type, base64: f.base64 }; }),
+      drive: S.files.filter(function (f) { return f.drive; }).map(function (f) { return { id: f.drive }; })
+    };
+  };
+  $('cPreview').onclick = function () {
+    var f = collect();
+    $('cPanel').innerHTML = '<div class="c-book"><div class="c-book-head"><b>Xem trước</b><button type="button" class="link-btn" data-close-panel>Đóng</button></div>' +
+      (f.to ? '<div class="hint">Tới: ' + esc(f.to) + '</div>' : '') + (f.subject ? '<b>' + esc(f.subject) + '</b>' : '') +
+      mailFrame('<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">' + f.body + '</div>' + (C.signature ? '<br><div>--</div>' + C.signature : '')) + '</div>';
+  };
+  var save = function (submit, btn, quiet) {
+    if (S.busy) return Promise.resolve(false);
+    if (S.files.some(function (f) { return f.reading; })) { if (!quiet) setMsg('cMsg', 'bad', 'Đợi tệp đọc xong đã.'); return Promise.resolve(false); }
+    S.busy = true;
+    var ver = S.ver;
+    if (btn) btn.disabled = true;
+    if (quiet) $('cSaved').textContent = 'Đang lưu…'; else setMsg('cMsg', '', submit ? 'Đang gửi…' : 'Đang lưu…');
+    return call('saveMailRequest', TOKEN, collect(), submit, S.id).then(function (r) {
+      S.busy = false; if (btn) btn.disabled = false;
+      S.id = r.id; S.saved = ver;
+      S.files = r.files.map(function (f) { return { id: f.id, name: f.name, size: f.size, keep: true }; }); drawFiles();
+      if ($('cSaved')) $('cSaved').textContent = 'Đã lưu nháp lúc ' + fmtTime(Date.now());
+      if (!quiet) setMsg('cMsg', '', '');
+      return true;
+    }).catch(function (err) { S.busy = false; if (btn) btn.disabled = false; if ($('cSaved')) $('cSaved').textContent = ''; setMsg('cMsg', 'bad', err.message); return false; });
+  };
+  var timer = setInterval(function () {
+    if (!$('cBody')) return clearInterval(timer);
+    if (S.ver !== S.saved && !htmlEmpty(ed.innerHTML)) save(false, null, true);
+  }, 20000);
+  var finish = function (text) { clearInterval(timer); closeModal(); done(text); };
+  $('cSend').onclick = function () { save(true, this).then(function (ok) { if (ok) finish('Đã gửi BOD duyệt. Theo dõi ở mục Yêu cầu của tôi.'); }); };
+  $('cDraft').onclick = function () { save(false, this).then(function (ok) { if (ok) finish('Đã lưu nháp.'); }); };
+  /* Đóng: có thay đổi chưa lưu thì lưu nháp trước */
+  $('cClose').onclick = function () {
+    if (S.ver === S.saved || htmlEmpty(ed.innerHTML)) return finish('');
+    save(false, null).then(function (ok) { if (ok) finish('Đã lưu nháp.'); });
+  };
+  if ($('cDelete')) $('cDelete').onclick = function () {
+    if (!confirm('Xoá thư này?')) return;
+    call('deleteMailRequest', TOKEN, S.id).then(function () { finish('Đã xoá thư.'); }).catch(function (err) { setMsg('cMsg', 'bad', err.message); });
+  };
+  setTimeout(function () { if (R.to && !R.to.list().length) $('in-to').focus(); else ed.focus(); }, 60);
+}
+</script>

@@ -1,0 +1,267 @@
+<script>
+/* Trang Quản lý task (BOD, NS phụ trách ban). Bấm một task thì mở khung bên phải để xem chi tiết, chấm, đổi trạng thái;
+   danh sách vẫn ở nguyên chỗ. Mỗi thao tác máy chủ trả lại cả dữ liệu trang để vẽ lại. */
+var TB = { page: '', data: null, tab: 'open', q: '', dept: '', event: '', open: null, gradeFor: null };
+var TB_TABS = [['open', 'Đang mở'], ['due_soon', 'Sắp đến hạn'], ['late', 'Trễ hạn'], ['waiting', 'Chờ chấm'], ['done', 'Đã xong'], ['cancelled', 'Đã huỷ']];
+var TB_PILLS = { assigned: ['Đã giao', 'info'], due_soon: ['Sắp đến hạn', 'warn'], late: ['Trễ hạn', 'bad'], waiting: ['Chờ chấm', 'info'], done: ['Đã xong', 'good'], cancelled: ['Đã huỷ', ''] };
+var QUALITY = [['complete', 'Hoàn chỉnh'], ['needs_revision', 'Cần chỉnh sửa'], ['poor', 'Làm quá sơ sài']];
+
+function tbInTab(t, tab) {
+  if (tab === 'open') return ['assigned', 'due_soon', 'late'].indexOf(t.status) >= 0;
+  if (tab === 'waiting') return !t.cancelled && t.waiting > 0;
+  if (tab === 'done') return t.status === 'done' || t.status === 'waiting';
+  return t.status === tab;
+}
+
+PAGES.task = function (main) {
+  openTaskBoard(main, 'task', 'Quản lý task', 'Thành viên tự bấm “Đã xong”, app tự biết đúng hạn hay trễ. Xin gia hạn vẫn nhắn Messenger, BOD hoặc NS sửa hạn ở đây.', 'Tạo task');
+};
+/* NS phụ trách ban dùng cùng danh sách task ở trang Ban phụ trách (team.html). */
+
+function openTaskBoard(main, pageId, title, lead, newText) {
+  TB.page = pageId; TB.open = null; TB.data = null; closeDrawer();
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>' + esc(title) + '</h1><p class="lead">' + esc(lead) + '</p></div>' +
+    '<button type="button" class="btn" data-tb="new">' + icon('plus') + esc(newText) + '</button></div>' +
+    '<div id="tbBody">' + loadingHtml() + '</div></div>';
+  call('taskBoard', TOKEN).then(function (d) { if (currentPage() === pageId) { TB.data = d; renderBoard(); } })
+    .catch(function (err) { if ($('tbBody')) $('tbBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+
+function renderBoard() {
+  var d = TB.data, body = $('tbBody');
+  if (!body) return;
+  if (TB.page === 'my-team' && TEAM.tab !== 'task') return teamDataChanged();
+  var focus = document.activeElement && document.activeElement.id === 'tbQuery';
+  var filtered = d.tasks.filter(function (t) {
+    if (TB.dept && t.dept !== TB.dept) return false;
+    if (TB.event && t.eventId !== TB.event) return false;
+    if (!TB.q) return true;
+    var hay = (t.name + ' ' + t.event + ' ' + t.people.map(function (p) { return p.name; }).join(' ')).toLowerCase();
+    return hay.indexOf(TB.q.toLowerCase()) >= 0;
+  });
+  var chips = TB_TABS.filter(function (x) { return x[0] !== 'waiting' || d.canGrade; }).map(function (x) {
+    var n = filtered.filter(function (t) { return tbInTab(t, x[0]); }).length;
+    return '<button type="button" class="chip" data-tb-tab="' + x[0] + '" aria-pressed="' + (TB.tab === x[0]) + '">' + esc(x[1]) + ' <span>' + n + '</span></button>';
+  }).join('');
+  var select = function (id, all, items, cur) {
+    return '<select id="' + id + '" class="pick">' + '<option value="">' + esc(all) + '</option>' + items.map(function (x) {
+      return '<option value="' + esc(x[0]) + '"' + (x[0] === cur ? ' selected' : '') + '>' + esc(x[1]) + '</option>';
+    }).join('') + '</select>';
+  };
+  var rows = filtered.filter(function (t) { return tbInTab(t, TB.tab); });
+  body.innerHTML = '<div class="toolbar"><div class="chips">' + chips + '</div>' +
+    '<label class="search">' + icon('search') + '<input type="search" id="tbQuery" placeholder="Tìm task hoặc người" aria-label="Tìm task hoặc người" value="' + esc(TB.q) + '"></label>' +
+    (d.depts.length > 1 ? select('tbDept', 'Ban: Tất cả', d.depts.map(function (x) { return [x.code, 'Ban ' + x.code]; }), TB.dept) : '') +
+    select('tbEvent', 'Sự kiện: Tất cả', d.events.map(function (x) { return [x.id, x.name]; }), TB.event) + '</div>' +
+    '<div class="tlist">' + (rows.length ? rows.map(taskRow).join('') : '<div class="empty">' + emptyText(d) + '</div>') + '</div>' +
+    '<p class="hint">Bấm vào một task để xem chi tiết, ' + (d.canGrade ? 'chấm chất lượng, ' : '') + 'xác nhận thay và xem nhật ký sửa hạn.</p>';
+  if (focus) { var q = $('tbQuery'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  $('tbQuery').oninput = function () { TB.q = this.value; renderBoard(); };
+  if ($('tbDept')) $('tbDept').onchange = function () { TB.dept = this.value; renderBoard(); };
+  $('tbEvent').onchange = function () { TB.event = this.value; renderBoard(); };
+}
+
+function emptyText(d) {
+  if (!d.hasTerm) return 'Chưa có nhiệm kỳ nào.';
+  if (!d.events.length) return 'Nhiệm kỳ này chưa có sự kiện nào. Mọi task đều thuộc một sự kiện, BOD tạo sự kiện trong Cài đặt, Kế hoạch năm.';
+  if (!d.tasks.length) return 'Chưa có task nào. Bấm Tạo task để giao việc.';
+  return 'Không có task nào ở đây.';
+}
+
+function whoText(t) {
+  if (!t.people.length) return 'Chưa giao ai';
+  if (t.people.length === 1) { var p = t.people[0]; return p.name + ' · ' + [p.dept, p.subTeam].filter(String).join(' '); }
+  return t.people.length + ' người · ' + t.dept;
+}
+
+function taskRow(t) {
+  var p = TB_PILLS[t.status] || ['', ''];
+  return '<div class="trow" data-tb-open="' + esc(t.id) + '">' +
+    '<div class="t"><button type="button" class="link-btn" data-tb-open="' + esc(t.id) + '">' + esc(t.name) + '</button><small>' + esc(t.event) + '</small></div>' +
+    '<span class="who">' + esc(whoText(t)) + '</span>' +
+    '<span class="due">' + esc(fmtDeadline(t.deadline)) + '</span>' +
+    '<span>' + pill(p[0], p[1]) + '</span>' +
+    '<span class="acts">' + (t.cancelled ? '' : '<button type="button" class="btn ghost sm" data-tb="deadline" data-id="' + esc(t.id) + '">Sửa hạn</button>') + '</span></div>';
+}
+
+/* ---------- Khung bên phải ---------- */
+function openDrawer(html) {
+  var d = $('drawer');
+  if (!d) {
+    d = document.createElement('div');
+    d.id = 'drawer'; d.className = 'drawer-wrap';
+    document.body.appendChild(d);
+  }
+  d.innerHTML = '<div class="drawer-scrim" data-tb="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drTitle">' +
+    '<button class="icon-btn close" type="button" data-tb="close" aria-label="Đóng">' + icon('close') + '</button>' + html + '</aside>';
+  d.hidden = false;
+}
+function closeDrawer() { var d = $('drawer'); if (d) { d.hidden = true; d.innerHTML = ''; } }
+function drawerOpen() { var d = $('drawer'); return d && !d.hidden; }
+
+function findTask(id) { return TB.data.tasks.filter(function (t) { return t.id === id; })[0]; }
+function fmtFull(ms) { var d = new Date(ms); return fmtTime(ms) + ' ' + fmtDay(ms) + '/' + d.getFullYear(); }
+
+function renderDetail(keepScroll) {
+  var t = findTask(TB.open);
+  if (!t) return closeDrawer();
+  var top = keepScroll && document.querySelector('.drawer') ? document.querySelector('.drawer').scrollTop : 0;
+  var p = TB_PILLS[t.status] || ['', ''];
+  var html = '<div class="dr-head"><h2 id="drTitle">' + esc(t.name) + '</h2><small>' + esc(t.event + ' · Ban ' + t.dept) + '</small>' + pill(p[0], p[1]) + '</div>' +
+    '<div class="dr-row"><div><b>' + esc(fmtDeadline(t.deadline)) + (t.deadline ? '/' + new Date(t.deadline).getFullYear() : '') + '</b>' +
+    '<small>Người nhập: ' + esc(t.createdBy) + (t.createdAt ? ' lúc ' + fmtFull(t.createdAt) : '') + (t.counted ? '' : ' · Tạo trong giai đoạn giao thoa nên không tính KPI') + '</small></div>' +
+    (t.cancelled ? '' : '<button type="button" class="btn ghost sm" data-tb="deadline" data-id="' + esc(t.id) + '">Sửa hạn</button>') + '</div>' +
+    (t.description ? '<p class="dr-desc">' + esc(t.description) + '</p>' : '') +
+    '<section class="sec"><h3>Người được giao (' + t.people.length + ')</h3><div class="list">' + t.people.map(function (x) { return personRow(t, x); }).join('') + '</div>' +
+    (TB.data.canGrade ? '<p class="hint">Nhớ gửi nhận xét riêng cho thành viên qua Messenger. Đánh giá chỉ hiện trên app.</p>' : '') +
+    '<span class="msg" id="drMsg" role="status"></span></section>' +
+    '<div class="dr-actions">' + (t.cancelled ? '<button type="button" class="btn ghost sm" data-tb="uncancel">Mở lại task</button>' :
+      '<button type="button" class="btn ghost sm" data-tb="edit">Sửa task</button><button type="button" class="btn ghost sm danger" data-tb="cancel">Huỷ task</button>') + '</div>' +
+    '<section class="sec"><h3>Nhật ký</h3><div id="drHistory">' + loadingHtml() + '</div></section>';
+  openDrawer(html);
+  if (top) document.querySelector('.drawer').scrollTop = top;
+  call('taskHistory', TOKEN, t.id).then(function (rows) {
+    if (TB.open !== t.id || !$('drHistory')) return;
+    $('drHistory').innerHTML = rows.length ? '<ul class="history">' + rows.map(function (r) {
+      return '<li><small>' + (r.at ? fmtFull(r.at) : '') + ' · ' + esc(r.who) + '</small>' + esc(r.text) + '</li>';
+    }).join('') + '</ul>' : '<p class="hint">Chưa sửa hạn, chấm hay đổi trạng thái lần nào.</p>';
+  }).catch(function (err) { if ($('drHistory')) $('drHistory').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
+}
+
+var TIMING_TEXT = { on_time: 'Đúng hạn', late: 'Trễ hạn' };
+function personRow(t, x) {
+  var meta, right = '', id = ' data-id="' + esc(t.id) + '" data-member="' + esc(x.id) + '"';
+  if (x.confirmedAt) {
+    meta = 'Xác nhận ' + fmtTime(x.confirmedAt) + ' ' + fmtDay(x.confirmedAt) + (x.confirmedBy ? ' (' + x.confirmedBy + ' xác nhận thay)' : '') +
+      ' · ' + TIMING_TEXT[x.timing] + (x.markedOnTime ? ' (Nộp đúng hạn)' : '');
+  } else {
+    meta = x.status === 'not_done' ? 'Không xác nhận, tính là Không làm' : 'Chưa xác nhận';
+  }
+  if (x.result === 'pass') right += pill('Đạt', 'good');
+  else if (x.result === 'fail') right += pill('Chưa đạt', 'bad');
+  if (!t.cancelled) {
+    if (!x.confirmedAt) right += '<button type="button" class="btn ghost sm" data-tb-person="confirm"' + id + '>Xác nhận thay</button>';
+    if (x.confirmedAt && x.timing === 'late' && !x.markedOnTime) right += '<button type="button" class="btn ghost sm" data-tb-person="on_time"' + id + '>Nộp đúng hạn</button>';
+    if (x.markedOnTime) right += '<button type="button" class="btn ghost sm" data-tb-person="not_on_time"' + id + '>Bỏ Nộp đúng hạn</button>';
+    if (x.confirmedAt && (!x.quality || TB.data.canGrade)) right += '<button type="button" class="btn ghost sm" data-tb-person="undo"' + id + '>Huỷ xác nhận</button>';
+  }
+  var grade = '';
+  if (TB.data.canGrade && x.confirmedAt && !t.cancelled) {
+    grade = '<div class="grade' + (TB.gradeFor === x.id ? ' ask' : '') + '"><span>' + (TB.gradeFor === x.id ? 'Chấm chất lượng luôn nhé:' : (x.quality ? 'Chấm lại:' : 'Chấm:')) + '</span><span class="seg">' +
+      QUALITY.map(function (q) { return '<button type="button" data-tb-grade="' + q[0] + '"' + id + ' aria-pressed="' + (x.quality === q[0]) + '">' + q[1] + '</button>'; }).join('') +
+      '</span>' + (x.gradedBy ? '<small>' + esc(x.gradedBy) + ' chấm</small>' : '') + '</div>';
+  } else if (x.quality) {
+    grade = '<div class="grade"><small>' + esc(QUALITY.filter(function (q) { return q[0] === x.quality; })[0][1] + ' · ' + x.gradedBy + ' chấm') + '</small></div>';
+  }
+  return '<div class="item person"><div class="t"><b>' + esc(x.name) + '</b><small>' + esc([x.dept, x.subTeam].filter(String).join(' ') + ' · ' + meta) + '</small></div>' +
+    '<div class="acts">' + right + '</div>' + grade + '</div>';
+}
+
+/* ---------- Tạo, sửa task ---------- */
+function toLocalInput(ms) { var d = new Date(ms); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + 'T' + p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+function fromLocalInput(s) { var m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(s || ''); return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]).getTime() : ''; }
+function defaultDeadline() { var d = new Date(); d.setDate(d.getDate() + 7); d.setHours(23, 59, 0, 0); return d.getTime(); }
+
+function renderForm(t) {
+  var d = TB.data, dept = t ? t.dept : (TB.dept || (d.depts.length === 1 ? d.depts[0].code : ''));
+  var picked = t ? t.people.map(function (p) { return p.id; }) : [];
+  var locked = t ? t.people.filter(function (p) { return p.confirmedAt; }).map(function (p) { return p.id; }) : [];
+  var html = '<div class="dr-head"><h2 id="drTitle">' + (t ? 'Sửa task' : 'Tạo task') + '</h2></div>' +
+    (d.events.length ? '' : '<div class="note plain"><span>' + esc(emptyText(d)) + '</span></div>') +
+    '<form id="taskForm" class="form">' +
+    '<label class="field">Sự kiện<select id="tfEvent" required><option value="">Chọn sự kiện</option>' + d.events.map(function (e) {
+      return '<option value="' + esc(e.id) + '"' + ((t ? t.eventId : TB.event) === e.id ? ' selected' : '') + '>' + esc(e.name) + '</option>';
+    }).join('') + '</select></label>' +
+    '<label class="field">Ban<select id="tfDept" required>' + (d.depts.length > 1 ? '<option value="">Chọn ban</option>' : '') + d.depts.map(function (x) {
+      return '<option value="' + esc(x.code) + '"' + (dept === x.code ? ' selected' : '') + '>' + esc(x.code + ' · ' + x.name) + '</option>';
+    }).join('') + '</select></label>' +
+    '<label class="field">Tên task<input id="tfName" required maxlength="200" value="' + esc(t ? t.name : '') + '"></label>' +
+    '<label class="field">Mô tả (không bắt buộc)<textarea id="tfDesc" rows="3">' + esc(t ? t.description : '') + '</textarea></label>' +
+    '<label class="field">Hạn chót<input type="datetime-local" id="tfDeadline" required value="' + toLocalInput(t && t.deadline ? t.deadline : defaultDeadline()) + '"></label>' +
+    (t ? '<p class="hint">Đổi hạn chót ở đây cũng được ghi vào Nhật ký như Sửa hạn.</p>' : (d.counted ? '' : '<p class="hint">Đang ở giai đoạn giao thoa nên task này không tính KPI.</p>')) +
+    '<div class="field"><span>Người được giao <span id="tfCount"></span></span><label class="search">' + icon('search') + '<input type="search" id="tfFind" placeholder="Tìm tên" aria-label="Tìm người"></label>' +
+    '<div class="pick-list" id="tfPeople"></div></div>' +
+    '<span class="msg" id="tfMsg" role="status"></span>' +
+    '<div class="dr-actions"><button type="button" class="btn ghost" data-tb="' + (t ? 'back' : 'close') + '">Huỷ</button><button class="btn" id="tfSave"' + (d.events.length ? '' : ' disabled') + '>' + (t ? 'Lưu' : 'Tạo task') + '</button></div></form>';
+  openDrawer(html);
+  var chosen = {};
+  picked.forEach(function (id) { chosen[id] = true; });
+  var drawPeople = function () {
+    var dep = $('tfDept').value, q = $('tfFind').value.trim().toLowerCase();
+    var list = d.members.filter(function (m) { return m.dept === dep; });
+    Object.keys(chosen).forEach(function (id) { if (!list.some(function (m) { return m.id === id; })) delete chosen[id]; });
+    var shown = list.filter(function (m) { return !q || m.name.toLowerCase().indexOf(q) >= 0 || chosen[m.id]; });
+    $('tfPeople').innerHTML = !dep ? '<p class="hint">Chọn ban trước.</p>' : !list.length ? '<p class="hint">Ban này chưa có ai.</p>' : shown.map(function (m) {
+      var lock = locked.indexOf(m.id) >= 0;
+      return '<label class="check"><input type="checkbox" value="' + esc(m.id) + '"' + (chosen[m.id] ? ' checked' : '') + (lock ? ' disabled' : '') + '><span>' + esc(m.name) +
+        (m.subTeam ? ' <small>' + esc(m.subTeam) + '</small>' : '') + (lock ? ' <small>đã xác nhận, không bỏ được</small>' : '') + '</span></label>';
+    }).join('');
+    $('tfCount').textContent = Object.keys(chosen).length ? '(' + Object.keys(chosen).length + ' người)' : '';
+  };
+  drawPeople();
+  $('tfDept').onchange = drawPeople;
+  $('tfFind').oninput = drawPeople;
+  $('tfPeople').onchange = function (e) { if (e.target.checked) chosen[e.target.value] = true; else delete chosen[e.target.value]; drawPeople(); };
+  $('tfName').focus();
+  $('taskForm').onsubmit = function (e) {
+    e.preventDefault();
+    var f = { taskId: t ? t.id : '', eventId: $('tfEvent').value, deptCode: $('tfDept').value, name: $('tfName').value,
+      description: $('tfDesc').value, deadline: fromLocalInput($('tfDeadline').value), memberIds: Object.keys(chosen) };
+    $('tfSave').disabled = true; setMsg('tfMsg', '', 'Đang lưu…');
+    call('saveTask', TOKEN, f).then(function (data) {
+      TB.data = data;
+      if (t) { TB.open = t.id; renderDetail(); } else closeDrawer();
+      renderBoard();
+    }).catch(function (err) { $('tfSave').disabled = false; setMsg('tfMsg', 'bad', err.message); });
+  };
+}
+
+/* ---------- Sửa hạn ---------- */
+function openDeadlineBox(t) {
+  openModal('<h2 id="boxTitle">Sửa hạn chót</h2><p class="hint" style="font-size:14px">' + esc(t.name) + '</p>' +
+    '<form id="dlForm" style="display:flex;flex-direction:column;gap:12px"><label class="field">Hạn chót mới<input type="datetime-local" id="dlValue" required value="' + toLocalInput(t.deadline || defaultDeadline()) + '"></label>' +
+    '<p class="hint">Mỗi lần sửa hạn đều được ghi vào Nhật ký của task.</p><span class="msg" id="dlMsg" role="status"></span>' +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="dlBtn">Lưu hạn mới</button></div></form>');
+  $('dlValue').focus();
+  $('dlForm').onsubmit = function (e) {
+    e.preventDefault();
+    $('dlBtn').disabled = true; setMsg('dlMsg', '', 'Đang lưu…');
+    call('setTaskDeadline', TOKEN, t.id, fromLocalInput($('dlValue').value)).then(function (data) {
+      TB.data = data; closeModal(); renderBoard(); if (TB.open === t.id && drawerOpen()) renderDetail(true);
+    }).catch(function (err) { $('dlBtn').disabled = false; setMsg('dlMsg', 'bad', err.message); });
+  };
+}
+
+/** Gọi một thao tác trong khung chi tiết rồi vẽ lại. */
+function detailAction(btn, fn, args, after) {
+  btn.disabled = true; setMsg('drMsg', '', 'Đang lưu…');
+  call.apply(null, [fn, TOKEN].concat(args)).then(function (data) {
+    TB.data = data; if (after) after(); renderBoard(); renderDetail(true);
+  }).catch(function (err) { btn.disabled = false; setMsg('drMsg', 'bad', err.message); });
+}
+
+document.addEventListener('click', function (e) {
+  if (currentPage() !== TB.page || !TB.data) return;
+  var b = e.target.closest('[data-tb],[data-tb-tab],[data-tb-open],[data-tb-person],[data-tb-grade]');
+  if (!b) return;
+  if (b.dataset.tbTab) { TB.tab = b.dataset.tbTab; return renderBoard(); }
+  if (b.dataset.tbPerson) {
+    var what = b.dataset.tbPerson, member = b.dataset.member;
+    if (what === 'undo' && !confirm('Huỷ xác nhận hoàn thành của người này?' + (TB.data.canGrade ? ' Phần chấm (nếu có) cũng bị bỏ.' : ''))) return;
+    return detailAction(b, 'setAssignmentStatus', [b.dataset.id, member, what], function () {
+      TB.gradeFor = what === 'confirm' && TB.data.canGrade ? member : null; // BOD xác nhận thay thì mở ngay phần chấm
+    });
+  }
+  if (b.dataset.tbGrade) return detailAction(b, 'gradeTask', [b.dataset.id, b.dataset.member, b.dataset.tbGrade], function () { TB.gradeFor = null; });
+  if (b.dataset.tbOpen && !e.target.closest('button:not([data-tb-open])')) { TB.open = b.dataset.tbOpen; TB.gradeFor = null; return renderDetail(); }
+  var act = b.dataset.tb, t = TB.open && findTask(TB.open);
+  if (act === 'close') { TB.open = null; closeDrawer(); }
+  else if (act === 'new') renderForm(null);
+  else if (act === 'deadline') openDeadlineBox(findTask(b.dataset.id));
+  else if (act === 'edit' && t) renderForm(t);
+  else if (act === 'back') renderDetail();
+  else if (act === 'cancel' && t) { if (confirm('Huỷ task “' + t.name + '”? Task đã huỷ không tính vào KPI. Mở lại được sau.')) detailAction(b, 'setTaskCancelled', [t.id, true]); }
+  else if (act === 'uncancel' && t) detailAction(b, 'setTaskCancelled', [t.id, false]);
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && drawerOpen() && $('modal').hidden) { TB.open = null; closeDrawer(); } });
+</script>

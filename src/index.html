@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500&display=swap" rel="stylesheet">
+  <?!= include('styles') ?>
+</head>
+<body>
+  <div id="screen"><div class="splash">Đang mở app…</div></div>
+  <div class="app" id="app" hidden>
+    <aside class="side" id="side" aria-label="Menu chính">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l8-8"/></svg></span>
+        <b>CLB ECO</b>
+        <button class="icon-btn only-phone" id="closeSide" type="button" aria-label="Đóng menu"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <nav id="nav"></nav>
+      <div class="grow"></div>
+      <div class="me-wrap">
+        <button class="me" id="meBtn" type="button" aria-haspopup="menu" aria-expanded="false"></button>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+    <div class="body">
+      <header class="topbar only-phone">
+        <button class="icon-btn" id="openSide" type="button" aria-label="Mở menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <span class="topbar-title" id="topTitle"></span>
+        <button class="avatar-btn" id="meBtnPhone" type="button" aria-label="Mở menu tài khoản"></button>
+      </header>
+      <main class="main" id="main"></main>
+    </div>
+  </div>
+  <div class="menu-scrim" id="menuScrim" hidden></div>
+  <div class="menu" id="meMenu" role="menu" aria-label="Tài khoản" hidden></div>
+  <div class="overlay" id="settings" hidden></div>
+  <div class="overlay small" id="modal" hidden></div>
+  <script>var GOOGLE_CLIENT_ID = <?= googleClientId ?>; var SEASON = <?= season ?>;</script>
+  <?!= include('season') ?>
+  <?!= include('home') ?>
+  <?!= include('taskboard') ?>
+  <?!= include('points') ?>
+  <?!= include('log') ?>
+  <?!= include('feedback') ?>
+  <?!= include('compose') ?>
+  <?!= include('mailbox') ?>
+  <?!= include('mail') ?>
+  <?!= include('bulk') ?>
+  <?!= include('members') ?>
+  <?!= include('notify') ?>
+  <?!= include('team') ?>
+  <?!= include('seeding') ?>
+  <?!= include('birthday') ?>
+  <?!= include('rules') ?>
+  <?!= include('roster') ?>
+  <?!= include('permissions') ?>
+  <?!= include('system') ?>
+  <?!= include('datatabs') ?>
+  <?!= include('shell') ?>
+</body>
+</html>
