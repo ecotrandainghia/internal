@@ -22,7 +22,7 @@ function addMember(app, id, email, extra = {}) {
 
 test('trang web: chưa cài thì mở trang cài đặt, cài rồi thì mở app', () => {
   const app = loadApp(FILES);
-  assert.equal(app.doGet().name, 'setup');
+  assert.equal(app.doGet().name, 'setup_view');
   app.__viewer = 'clb@example.com';
   app.setupApp({ ...BOD });
   const page = app.doGet();

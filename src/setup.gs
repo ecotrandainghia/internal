@@ -21,7 +21,7 @@ function maskEmail_(email) {
 }
 
 function setupPage_() {
-  var t = HtmlService.createTemplateFromFile('setup');
+  var t = HtmlService.createTemplateFromFile('setup_view');
   t.isOwner = isOwner_();
   t.ownerEmail = t.isOwner ? String(Session.getEffectiveUser().getEmail()) : maskEmail_(Session.getEffectiveUser().getEmail());
   return t.evaluate().setTitle('Cài đặt app CLB ECO')

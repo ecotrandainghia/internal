@@ -29,9 +29,9 @@ App quản lý CLB ECO, chạy trên Google Apps Script, viết theo wireframe V
 - `src/db.gs`: mở file dữ liệu, tự tạo tab và cột còn thiếu, đọc ghi theo tên tab và tên cột, khoá ghi, Nhật ký, Cài đặt.
 - `src/access.gs`: quy tắc đăng nhập và quyền (ai được vào, BOD hay thành viên, nhãn nào còn hạn, nhiệm kỳ của một ngày). Chạy thử được bằng Node.
 - `src/auth.gs`: đăng nhập bằng email và mật khẩu hoặc Google, phiên ghi nhớ 60 ngày, đổi mật khẩu, lưu giao diện, đồng ý dùng dữ liệu.
-- `src/setup.gs`, `src/setup.html`: trang cài đặt lần đầu.
+- `src/setup.gs`, `src/setup_view.html`: trang cài đặt lần đầu.
 - `src/stats.gs`: cách tính dùng chung (nhiệm kỳ và giai đoạn hiện tại, kết quả task, KPI task, KPI log, điểm, hạng). Không gọi gì của Google nên chạy thử được bằng Node.
-- `src/home.gs`, `src/home.html`: trang chủ BOD và thành viên.
+- `src/home.gs`, `src/home_view.html`: trang chủ BOD và thành viên.
 - `src/tasks.gs`, `src/taskboard.html`: task. Thành viên bấm Đã xong hoặc Huỷ xác nhận; BOD và NS phụ trách ban nhập task, sửa hạn, huỷ task, xác nhận thay, bấm Nộp đúng hạn; BOD chấm.
 
 Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng tiếng Việt có dấu.
@@ -60,9 +60,9 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Thành viên thấy điểm và hạng trong giai đoạn (cả CLB, BOD không xếp hạng), KPI task, KPI log và số buổi cần thêm. Giai đoạn giao thoa không có điểm và KPI.
 - KPI task chỉ tính task đã chấm hoặc Không làm. KPI log của sự kiện chưa chốt dùng chỉ tiêu ban đầu.
 - Task hiện Sắp đến hạn khi còn `due_soon_days` ngày (tab Cài đặt, mặc định 2).
-- `src/points.gs`, `src/points.html`: trang Cộng điểm và Thang điểm (chỉ BOD).
-- `src/log.gs`, `src/log.html`: Kế hoạch năm (sự kiện) và trang Quản lý log: buổi log, chỉ tiêu, điểm danh, chốt và mở chốt.
-- `src/feedback.gs`, `src/feedback.html`: trang Góp ý (thành viên gửi, BOD đọc và đánh dấu áp dụng).
+- `src/points.gs`, `src/points_view.html`: trang Cộng điểm và Thang điểm (chỉ BOD).
+- `src/log.gs`, `src/log_view.html`: Kế hoạch năm (sự kiện) và trang Quản lý log: buổi log, chỉ tiêu, điểm danh, chốt và mở chốt.
+- `src/feedback.gs`, `src/feedback_view.html`: trang Góp ý (thành viên gửi, BOD đọc và đánh dấu áp dụng).
 - `src/signup.gs`: sheet đăng ký log của từng sự kiện: tạo, dán link, đọc người đăng ký khi điểm danh.
 
 ## Task
