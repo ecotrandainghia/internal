@@ -60,10 +60,10 @@ var APP_LINK = 'https://ecotrandainghia.github.io/internal/';
 var SETTINGS = [
   ['Của tôi', false, [
     ['account', 'Tài khoản của tôi', 'user', 'Ai cũng thấy phần này.', [['Ảnh đại diện', 'Hiện ở thanh bên và bảng điểm', 'Đổi ảnh'], ['Mật khẩu', 'Đổi mật khẩu đăng nhập của bạn', 'Đổi mật khẩu', 'password'], ['Giao diện', 'Sáng, tối hoặc theo cài đặt của máy', 'theme'], ['Dữ liệu ẩn danh', 'Cho CLB dùng dữ liệu của bạn ở dạng ẩn danh, không bắt buộc', 'consent'], ['Hướng dẫn', 'Xem lại hướng dẫn cài app và tour giới thiệu', 'Xem lại', 'guide']]],
-    ['my-notify', 'Thông báo của tôi', 'bell', 'Phải bật ít nhất kênh Zalo.', [['Zalo', 'Bot Zalo của CLB', 'Kết nối'], ['App trên điện thoại', 'Khi đã thêm app vào màn hình chính', 'Bật'], ['Gửi thử', 'Gửi một tin thử tới các kênh đang bật', 'Gửi thử'], ['Thông báo 30 ngày qua', 'Xem lại những tin app đã gửi bạn', 'Xem']]]]],
+    ['my-notify', 'Thông báo của tôi', 'bell', 'Chọn cách bạn nhận tin: Zalo, app trên điện thoại hoặc cả hai. Phải giữ ít nhất một đường.', [['Zalo', 'Nhắn mã kết nối cho bot Zalo của CLB', 'Kết nối', 'my-notify'], ['App trên điện thoại', 'Khi đã thêm app vào màn hình chính', 'Bật', 'my-notify'], ['Tự nhắc hạn task', 'Mặc định tắt vì NS phụ trách ban nhắc giúp', 'Sửa', 'my-notify'], ['Gửi thử', 'Gửi một tin thử tới các đường đang bật', 'Gửi thử', 'my-notify'], ['Thông báo 30 ngày qua', 'Xem lại những tin app đã gửi bạn', 'Xem', 'notices']]]]],
   ['Câu lạc bộ (chỉ BOD)', true, [
     ['rules', 'Quy tắc CLB', 'book', 'Mỗi lần sửa được ghi vào Nhật ký.', [['Cơ cấu ban', 'Tên ban, viết tắt, ban nào có NS phụ trách', 'Sửa'], ['Thang điểm', 'Các loại hoạt động và số điểm mỗi loại', 'Sửa'], ['Khen thưởng và hạn task', 'Top khen thưởng, số ngày tính là sắp đến hạn', 'Sửa'], ['Ngưỡng cảnh báo', 'Có số mặc định, sửa được khi cần', 'Sửa'], ['Kế hoạch năm', 'Các sự kiện trong năm để gom task và log', 'Mở', 'plan']]],
-    ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua kênh nào, gửi thử', 'Xem'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, báo cáo seeding', 'Sửa'], ['Bot Zalo', 'Mã kết nối và số người đã kết nối', 'Mở']]],
+    ['club-notify', 'Thông báo của CLB', 'bell', '', [['Thông báo của thành viên', 'Ai nhận qua đường nào, gửi thử', 'Xem', 'club-notify'], ['Lịch nhắc task', 'Các mốc nhắc trước hạn và khi trễ', 'Sửa'], ['Báo cho BOD', 'Góp ý mới, thư chờ duyệt, seeding', 'Sửa', 'bod-alerts'], ['Bot Zalo', 'Mã bot và số người đã kết nối', 'Mở', 'zalo-bot']]],
     ['activities', 'Hoạt động CLB', 'star', '', [['File mẫu log', 'File mẫu và thư mục lưu sheet đăng ký log', 'Sửa', 'log-files'], ['Sheet đăng ký log', 'Mỗi sự kiện một sheet, tạo hoặc đổi ở trang Quản lý log', 'Mở', 'log-page'], ['Báo cáo seeding', 'Mở trang báo cáo seeding', 'Mở'], ['Link ghim', 'Mọi người, kể cả BOD, thấy giống nhau', 'Sửa']]],
     ['mailbox', 'Hộp thư', 'mail', '', [['Danh bạ', 'Thành viên CLB và các địa chỉ khác', 'Mở', 'contacts'], ['Chữ ký', 'Tự thêm vào cuối thư UCV gửi', 'Sửa', 'mail-signature'], ['Khi vượt hạn mức gửi', 'Chia sang ngày sau, bớt người hoặc hẹn giờ', 'Xem', 'mail-quota']]],
     ['accounts', 'Tài khoản và phân quyền', 'lock', '', [['Tải danh sách thành viên', 'Sau Oday, sau mỗi đợt tuyển', 'Tải lên'], ['Phân quyền nhân sự', 'BOD gán tay từng người', 'Sửa'], ['Core team và UCV', 'Tải sheet lên; UCV có thêm hộp thư', 'Tải lên'], ['Đặt lại mật khẩu', 'Cấp lại mật khẩu cho bất kỳ ai', 'Mở'], ['Đăng nhập bằng Google', 'Cho phép đăng nhập bằng tài khoản Google', 'Bật'], ['Lịch sinh nhật', 'Google Lịch ghi sinh nhật thành viên', 'Mở']]],
@@ -86,12 +86,14 @@ function call(fn) {
 }
 
 /* ---------- Trang vỏ (app cài trên điện thoại, máy tính): ghi nhớ đăng nhập, đăng nhập Google, màu thanh trên ---------- */
-var wrapper = null, wrapperOrigin = '';
+var wrapper = null, wrapperOrigin = '', WRAPPER_PUSH = '';
 function toWrapper(d) { if (wrapper) { try { wrapper.postMessage(d, wrapperOrigin); } catch (e) {} } }
 window.addEventListener('message', function (e) {
   var d = e.data;
   if (!d || typeof d !== 'object' || !/^https:\/\//.test(e.origin) || e.source !== window.top) return;
+  if (d.eco === 'dang-ky-thong-bao' || d.eco === 'thong-bao-loi') return onPushResult(d);
   if (d.eco === 'vo') {
+    WRAPPER_PUSH = String(d.thongBao || '');
     var first = !wrapper;
     wrapper = e.source; wrapperOrigin = e.origin;
     if (!first) return;
@@ -334,8 +336,12 @@ function renderNav() {
   $('meBtn').innerHTML = av + '<span class="who"><b>' + esc(USER.name) + '</b><small>' + esc(userSubtitle()) + '</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>';
   $('meBtnPhone').innerHTML = av;
 }
+/* Trang không có trên thanh bên, mở từ menu avatar hoặc Cài đặt. */
+var EXTRA_PAGES = { notifications: 'Thông báo' };
 function renderPage() {
   var cur = currentPage(), item = navItems().filter(function (x) { return x[0] === cur; })[0];
+  if (!item && EXTRA_PAGES[cur]) item = [cur, EXTRA_PAGES[cur]];
+  if (!item) { page = cur = 'home'; item = navItems()[0]; }
   $('topTitle').textContent = item[1];
   if (PAGES[cur]) PAGES[cur]($('main'));
   else $('main').innerHTML = '<h1>' + esc(item[1]) + '</h1><p class="lead">Khung app mới. Nội dung trang này làm ở bước ' + item[3] + ' của kế hoạch.</p><div class="todo">Chưa có nội dung</div>';
@@ -352,6 +358,7 @@ function openMenu(btn) {
   var m = $('meMenu');
   m.innerHTML = '<div class="email">' + esc(USER.email) + '</div>' +
     '<button class="menu-item" type="button" data-act="settings">' + icon('gear') + '<span>Cài đặt</span><kbd>Ctrl+,</kbd></button>' +
+    '<button class="menu-item" type="button" data-act="notices">' + icon('bell') + '<span>Thông báo</span></button>' +
     '<div class="menu-item">' + icon('theme') + '<span>Giao diện</span>' + themeSeg() + '</div>' +
     '<button class="menu-item" type="button" data-act="tour">' + icon('help') + '<span>Xem lại hướng dẫn</span></button><hr>' +
     '<button class="menu-item danger" type="button" data-act="logout">' + icon('logout') + '<span>Đăng xuất</span></button>';
@@ -433,7 +440,12 @@ document.addEventListener('click', function (e) {
   else if (act === 'mail-quota') openQuotaHelp();
   else if (act === 'log-page') { closeSettings(); page = 'log'; renderPage(); }
   else if (act === 'close-modal') closeModal();
-  else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); }
+  else if (act === 'notify') { openSettings(); openSection = 'my-notify'; renderSettings(''); openMyNotify(); }
+  else if (act === 'my-notify') openMyNotify();
+  else if (act === 'notices') { closeSettings(); closeMenu(); page = 'notifications'; renderPage(); }
+  else if (act === 'club-notify') openClubNotify('people');
+  else if (act === 'bod-alerts') openClubNotify('alerts');
+  else if (act === 'zalo-bot') openClubNotify('bot');
   else if (act === 'todo') alert('Phần này làm ở các bước sau của kế hoạch.');
 });
 $('meBtn').addEventListener('click', function () { $('meMenu').hidden ? openMenu(this) : closeMenu(); });

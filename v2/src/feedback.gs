@@ -98,6 +98,7 @@ function sendFeedback(token, f) {
     content: String(f.content).trim(), is_anonymous: !f.named, member_id: f.named ? me.memberId : '',
     sent_date: todayDate_(), is_read: false, is_applied: false, marked_by: ''
   }], { termId: term.term_id });
+  alertBod_('feedback', 'Góp ý mới', 'Có một góp ý mới' + (f.named ? ' của ' + me.user.name : ' ẩn danh') + '. Mở app, trang Góp ý để đọc.');
   return myFeedbackFor_(me);
 }
 
