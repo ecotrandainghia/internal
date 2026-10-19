@@ -1,5 +1,5 @@
 <script>
-/* Cài đặt > Tài khoản và phân quyền > Tải danh sách thành viên: chọn loại đợt, dán link sheet, xem trước rồi tải; các lần tải gần
+/* Cài đặt > Tài khoản và phân quyền > Tải danh sách thành viên (và hộp Core team và UCV ở cuối file): chọn loại đợt, dán link sheet, xem trước rồi tải; các lần tải gần
    đây (hoàn tác lần mới nhất); Kết thúc nhiệm kỳ khi đang ở GD2. */
 var RS = { data: null, decisions: {}, view: null };
 var RS_KINDS = {
@@ -101,15 +101,16 @@ function drawRosterPreview(v) {
   };
 }
 
-function rsUploads(d) {
-  if (!d.uploads.length) return '';
-  return '<section class="sec"><h2>Các lần tải gần đây</h2><div class="list">' + d.uploads.map(function (u) {
+function rsUploads(d, types) {
+  var list = d.uploads.filter(function (u) { return !types || types.indexOf(u.type) >= 0; });
+  if (!list.length) return '';
+  return '<section class="sec"><h2>Các lần tải gần đây</h2><div class="list">' + list.map(function (u) {
     return '<div class="sd-row"><div><b>' + esc(RS_TYPES[u.type] + (u.kind ? ', ' + RS_KINDS[u.kind][0] : '')) + '</b>' +
       '<small>' + fmtTime(u.at) + ' ' + fmtDay(u.at) + ' · ' + esc(u.by) + (u.summary ? ' · ' + esc(u.summary) : '') + '</small></div>' +
       (u.status === 'undone' ? pill('Đã hoàn tác', '') : '<span></span>') +
       '<div class="acts">' + (u.url ? '<a class="btn ghost sm" href="' + esc(u.url) + '" target="_blank" rel="noopener">Bản sao</a>' : '') +
       (u.canUndo ? '<button type="button" class="btn ghost sm" data-rs-undo="' + esc(u.id) + '">Hoàn tác</button>' : '') + '</div></div>';
-  }).join('') + '</div><p class="hint">Chỉ hoàn tác được lần tải danh sách thành viên mới nhất, trong ' + d.undoDays + ' ngày, khi người mới chưa có task, điểm danh hay điểm.</p></section>';
+  }).join('') + '</div><p class="hint">Chỉ hoàn tác được lần tải mới nhất của mỗi loại sheet, trong ' + d.undoDays + ' ngày. Với danh sách thành viên, người mới phải chưa có task, điểm danh hay điểm.</p></section>';
 }
 
 function rsEnd(d) {
@@ -120,12 +121,15 @@ function rsEnd(d) {
   return h + '<div><button type="button" class="btn ghost" id="rsEnd"' + (d.endBlockers.length ? ' disabled' : '') + '>Kết thúc nhiệm kỳ ' + esc(d.term.label) + '</button></div></section>';
 }
 
-function bindRosterRows() {
+function bindRosterRows(redraw) {
+  redraw = redraw || drawRoster;
   document.querySelectorAll('[data-rs-undo]').forEach(function (b) {
     b.onclick = function () {
-      if (!confirm('Hoàn tác lần tải này? Người mới thêm sẽ bị xoá, thông tin và ban của người cũ trở lại như trước.')) return;
+      var u = RS.data.uploads.filter(function (x) { return x.id === b.dataset.rsUndo; })[0];
+      if (!confirm(u.type === 'members' ? 'Hoàn tác lần tải này? Người mới thêm sẽ bị xoá, thông tin và ban của người cũ trở lại như trước.'
+        : 'Hoàn tác lần tải sheet ' + RS_TYPES[u.type] + '? Nhãn ' + RS_TYPES[u.type] + ' trở lại như trước lần tải.')) return;
       b.disabled = true; setMsg('rsMsg', '', 'Đang hoàn tác…');
-      call('undoRoster', TOKEN, b.dataset.rsUndo).then(function (d) { drawRoster(d, ['ok', 'Đã hoàn tác.']); })
+      call('undoRoster', TOKEN, b.dataset.rsUndo).then(function (d) { redraw(d, ['ok', 'Đã hoàn tác.']); })
         .catch(function (err) { b.disabled = false; setMsg('rsMsg', 'bad', err.message); });
     };
   });
@@ -134,6 +138,67 @@ function bindRosterRows() {
     var btn = this;
     btn.disabled = true; setMsg('rsMsg', '', 'Đang kết thúc nhiệm kỳ…');
     call('endTerm', TOKEN).then(function (d) { drawRoster(d, ['ok', 'Đã kết thúc nhiệm kỳ. Bước tiếp: chốt BOD mới rồi tải sheet Oday.']); })
+      .catch(function (err) { btn.disabled = false; setMsg('rsMsg', 'bad', err.message); });
+  };
+}
+/* ---------- Core team và UCV ---------- */
+var LS_TYPES = {
+  core_team: ['Core team', 'Cột Họ và tên, Email, Cách vào core team. Core team không có quyền gì thêm, dùng để xét UCV và certificate core team.'],
+  ucv: ['UCV', 'Cột Họ và tên, Email (cột Vị trí ứng cử app không đọc). UCV có thêm hộp thư CLB; rời UCV thì mất hộp thư.']
+};
+
+function openLabelSheet() {
+  RS.lsType = RS.lsType || 'core_team';
+  wideModal('<h2 id="boxTitle">Core team và UCV</h2>' + loadingHtml());
+  call('rosterPage', TOKEN).then(function (d) { drawLabelSheet(d); }).catch(function (err) { failBox('Core team và UCV', err); });
+}
+
+function drawLabelSheet(d, flash) {
+  RS.data = d;
+  wideModal('<h2 id="boxTitle">Core team và UCV</h2>' +
+    '<p class="hint">Mỗi lần tải là danh sách đầy đủ hiện tại. Ai mới có trong sheet thì được gắn nhãn, ai không còn thì gỡ nhãn (vẫn là thành viên bình thường). App nối người trong sheet với thành viên bằng Email, và Họ và tên phải khớp.</p>' +
+    '<span class="msg" id="rsMsg" role="status"></span>' +
+    '<form id="lsForm" class="rs-form"><fieldset class="rs-kinds"><legend>Sheet</legend>' + Object.keys(LS_TYPES).map(function (t) {
+      return '<label class="check"><input type="radio" name="lsType" value="' + t + '"' + (t === RS.lsType ? ' checked' : '') + '><span>' + esc(LS_TYPES[t][0]) + '<small>' + esc(LS_TYPES[t][1]) + '</small></span></label>';
+    }).join('') + '</fieldset>' +
+    '<label class="field">Link Google Sheets<input id="lsLink" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." required></label>' +
+    '<label class="field">Tên tab (để trống là tab đầu tiên)<input id="lsTab" maxlength="100"></label>' +
+    '<div class="actions" style="justify-content:flex-start"><button class="btn ghost" id="lsPreviewBtn">Xem trước</button></div></form><div id="lsPreview"></div>' +
+    rsUploads(d, ['core_team', 'ucv']) +
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+  if (flash) setMsg('rsMsg', flash[0], flash[1]);
+  var reset = function () { $('lsPreview').innerHTML = ''; };
+  document.querySelectorAll('[name=lsType]').forEach(function (r) { r.onchange = function () { RS.lsType = r.value; reset(); }; });
+  $('lsLink').oninput = reset; $('lsTab').oninput = reset;
+  $('lsForm').onsubmit = function (e) { e.preventDefault(); lsPreview(); };
+  bindRosterRows(drawLabelSheet);
+}
+
+function lsReq() { return { type: RS.lsType, link: $('lsLink').value.trim(), tab: $('lsTab').value.trim() }; }
+
+function lsPreview() {
+  var btn = $('lsPreviewBtn');
+  btn.disabled = true; setMsg('rsMsg', '', 'Đang đọc sheet…'); $('lsPreview').innerHTML = '';
+  call('previewLabelSheet', TOKEN, lsReq()).then(function (v) { btn.disabled = false; setMsg('rsMsg', '', ''); drawLabelPreview(v); })
+    .catch(function (err) { btn.disabled = false; setMsg('rsMsg', 'bad', err.message); });
+}
+
+function drawLabelPreview(v) {
+  var h = '<section class="sec rs-prev"><h2>Xem trước: ' + esc(v.typeName) + ', nhiệm kỳ ' + esc(v.termLabel) + '</h2>';
+  if (v.errors.length) h += '<p class="hint sd-warn">' + icon('help') + 'Sửa các dòng này trong sheet rồi bấm Xem trước lại:</p>' + rsList(v.errors, 'bad');
+  else if (v.noChange) h += '<p class="hint">Sheet giống hệt danh sách ' + esc(v.typeName) + ' đang có (' + v.kept + ' người), không có gì để tải.</p>';
+  else {
+    var line = function (n, label, names) { return '<li><b>' + n + '</b> ' + esc(label) + (names && names.length ? ': ' + esc(names.join(', ')) : '') + '</li>'; };
+    h += '<ul class="rs-list rs-sum">' + line(v.added.length, 'người mới vào ' + v.typeName, v.added) + line(v.left.length, 'người rời ' + v.typeName, v.left) +
+      line(v.kept, 'người giữ nguyên') + (v.changed.length ? line(v.changed.length, 'người đổi cách vào core team', v.changed) : '') + '</ul>' +
+      '<div class="note plain"><span>' + (v.type === 'ucv' ? 'Người mới vào UCV có hộp thư ngay; người rời UCV mất hộp thư.' : 'Nhãn Core team không thêm quyền gì.') + '</span><button type="button" class="btn" id="lsApply">Tải lên</button></div>';
+  }
+  $('lsPreview').innerHTML = h + '</section>';
+  if ($('lsApply')) $('lsApply').onclick = function () {
+    if (!confirm('Tải sheet ' + v.typeName + '?')) return;
+    var btn = this;
+    btn.disabled = true; setMsg('rsMsg', '', 'Đang tải…');
+    call('applyLabelSheet', TOKEN, lsReq()).then(function (r) { drawLabelSheet(r.page, ['ok', 'Đã tải: ' + r.summary + '.']); })
       .catch(function (err) { btn.disabled = false; setMsg('rsMsg', 'bad', err.message); });
   };
 }

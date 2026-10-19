@@ -156,6 +156,13 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Đăng nhập bằng Google: BOD dán Client ID (dòng Cài đặt `google_client_id`, để trống là tắt), có hướng dẫn tạo Client ID một lần trên Google Cloud.
 - Mọi thay đổi ghi Nhật ký (`change_setting`), không bao giờ ghi mật khẩu.
 
+## Core team và UCV
+
+- BOD mở từ Cài đặt, Tài khoản và phân quyền, Core team và UCV; chọn sheet Core team (Họ và tên, Email, Cách vào core team) hoặc UCV (Họ và tên, Email; cột Vị trí ứng cử không đọc), dán link, Xem trước rồi Tải lên.
+- Mỗi lần là danh sách đầy đủ hiện tại (CK-08): người mới được gắn nhãn `core_team` hoặc `ucv` ở nhiệm kỳ đang chạy (Core team ghi Cách vào ở cột Chi tiết), người không còn thì nhãn có Đến ngày. Rời UCV là mất hộp thư ngay.
+- Nối người bằng Email của thành viên đang ở CLB; Họ và tên phải khớp (bỏ dấu giống nhau cũng được), không thì báo dòng lỗi.
+- Như sheet thành viên: chép bản sheet kèm tab `_undo`, ghi Lần tải sheet và Nhật ký; hoàn tác lần tải mới nhất của mỗi loại sheet trong 7 ngày.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
