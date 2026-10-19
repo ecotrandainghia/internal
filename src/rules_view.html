@@ -16,6 +16,10 @@ function rulesCall(btn, msgId, fn, args, redraw, okText) {
 }
 
 /* ---------- Cơ cấu ban ---------- */
+function splitSubs(text) { return String(text || '').split(',').map(function (x) { return x.trim(); }).filter(String); }
+function subChip(v) {
+  return '<span class="dp-sub" data-sub="' + esc(v) + '">' + esc(v) + '<button type="button" data-sub-del aria-label="Bỏ mảng ' + esc(v) + '">×</button></span>';
+}
 function openDepartments() { RULES.data = null; loadRules(drawDepartments, 'Cơ cấu ban'); }
 
 function drawDepartments(d, flash) {
@@ -23,12 +27,13 @@ function drawDepartments(d, flash) {
     var fresh = !x.used && x.isNew;
     return '<tr data-dp-row="' + i + '"><td>' + (fresh ? '<input class="dp-code" maxlength="10" value="' + esc(x.code) + '" aria-label="Mã ban" placeholder="MKT">' : '<b>' + esc(x.code) + '</b>') + '</td>' +
       '<td><input class="dp-name" maxlength="60" value="' + esc(x.name) + '" aria-label="Tên ban"></td>' +
-      '<td><input class="dp-subs" value="' + esc(x.subTeams) + '" aria-label="Các mảng" placeholder="Trống nếu không có"></td>' +
+      '<td><div class="dp-subs">' + splitSubs(x.subTeams).map(subChip).join('') +
+        '<input class="dp-sub-new" maxlength="10" placeholder="+ Thêm mảng" aria-label="Thêm mảng cho ban này"></div></td>' +
       '<td class="r num">' + (x.isNew ? '' : x.people) + '</td>' +
       '<td><input type="checkbox" class="dp-on"' + (x.active ? ' checked' : '') + (x.code === 'BOD' ? ' disabled' : '') + ' aria-label="Đang dùng"></td></tr>';
   };
   wideModal('<h2 id="boxTitle">Cơ cấu ban</h2>' +
-    '<p class="hint">Mã ban phải đúng chữ ghi ở cột Ban của sheet tải lên. Mảng ghi cách nhau dấu phẩy. Ban đã có dữ liệu không xoá được, chỉ bỏ tick Đang dùng để dữ liệu năm cũ vẫn đọc được. NS phụ trách ban gán ở Phân quyền nhân sự, ban nào cũng được.</p>' +
+    '<p class="hint">Mã ban phải đúng chữ ghi ở cột Ban của sheet tải lên. Mảng gõ tên rồi bấm Enter để thêm, bấm × để bỏ. Ban đã có dữ liệu không xoá được, chỉ bỏ tick Đang dùng để dữ liệu năm cũ vẫn đọc được. NS phụ trách ban gán ở Phân quyền nhân sự, ban nào cũng được.</p>' +
     '<div class="table-wrap"><table class="mtable dp-table"><thead><tr><th>Mã</th><th>Tên ban</th><th>Mảng</th><th class="r">Đang có</th><th>Dùng</th></tr></thead><tbody>' +
     d.depts.map(row).join('') + '</tbody></table></div>' +
     '<div><button type="button" class="btn ghost sm" id="dpAdd">' + icon('plus') + 'Thêm ban</button></div>' +
@@ -38,7 +43,10 @@ function drawDepartments(d, flash) {
   var read = function () {
     return Array.prototype.map.call(document.querySelectorAll('[data-dp-row]'), function (tr) {
       var x = d.depts[Number(tr.dataset.dpRow)], code = tr.querySelector('.dp-code');
-      return { code: code ? code.value.trim().toUpperCase() : x.code, name: tr.querySelector('.dp-name').value, subTeams: tr.querySelector('.dp-subs').value,
+      var subs = Array.prototype.map.call(tr.querySelectorAll('[data-sub]'), function (c) { return c.dataset.sub; });
+      var typed = tr.querySelector('.dp-sub-new').value.trim().toUpperCase();
+      if (typed && subs.indexOf(typed) < 0) subs.push(typed);
+      return { code: code ? code.value.trim().toUpperCase() : x.code, name: tr.querySelector('.dp-name').value, subTeams: subs.join(', '),
         active: tr.querySelector('.dp-on').checked, people: x.people, used: x.used, isNew: x.isNew };
     });
   };
@@ -48,6 +56,20 @@ function drawDepartments(d, flash) {
     drawDepartments({ depts: list, numbers: d.numbers, limits: d.limits, links: d.links });
     var codes = document.querySelectorAll('.dp-code');
     if (codes.length) codes[codes.length - 1].focus();
+  };
+  document.querySelectorAll('.dp-sub-new').forEach(function (inp) {
+    inp.onkeydown = function (e) {
+      if (e.key !== 'Enter' && e.key !== ',') return;
+      e.preventDefault();
+      var v = inp.value.trim().toUpperCase().replace(/,/g, '');
+      var have = Array.prototype.some.call(inp.parentNode.querySelectorAll('[data-sub]'), function (c) { return c.dataset.sub === v; });
+      if (v && !have) inp.insertAdjacentHTML('beforebegin', subChip(v));
+      inp.value = '';
+    };
+  });
+  $('modal').querySelector('.dp-table').onclick = function (e) {
+    var b = e.target.closest('[data-sub-del]');
+    if (b) b.parentNode.remove();
   };
   $('dpSave').onclick = function () {
     rulesCall(this, 'dpMsg', 'saveDepartments', [read()], drawDepartments, 'Đã lưu cơ cấu ban.');
