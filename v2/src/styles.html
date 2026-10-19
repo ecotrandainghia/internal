@@ -575,4 +575,28 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .tm-row .tm-who { grid-column: 1 / -1; grid-row: 2; }
   .tm-row .acts { grid-column: 1 / -1; }
 }
+/* Seeding */
+.sd-warn { display: flex; gap: 8px; align-items: flex-start; color: var(--warn); margin-bottom: 8px; }
+.sd-warn svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+.sd-form { margin: 8px 0 32px; max-width: 640px; }
+.sd-go { justify-content: flex-start; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fp-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.fp-row > div { flex: 1; min-width: 0; }
+.fp-row small { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.fp-row a { color: var(--good); }
+.sd-form .field input[type=datetime-local], .box .field input[type=datetime-local] { max-width: 260px; }
+.sd-when { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.sd-form + .sec { margin-bottom: 32px; }
+.sd-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+.sd-row small { display: block; font-size: 12px; color: var(--ink-2); }
+.sd-row .acts { display: flex; gap: 6px; align-items: center; }
+.sd-link { color: var(--good); overflow-wrap: anywhere; }
+.box textarea { padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--surface); font: inherit; font-size: 14px; color: var(--ink); resize: vertical; }
+.sd-pick { margin-top: 12px; }
+.sd-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; }
+.sd-unsure { padding: 8px 12px; border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: var(--r-in); display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 720px) {
+  .sd-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .sd-row .acts { grid-column: 1 / -1; flex-wrap: wrap; }
+}
 </style>

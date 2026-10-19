@@ -116,6 +116,14 @@ Tên file, hàm, biến dùng tiếng Anh; chữ hiện cho người dùng dùng
 - Lịch nhắc hạn task (Cài đặt, Thông báo của CLB, Lịch nhắc task): mỗi mốc là một ngày so với ngày hạn chót và một giờ, mặc định 20:30 hôm trước, 6:30 ngày hạn, 6:30 hôm sau (dòng `task_remind_times`). Chỉ nhắc người chưa xác nhận xong. Tin gửi NS phụ trách ban của task; task của BOD gửi thẳng BOD đó; ban chưa có NS phụ trách thì gửi thẳng người được giao; ai bật Tự nhắc hạn task thì nhận thêm task của mình.
 - Việc tự chạy `runTaskReminders`: mỗi giờ nhắc một lịch chạy hằng ngày, app tự cài (và cài lại khi lịch đổi) lúc BOD mở Thông báo của CLB hoặc ai đó lưu cách nhận tin. Mỗi lần chạy cũng đọc tin mới của bot Zalo và xoá thông báo cũ. Nút Gửi nhắc ngay gửi mọi mốc của hôm nay.
 
+## Seeding
+
+- NS phụ trách seeding (nhãn `seeding_lead`) có trang Seeding; BOD mở từ Cài đặt, Hoạt động CLB, Báo cáo seeding. Thấy bài mới thì dán link và tự chọn lúc nhắc (có nút nhanh Sau 24 giờ, Sau 48 giờ, không có mức mặc định). Việc tự chạy `runSeedingReminders` (mỗi 15 phút, cài lúc đặt nhắc đầu tiên) nhắc người đặt qua Zalo hoặc app khi tới giờ, nhớ đã nhắc tới đâu để không nhắc lại.
+- Đến giờ, dán nguyên đoạn copy react và đoạn copy comment. App dò tên Facebook của thành viên (chưa có thì dò họ tên) và tên fanpage, bỏ dấu, không phân biệt hoa thường. Tên dài dò trước nên tên nằm trong tên khác không bị tính nhầm; tên một chữ chỉ khớp khi đứng riêng một dòng. Trùng tên giữa nhiều người hoặc tên chỉ nằm trong tên dài hơn thì hiện ra để người nhập tick.
+- Ghi nhận cộng điểm theo hai hoạt động `react_activity_id` (+1) và `comment_activity_id` (+2) trong Thang điểm, mỗi người một lần cho react và một lần cho comment của mỗi bài, dòng Cộng điểm có nguồn Seeding và mã bài. Giai đoạn giao thoa không cộng được. Huỷ ghi nhận (BOD hoặc người đã ghi nhận) gỡ điểm và đưa bài về Chờ dán.
+- Đoạn đã dán được chép nguyên văn sang file "[ECO] Bằng chứng seeding <nhiệm kỳ>" trong thư mục Bằng chứng seeding trên Drive, tab phase_1 hoặc phase_2 theo lúc tạo bài, mỗi bài một hàng, ô quá 50.000 ký tự thì nối xuống hàng dưới. Mã file lưu ở Script Property `SEEDING_EVIDENCE_<nhiệm kỳ>`.
+- Fanpage (HS-04): mỗi thành viên thêm fanpage của mình ở Cài đặt, Tài khoản của tôi, Fanpage để seeding. Tên fanpage không trùng fanpage khác hay tên Facebook của thành viên khác.
+
 Kiểm tra: `npm test` chạy cả test app cũ và test trong `v2/tests` (giả lập Google Sheets, không cần mạng).
 
 Xem thử: tạo một dự án Apps Script riêng (không dùng dự án của app cũ), chép các file trong `v2/src/` vào, triển khai ứng dụng web rồi mở link. Lần đầu sẽ ra trang cài đặt: nhập thông tin BOD đầu tiên và mật khẩu chung của CLB. Nếu trang đòi mã thì bấm Gửi mã và xem hộp thư của tài khoản đã triển khai.
