@@ -54,7 +54,7 @@ function drawMyNotify(d, flash) {
   var zaloOff = d.bot.has ? '' : 'Chưa dùng được: CLB chưa có bot Zalo. BOD cài bot ở mục Thông báo của CLB.';
   var zaloNote = zaloOff || (d.linked ? 'Đã kết nối' + (d.zaloName ? ' với ' + esc(d.zaloName) : '') + '.' : 'Chưa kết nối.');
   var botLink = /^https:\/\//i.test(d.bot.link || '') ? d.bot.link : '';
-  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">' + (botLink ? 'Bấm Mở bot trên Zalo bên dưới' : 'Mở bot <b>' + esc(d.bot.name || 'của CLB') + '</b> trong Zalo (bot không tìm kiếm được, nhờ BOD gửi link bot)') +
+  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">' + (botLink ? 'Bấm Mở bot trên Zalo bên dưới, bấm Quan tâm' : 'Nhờ BOD gửi link bot, mở link đó, bấm Quan tâm') +
     ', nhắn mã <b class="nt-code">' + esc(d.code) + '</b> cho bot, rồi bấm Kiểm tra trong vòng 25 giây.</p><div class="nt-btns">' +
     (botLink ? '<a class="btn-outline" href="' + esc(botLink) + '" target="_blank" rel="noopener noreferrer">Mở bot trên Zalo</a>' : '') +
     '<button type="button" class="btn-outline" id="ntCheck">Kiểm tra kết nối</button></div>' : '';
@@ -165,7 +165,7 @@ function drawZaloBot(d) {
     '<p class="hint">Head HR tạo bot mỗi năm trong Zalo Bot Manager rồi dán mã bot vào đây. Mã bot cất riêng trong phần bí mật của app, không ghi vào sheet. Đổi bot mới thì mọi người phải nhắn mã kết nối cho bot mới.</p>' +
     '<label class="field">Mã bot mới<input id="ncToken" type="password" autocomplete="off" placeholder="Dán mã bot"></label>' +
     '<div class="actions"><button type="button" class="btn" id="ncSaveBot">Lưu mã bot</button></div>' +
-    (d.bot.has ? '<p class="hint">Bot Zalo không tìm kiếm được, thành viên phải mở bot bằng link chia sẻ. Dán link bot vào đây, app sẽ hiện nút mở bot cho từng người ở Cài đặt, Thông báo của tôi.</p>' +
+    (d.bot.has ? '<p class="hint">Thành viên mở bot bằng link chia sẻ (deeplink) rồi bấm Quan tâm. Dán link bot vào đây, app sẽ hiện nút mở bot cho từng người ở Cài đặt, Thông báo của tôi.</p>' +
       '<label class="field">Link chia sẻ bot<input id="ncLink" type="url" autocomplete="off" placeholder="https://..." value="' + esc(d.bot.link || '') + '"></label>' +
       '<div class="actions"><button type="button" class="btn" id="ncSaveLink">Lưu link</button></div>' : '') +
     '<span class="msg" id="ncMsg" role="status"></span>' +

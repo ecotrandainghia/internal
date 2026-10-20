@@ -366,7 +366,7 @@ function saveBodAlerts(token, alerts) {
   return clubNotifyFor_();
 }
 
-/** Lưu link chia sẻ bot (bot Zalo không tìm kiếm được, người dùng mở bot bằng link). Để trống thì xoá link. */
+/** Lưu link chia sẻ bot (người dùng mở bot bằng link rồi bấm Quan tâm). Để trống thì xoá link. */
 function saveZaloBotLink(token, link) {
   var me = requireUser_(token, 'bod');
   link = String(link || '').trim();
