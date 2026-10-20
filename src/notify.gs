@@ -171,7 +171,7 @@ function myNotifyFor_(me) {
   var account = me.data.accounts.filter(function (a) { return a.member_id === me.memberId; })[0];
   return {
     zalo: p.zalo, app: p.app, selfRemind: p.selfRemind, must: mustNotify_(me.user, account),
-    bot: { has: !!zaloToken_(), name: String(getSetting_('zalo_bot_name', '')) },
+    bot: { has: !!zaloToken_(), name: String(getSetting_('zalo_bot_name', '')), link: String(getSetting_('zalo_bot_link', '')) },
     code: p.code, linked: !!p.chatId, zaloName: p.zaloName,
     devices: p.devices.map(deviceView_),
     publicKey: vapidKeys_().pub
@@ -282,7 +282,7 @@ function clubNotifyFor_() {
   var alerts = {};
   Object.keys(BOD_ALERTS).forEach(function (k) { alerts[k] = { label: BOD_ALERTS[k][1], on: bodAlertOn_(k) }; });
   return {
-    bot: { has: !!zaloToken_(), name: String(getSetting_('zalo_bot_name', '')) },
+    bot: { has: !!zaloToken_(), name: String(getSetting_('zalo_bot_name', '')), link: String(getSetting_('zalo_bot_link', '')) },
     people: list, alerts: alerts, keepDays: getNumberSetting_('notify_keep_days', NOTIFY_KEEP_DAYS)
   };
 }
@@ -307,6 +307,7 @@ function saveZaloBot(token, botToken) {
   try { bot = zaloCall_(botToken, 'getMe', {}); } catch (e) { throw new Error('Mã bot không dùng được. Bạn kiểm tra đã chép đủ mã chưa. (' + e.message + ')'); }
   PropertiesService.getScriptProperties().setProperty(ZALO_TOKEN_PROP, botToken);
   setSetting_('zalo_bot_name', zaloBotName_(bot), me.memberId, 'Tên bot Zalo của CLB (app tự ghi khi BOD nhập mã bot)');
+  setSetting_('zalo_bot_link', '', me.memberId, 'Link chia sẻ bot Zalo của CLB (BOD dán; bot mới thì xoá)');
   dropZaloWebhook_();
   withLock_(function () {
     var rows = readTable_('zalo_links').filter(function (z) { return z.chat_id || z.zalo_name || z.linked_at; });
@@ -362,5 +363,14 @@ function saveBodAlerts(token, alerts) {
     if (alerts[k] === undefined || !!alerts[k] === bodAlertOn_(k)) return;
     setSetting_(BOD_ALERTS[k][0], alerts[k] ? '1' : '0', me.memberId, 'Báo BOD khi có ' + BOD_ALERTS[k][1].toLowerCase() + ' (1 là bật, 0 là tắt)');
   });
+  return clubNotifyFor_();
+}
+
+/** Lưu link chia sẻ bot (bot Zalo không tìm kiếm được, người dùng mở bot bằng link). Để trống thì xoá link. */
+function saveZaloBotLink(token, link) {
+  var me = requireUser_(token, 'bod');
+  link = String(link || '').trim();
+  if (link && (!/^https:\/\/[^\s<>"']+$/i.test(link) || link.length > 300)) throw new Error('Link phải bắt đầu bằng https:// và không có khoảng trắng.');
+  setSetting_('zalo_bot_link', link, me.memberId, 'Link chia sẻ bot Zalo của CLB (BOD dán; bot mới thì xoá)');
   return clubNotifyFor_();
 }
