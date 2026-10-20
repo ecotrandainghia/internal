@@ -53,8 +53,11 @@ function drawMyNotify(d, flash) {
     : push === 'khong' ? 'Máy này không hỗ trợ thông báo của app.' : '';
   var zaloOff = d.bot.has ? '' : 'Chưa dùng được: CLB chưa có bot Zalo. BOD cài bot ở mục Thông báo của CLB.';
   var zaloNote = zaloOff || (d.linked ? 'Đã kết nối' + (d.zaloName ? ' với ' + esc(d.zaloName) : '') + '.' : 'Chưa kết nối.');
-  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">Mở Zalo, tìm bot <b>' + esc(d.bot.name || 'của CLB') + '</b>, nhắn mã <b class="nt-code">' + esc(d.code) +
-    '</b> cho bot, rồi bấm Kiểm tra trong vòng 25 giây.</p><div><button type="button" class="btn-outline" id="ntCheck">Kiểm tra kết nối</button></div>' : '';
+  var botLink = /^https:\/\//i.test(d.bot.link || '') ? d.bot.link : '';
+  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">1. ' + (botLink ? 'Bấm Mở bot trên Zalo bên dưới' : 'Nhờ BOD gửi link bot, mở link đó') +
+    ', bấm Quan tâm.<br>2. Quay lại đây, bấm Kiểm tra kết nối.<br>3. Trong 25 giây, nhắn mã <b class="nt-code">' + esc(d.code) + '</b> cho bot.</p><div class="nt-btns">' +
+    (botLink ? '<a class="btn-outline" href="' + esc(botLink) + '" target="_blank" rel="noopener noreferrer">Mở bot trên Zalo</a>' : '') +
+    '<button type="button" class="btn-outline" id="ntCheck">Kiểm tra kết nối</button></div>' : '';
   // Đã có máy bật thì vẫn đổi được, kể cả khi đang mở trên máy không bật được.
   var appLock = appOff && !d.devices.length && !d.app;
   var appNote = d.devices.length ? d.devices.length + ' máy đã bật.' + (appOff ? ' ' + esc(appOff) : '') : esc(appOff || 'Chưa bật trên máy nào.');
@@ -86,7 +89,7 @@ function drawMyNotify(d, flash) {
     };
   });
   if ($('ntCheck')) $('ntCheck').onclick = function () {
-    this.disabled = true; ntSay('', 'Đang chờ tin nhắn của bạn tới bot (tối đa 25 giây)…');
+    this.disabled = true; ntSay('', 'Bây giờ mở Zalo, nhắn mã ' + d.code + ' cho bot. App chờ tối đa 25 giây…');
     call('checkMyZalo', TOKEN).then(function (x) { drawMyNotify(x, [x.linked ? 'ok' : 'bad', x.checkText]); })
       .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
   };
@@ -161,8 +164,17 @@ function drawZaloBot(d) {
     '<p>' + (d.bot.has ? 'Đang dùng bot <b>' + esc(d.bot.name || '(chưa rõ tên)') + '</b>. ' + linked + '/' + d.people.length + ' người đã kết nối.' : 'CLB chưa có bot Zalo.') + '</p>' +
     '<p class="hint">Head HR tạo bot mỗi năm trong Zalo Bot Manager rồi dán mã bot vào đây. Mã bot cất riêng trong phần bí mật của app, không ghi vào sheet. Đổi bot mới thì mọi người phải nhắn mã kết nối cho bot mới.</p>' +
     '<label class="field">Mã bot mới<input id="ncToken" type="password" autocomplete="off" placeholder="Dán mã bot"></label>' +
+    '<div class="actions"><button type="button" class="btn" id="ncSaveBot">Lưu mã bot</button></div>' +
+    (d.bot.has ? '<p class="hint">Thành viên mở bot bằng link chia sẻ (deeplink) rồi bấm Quan tâm. Dán link bot vào đây, app sẽ hiện nút mở bot cho từng người ở Cài đặt, Thông báo của tôi.</p>' +
+      '<label class="field">Link chia sẻ bot<input id="ncLink" type="url" autocomplete="off" placeholder="https://..." value="' + esc(d.bot.link || '') + '"></label>' +
+      '<div class="actions"><button type="button" class="btn" id="ncSaveLink">Lưu link</button></div>' : '') +
     '<span class="msg" id="ncMsg" role="status"></span>' +
-    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button type="button" class="btn" id="ncSaveBot">Lưu mã bot</button></div>');
+    '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
+  if ($('ncSaveLink')) $('ncSaveLink').onclick = function () {
+    this.disabled = true; setMsg('ncMsg', '', 'Đang lưu…');
+    call('saveZaloBotLink', TOKEN, $('ncLink').value).then(function (x) { drawClubNotify(x, ['ok', 'Đã lưu link bot.']); })
+      .catch(function (err) { $('ncSaveLink').disabled = false; setMsg('ncMsg', 'bad', err.message); });
+  };
   $('ncSaveBot').onclick = function () {
     var t = $('ncToken').value.trim();
     if (!t) return setMsg('ncMsg', 'bad', 'Bạn dán mã bot vào nhé.');
