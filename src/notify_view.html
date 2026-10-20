@@ -54,8 +54,8 @@ function drawMyNotify(d, flash) {
   var zaloOff = d.bot.has ? '' : 'Chưa dùng được: CLB chưa có bot Zalo. BOD cài bot ở mục Thông báo của CLB.';
   var zaloNote = zaloOff || (d.linked ? 'Đã kết nối' + (d.zaloName ? ' với ' + esc(d.zaloName) : '') + '.' : 'Chưa kết nối.');
   var botLink = /^https:\/\//i.test(d.bot.link || '') ? d.bot.link : '';
-  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">' + (botLink ? 'Bấm Mở bot trên Zalo bên dưới, bấm Quan tâm' : 'Nhờ BOD gửi link bot, mở link đó, bấm Quan tâm') +
-    ', nhắn mã <b class="nt-code">' + esc(d.code) + '</b> cho bot, rồi bấm Kiểm tra trong vòng 25 giây.</p><div class="nt-btns">' +
+  var zaloSteps = d.bot.has && !d.linked ? '<p class="nt-step">1. ' + (botLink ? 'Bấm Mở bot trên Zalo bên dưới' : 'Nhờ BOD gửi link bot, mở link đó') +
+    ', bấm Quan tâm.<br>2. Quay lại đây, bấm Kiểm tra kết nối.<br>3. Trong 25 giây, nhắn mã <b class="nt-code">' + esc(d.code) + '</b> cho bot.</p><div class="nt-btns">' +
     (botLink ? '<a class="btn-outline" href="' + esc(botLink) + '" target="_blank" rel="noopener noreferrer">Mở bot trên Zalo</a>' : '') +
     '<button type="button" class="btn-outline" id="ntCheck">Kiểm tra kết nối</button></div>' : '';
   // Đã có máy bật thì vẫn đổi được, kể cả khi đang mở trên máy không bật được.
@@ -89,7 +89,7 @@ function drawMyNotify(d, flash) {
     };
   });
   if ($('ntCheck')) $('ntCheck').onclick = function () {
-    this.disabled = true; ntSay('', 'Đang chờ tin nhắn của bạn tới bot (tối đa 25 giây)…');
+    this.disabled = true; ntSay('', 'Bây giờ mở Zalo, nhắn mã ' + d.code + ' cho bot. App chờ tối đa 25 giây…');
     call('checkMyZalo', TOKEN).then(function (x) { drawMyNotify(x, [x.linked ? 'ok' : 'bad', x.checkText]); })
       .catch(function (err) { drawMyNotify(d, ['bad', err.message]); });
   };
