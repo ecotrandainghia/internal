@@ -93,7 +93,8 @@ function openDrawer(html) {
     document.body.appendChild(d);
   }
   d.innerHTML = '<div class="drawer-scrim" data-tb="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drTitle">' +
-    '<button class="icon-btn close" type="button" data-tb="close" aria-label="Đóng">' + icon('close') + '</button>' + html + '</aside>';
+    '<button class="icon-btn close only-desk" type="button" data-tb="close" aria-label="Đóng">' + icon('close') + '</button>' +
+    '<button class="icon-btn only-phone drawer-back" type="button" data-tb="close" aria-label="Quay lại">' + icon('back') + '</button>' + html + '</aside>';
   d.hidden = false;
 }
 function closeDrawer() { var d = $('drawer'); if (d) { d.hidden = true; d.innerHTML = ''; } }

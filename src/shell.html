@@ -194,8 +194,14 @@ function logoHtml() { return '<span class="logo" aria-hidden="true"><img src="' 
 function loginMsg(kind, text) { var m = $('loginMsg'); if (m) { m.className = 'msg ' + kind; m.textContent = text; } }
 
 /* ---------- Hộp nhỏ (đổi mật khẩu, lần đăng nhập đầu) ---------- */
-function openModal(html) { $('modal').innerHTML = '<div class="box" role="dialog" aria-modal="true" aria-labelledby="boxTitle">' + html + '</div>'; $('modal').hidden = false; }
-function closeModal() { $('modal').hidden = true; $('modal').innerHTML = ''; }
+/** Máy tính: hộp nổi giữa màn hình. Điện thoại: thành trang đầy màn hình, có nút quay lại cạnh tên (khi hộp đóng được). */
+function openModal(html) {
+  if (/data-act="close-modal"/.test(html)) html = html.replace('<h2 id="boxTitle">', '<h2 id="boxTitle"><button class="icon-btn only-phone box-back" type="button" data-act="close-modal" aria-label="Quay lại">' + icon('back') + '</button>');
+  $('modal').innerHTML = '<div class="box" role="dialog" aria-modal="true" aria-labelledby="boxTitle">' + html + '</div>'; $('modal').hidden = false;
+  reportPath();
+}
+function closeModal() { var was = !$('modal').hidden; $('modal').hidden = true; $('modal').innerHTML = ''; if (was) reportPath(); }
+function modalClosable() { return !$('modal').hidden && !!$('modal').querySelector('[data-act="close-modal"]'); }
 function setMsg(id, kind, text) { var m = $(id); if (m) { m.className = 'msg ' + kind; m.textContent = text; } }
 
 function openPasswordBox() {
@@ -262,7 +268,7 @@ function openGuide(fromOnboarding, kind) {
     (wrapper ? '<p class="hint" style="font-size:14px">Bạn đang mở app đã cài, nên bước này có thể bỏ qua.</p>' : '') +
     '<ol>' + g[1].map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>' +
     '<div class="link-box"><span>' + esc(APP_LINK) + '</span><button type="button" class="btn-outline" id="copyLink">Chép link</button></div>' +
-    '<div class="actions"><button class="btn" id="guideNext">' + (fromOnboarding ? 'Tiếp tục' : 'Xem tour giới thiệu') + '</button></div>');
+    '<div class="actions">' + (fromOnboarding ? '' : '<button type="button" class="btn ghost" data-act="close-modal">Đóng</button>') + '<button class="btn" id="guideNext">' + (fromOnboarding ? 'Tiếp tục' : 'Xem tour giới thiệu') + '</button></div>');
   $('modal').querySelectorAll('[data-guide]').forEach(function (b) { b.onclick = function () { openGuide(fromOnboarding, b.dataset.guide); }; });
   $('copyLink').onclick = function () {
     var b = this;
@@ -365,7 +371,7 @@ function pageAllowed(k) { return !!EXTRA_PAGES[k] || navItems().some(function (x
 
 /* ---------- Link riêng cho từng trang: #/task, #/points, #/settings/rules ---------- */
 var START_PATH = '', SENT_PATH = '', FROM_URL = false;
-function currentPath() { return USER && !$('settings').hidden ? 'settings' + (openSection ? '/' + openSection : '') : page; }
+function currentPath() { return (USER && !$('settings').hidden ? 'settings' + (openSection ? '/' + openSection : '') : page) + (modalClosable() ? '/hop' : ''); }
 /** Ghi đường dẫn trang đang mở lên thanh địa chỉ (trang vỏ, hoặc link Apps Script khi mở thẳng). */
 function reportPath(replace) {
   var p = currentPath();
@@ -380,6 +386,9 @@ function openPath(path, replace) {
   if (!USER) { START_PATH = path; return; }
   FROM_URL = true;
   try {
+    // Nút quay lại của điện thoại, trình duyệt: đang mở hộp thì chỉ đóng hộp, trang bên dưới giữ nguyên.
+    if (modalClosable()) { closeModal(); if (String(path || '').replace(/^#?\/?/, '') === currentPath()) return; }
+    if (parts[parts.length - 1] === 'hop') parts.pop();
     if (k === 'settings') {
       if ($('settings').hidden) openSettings();
       var all = [].concat.apply([], visibleGroups().map(function (g) { return g[2]; }));
@@ -390,7 +399,7 @@ function openPath(path, replace) {
       page = pageAllowed(k) ? k : 'home';
       renderPage();
     }
-  } finally { FROM_URL = false; }
+  } finally { FROM_URL = false; SENT_PATH = currentPath(); } // thanh địa chỉ đã ở đường này rồi, lần sau mở lại hộp, trang thì phải ghi tiếp
   if (replace || currentPath() !== String(path || '').replace(/^#?\/?/, '')) { SENT_PATH = ''; reportPath(true); } else SENT_PATH = currentPath();
 }
 try { google.script.history.setChangeHandler(function (e) { if (!wrapper) openPath(e.location && e.location.hash, false); }); } catch (e) {}
