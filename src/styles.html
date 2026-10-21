@@ -398,7 +398,9 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .lg-sum { white-space: normal; flex-basis: 100%; order: 3; }
   .tr { grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr)); gap: 6px; font-size: 13px; }
   .q-grid { grid-template-columns: 1fr; }
-  .drawer { top: 24px; width: 100%; border-radius: var(--r-card) var(--r-card) 0 0; padding: 20px 16px; }
+  /* Điện thoại: chi tiết task, thành viên mở thành trang đầy màn hình, nút quay lại ở góc trái. */
+  .drawer { width: 100%; border-radius: 0; box-shadow: none; padding: calc(12px + var(--sat)) calc(16px + var(--sar)) calc(24px + var(--sab)) calc(16px + var(--sal)); gap: 16px; }
+  .drawer-back { align-self: flex-start; margin: 0 0 -8px -8px; }
 }
 
 /* Hộp thư (UCV) và Duyệt thư (BOD) */
@@ -572,7 +574,14 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .set-body { padding: 20px 16px calc(20px + var(--sab)); }
   .set-nav { padding-bottom: calc(16px + var(--sab)); }
   .menu-scrim { background: rgb(28 27 23 / .32); backdrop-filter: blur(4px); }
-  .overlay.small { padding: calc(24px + var(--sat)) 16px calc(24px + var(--sab)); place-items: center; }
+  /* Hộp nhỏ thành trang đầy màn hình: tên và nút quay lại ghim trên cùng, nút Lưu, Đóng ở cuối trang. */
+  .overlay.small { padding: 0; place-items: stretch; background: var(--surface); }
+  .overlay.small .box, .overlay.small .box.wide, .overlay.small .box.composer { width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; padding: calc(16px + var(--sat)) calc(16px + var(--sar)) calc(24px + var(--sab)) calc(16px + var(--sal)); }
+  .overlay.small .box > h2:first-child { position: sticky; top: calc(-16px - var(--sat)); z-index: 2; display: flex; align-items: center; gap: 4px; min-height: 52px; margin: calc(-16px - var(--sat)) calc(-16px - var(--sar)) 0 calc(-16px - var(--sal)); padding: calc(6px + var(--sat)) calc(16px + var(--sar)) 6px calc(16px + var(--sal)); background: var(--surface); font-size: 17px; }
+  .overlay.small .box > h2:first-child:has(.box-back) { padding-left: calc(4px + var(--sal)); }
+  .box-back { flex: none; }
+  .overlay.small .box > .actions:last-child, .overlay.small .box > form:last-child > .actions:last-child { margin-top: auto; padding-top: 8px; }
+  .overlay.small .box > form:last-child { flex: 1; }
   /* Menu avatar: ô gọn ngay dưới avatar, cao vừa nội dung; máy thấp quá thì cuộn trong ô, không chạm thanh vuốt về màn hình chính. */
   .menu { max-height: calc(100% - var(--menu-top, 60px) - 12px - var(--sab)); overflow-y: auto; }
 }
