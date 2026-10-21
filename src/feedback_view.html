@@ -7,7 +7,7 @@ var FB_TABS = [['all', 'Tất cả'], ['new', 'Mới'], ['named', 'Có tên'], [
 PAGES.feedback = function (main) {
   FB.data = null; FB.flash = '';
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Góp ý</h1><p class="lead" id="fbLead"></p></div></div><div id="fbBody">' + loadingHtml() + '</div></div>';
-  call('feedbackPage', TOKEN).then(setFeedback)
+  load('feedbackPage', TOKEN).then(setFeedback)
     .catch(function (err) { if ($('fbBody')) $('fbBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 };
 

@@ -14,7 +14,7 @@ function whenText(ms) { return fmtTime(ms) + ' ' + fmtDay(ms) + '/' + new Date(m
 PAGES.notifications = function (main) {
   main.innerHTML = '<div class="page stack"><div class="page-head"><div><h1>Thông báo</h1><p class="lead" id="ntLead">Những tin app đã gửi bạn, qua Zalo hay app trên điện thoại đều có ở đây.</p></div>' +
     '<button type="button" class="btn ghost" data-act="notify">' + icon('bell') + 'Cách nhận tin</button></div><div id="ntBody">' + loadingHtml() + '</div></div>';
-  call('myNotifications', TOKEN).then(function (d) {
+  load('myNotifications', TOKEN).then(function (d) {
     if (currentPage() !== 'notifications') return;
     $('ntLead').textContent = 'Những tin app đã gửi bạn trong ' + d.days + ' ngày qua, qua Zalo hay app trên điện thoại đều có ở đây. Tin cũ hơn app tự xoá.';
     $('ntBody').innerHTML = d.items.length ? '<div class="list">' + d.items.map(function (n) {
@@ -28,7 +28,7 @@ PAGES.notifications = function (main) {
 /** Từ trang khác (Trang chủ, trang Thông báo): mở Cài đặt ở mục Thông báo của tôi. */
 function openMyNotify() { openSettings(); openSection = 'my-notify'; renderSettings(''); }
 function loadMyNotify() {
-  call('myNotify', TOKEN).then(function (d) { drawMyNotify(d); })
+  loadFresh('myNotify', TOKEN).then(function (d) { drawMyNotify(d); })
     .catch(function (err) { if ($('myNotify')) $('myNotify').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 }
 /** Nút Bật/Tắt; off là lý do chưa dùng được (nút mờ, không bấm được). */
@@ -120,7 +120,7 @@ function onPushResult(d) {
 function openClubNotify(view) {
   NT.view = view;
   openModal('<h2 id="boxTitle">Thông báo của CLB</h2>' + loadingHtml());
-  call('clubNotify', TOKEN).then(function (d) { drawClubNotify(d); }).catch(function (err) { failBox('Thông báo của CLB', err); });
+  loadFresh('clubNotify', TOKEN).then(function (d) { drawClubNotify(d); }).catch(function (err) { failBox('Thông báo của CLB', err); });
 }
 
 function drawClubNotify(d, flash, report) {
@@ -219,7 +219,7 @@ document.addEventListener('click', function (e) {
     call('unlinkZalo', TOKEN, b.dataset.ncUnlink).then(function (x) { drawClubNotify(x, ['ok', 'Đã gỡ kết nối Zalo.']); })
       .catch(function (err) { setMsg('ncMsg', 'bad', err.message); });
   } else if (b.dataset.ncDev) {
-    call('removeDevice', TOKEN, b.dataset.ncDev).then(function () { return call('clubNotify', TOKEN); })
+    call('removeDevice', TOKEN, b.dataset.ncDev).then(function () { return loadFresh('clubNotify', TOKEN); })
       .then(function (x) { drawClubNotify(x, ['ok', 'Đã gỡ máy.']); }).catch(function (err) { setMsg('ncMsg', 'bad', err.message); });
   }
 });

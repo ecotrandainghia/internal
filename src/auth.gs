@@ -146,7 +146,13 @@ function loginWithGoogle(idToken) {
 function startSession_(memberId, data) {
   var user = buildUser_(memberId, data, new Date());
   updateRecord_('accounts', memberId, { last_login_at: new Date() });
-  return { token: createSession_(memberId), user: user };
+  var token = createSession_(memberId);
+  return { token: token, user: user, home: homeFor_(token) };
+}
+
+/** Số liệu trang chủ gửi kèm lúc mở app, đỡ một lần chờ. Lỗi thì bỏ qua, trang chủ tự tải lại. */
+function homeFor_(token) {
+  try { return homeData(token); } catch (e) { return null; }
 }
 
 /**
@@ -165,7 +171,7 @@ function openApp(token) {
   if (!account.last_login_at || now - account.last_login_at.getTime() > LAST_LOGIN_REFRESH_MS) {
     updateRecord_('accounts', me.memberId, { last_login_at: new Date(now) });
   }
-  return { user: me.user };
+  return { user: me.user, home: homeFor_(token) };
 }
 
 function logout(token) {

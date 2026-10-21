@@ -49,7 +49,7 @@ function kpiStats(task, log, threshold) {
 PAGES['my-kpi'] = function (main) {
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>KPI của tôi</h1><p class="lead" id="kpLead">Đạt khi KPI task và KPI log đều từ ngưỡng của quy chế.</p></div></div>' +
     '<div id="kpBody">' + loadingHtml() + '</div></div>';
-  call('myKpi', TOKEN).then(function (d) { if (currentPage() === 'my-kpi') renderMyKpi(d); }).catch(function (err) { pageError('kpBody', err); });
+  load('myKpi', TOKEN).then(function (d) { if (currentPage() === 'my-kpi') renderMyKpi(d); }).catch(function (err) { pageError('kpBody', err); });
 };
 
 function renderMyKpi(d) {
@@ -77,7 +77,7 @@ PAGES.ranking = function (main) {
   loadRanking(RK.phase);
 };
 function loadRanking(phase) {
-  call('myRanking', TOKEN, phase || '').then(function (d) { if (currentPage() === 'ranking') { RK.phase = d.phase || ''; RK.data = d; renderRanking(); } })
+  load('myRanking', TOKEN, phase || '').then(function (d) { if (currentPage() === 'ranking') { RK.phase = d.phase || ''; RK.data = d; renderRanking(); } })
     .catch(function (err) { pageError('rkBody', err); });
 }
 
@@ -120,7 +120,7 @@ PAGES.members = function (main) {
     '<div class="tabs" role="group" aria-label="Xem theo">' + MB_TABS.map(function (t) {
       return '<button type="button" data-mv-tab="' + t[0] + '" aria-pressed="' + (MV.tab === t[0]) + '">' + t[1] + '</button>';
     }).join('') + '</div><div id="mvBody" class="stack">' + loadingHtml() + '</div></div>';
-  call('membersPage', TOKEN).then(function (d) {
+  load('membersPage', TOKEN).then(function (d) {
     if (currentPage() !== 'members') return;
     MV.data = d;
     if (d.term) $('mvLead').textContent = 'Nhiệm kỳ ' + d.term.label + (d.term.phaseLabel ? ' · ' + d.term.phaseLabel : '') + '. Mọi thành viên trừ BOD.';

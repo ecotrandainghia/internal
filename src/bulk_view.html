@@ -238,7 +238,7 @@ function moveSend(id) {
 /* ---------- Danh bạ (Cài đặt > Hộp thư > Danh bạ) ---------- */
 function openContactBook() {
   openModal('<h2 id="boxTitle">Danh bạ</h2>' + loadingHtml());
-  call('contactBook', TOKEN).then(drawContactBook).catch(function (err) { openModal('<h2 id="boxTitle">Danh bạ</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
+  loadFresh('contactBook', TOKEN).then(drawContactBook).catch(function (err) { openModal('<h2 id="boxTitle">Danh bạ</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
 }
 function drawContactBook(b, editing, flash) {
   var e = editing || {};

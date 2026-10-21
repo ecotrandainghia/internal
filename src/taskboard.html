@@ -23,7 +23,7 @@ function openTaskBoard(main, pageId, title, lead, newText) {
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>' + esc(title) + '</h1><p class="lead">' + esc(lead) + '</p></div>' +
     '<button type="button" class="btn" data-tb="new">' + icon('plus') + esc(newText) + '</button></div>' +
     '<div id="tbBody">' + loadingHtml() + '</div></div>';
-  call('taskBoard', TOKEN).then(function (d) { if (currentPage() === pageId) { TB.data = d; renderBoard(); } })
+  load('taskBoard', TOKEN).then(function (d) { if (currentPage() === pageId) { TB.data = d; renderBoard(); } })
     .catch(function (err) { if ($('tbBody')) $('tbBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 }
 
