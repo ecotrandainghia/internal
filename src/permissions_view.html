@@ -9,7 +9,7 @@ var STAFF_BOXES = [
 
 function loadAdmin(draw, title) {
   openModal('<h2 id="boxTitle">' + esc(title) + '</h2>' + loadingHtml());
-  call('accountAdmin', TOKEN).then(function (d) { ADM.data = d; draw(d); }).catch(function (err) { failBox(title, err); });
+  loadFresh('accountAdmin', TOKEN).then(function (d) { ADM.data = d; draw(d); }).catch(function (err) { failBox(title, err); });
 }
 
 function adminCall(btn, msgId, fn, args, redraw, okText) {

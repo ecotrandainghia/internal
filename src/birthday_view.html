@@ -6,7 +6,7 @@ var BD = { data: null };
 PAGES.birthdays = function (main) {
   BD.data = null;
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Sinh nhật</h1><p class="lead" id="bdLead"></p></div></div><div id="bdBody">' + loadingHtml() + '</div></div>';
-  call('birthdayPage', TOKEN).then(setBirthdays).catch(function (err) { pageError('bdBody', err); });
+  load('birthdayPage', TOKEN).then(setBirthdays).catch(function (err) { pageError('bdBody', err); });
 };
 
 function setBirthdays(d, flash) {
@@ -45,7 +45,7 @@ function drawBirthdays() {
 function openBirthdaySettings() {
   if (BD.data && BD.data.isBod) return drawBirthdayBox(BD.data);
   openModal('<h2 id="boxTitle">Lịch sinh nhật</h2>' + loadingHtml());
-  call('birthdayPage', TOKEN).then(function (d) { BD.data = d; drawBirthdayBox(d); }).catch(function (err) { failBox('Lịch sinh nhật', err); });
+  loadFresh('birthdayPage', TOKEN).then(function (d) { BD.data = d; drawBirthdayBox(d); }).catch(function (err) { failBox('Lịch sinh nhật', err); });
 }
 
 function syncText(r) {

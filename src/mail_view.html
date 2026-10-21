@@ -14,7 +14,7 @@ PAGES.mail = function (main) {
 
 function mlOn() { return currentPage() === 'mail' && $('mlBody'); }
 function loadReview(keepId) {
-  return call('mailReview', TOKEN).then(function (d) { setReview(d, keepId); })
+  return load('mailReview', TOKEN).then(function (d) { setReview(d, keepId); })
     .catch(function (err) { if (mlOn()) $('mlBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 }
 function setReview(d, keepId) {

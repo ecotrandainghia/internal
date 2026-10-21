@@ -53,7 +53,7 @@ function goButton(pageId, text) { return '<button type="button" class="btn ghost
 PAGES.home = function (main) {
   main.innerHTML = '<div class="home"><section class="hello" aria-label="Lời chào">' + seasonDecor() + '<h1>Chào ' + dayPart() + ', ' + esc(USER.name.trim().split(/\s+/).pop()) + '</h1><p>' + todayText() + '</p></section>' +
     '<div id="homeBody">' + loadingHtml() + '</div></div>';
-  call('homeData', TOKEN).then(function (d) { if (currentPage() === 'home' && $('homeBody')) renderHome(d); })
+  load('homeData', TOKEN).then(function (d) { if (currentPage() === 'home' && $('homeBody')) renderHome(d); })
     .catch(function (err) { if ($('homeBody')) $('homeBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 };
 

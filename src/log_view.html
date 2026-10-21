@@ -14,7 +14,7 @@ PAGES.log = function (main) {
 };
 
 function loadLog(eventId) {
-  call('logBoard', TOKEN, eventId || '').then(setLog)
+  load('logBoard', TOKEN, eventId || '').then(setLog)
     .catch(function (err) { if ($('lgBody')) $('lgBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 }
 
@@ -273,7 +273,7 @@ function fromDateInput(s) { var m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ''); ret
 function openPlan() {
   closeSettings();
   openModal('<h2 id="boxTitle">Kế hoạch năm</h2>' + loadingHtml());
-  call('eventPlan', TOKEN).then(function (p) { drawPlan(p, null); }).catch(function (err) { openModal('<h2 id="boxTitle">Kế hoạch năm</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
+  loadFresh('eventPlan', TOKEN).then(function (p) { drawPlan(p, null); }).catch(function (err) { openModal('<h2 id="boxTitle">Kế hoạch năm</h2><p class="msg bad">' + esc(err.message) + '</p><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>'); });
 }
 
 function drawPlan(p, editing) {

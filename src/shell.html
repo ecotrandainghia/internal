@@ -79,7 +79,7 @@ var SETTINGS = [
 /** Gọi một hàm trong Apps Script, trả về Promise. Phiên hết hạn thì quay về màn đăng nhập. */
 function call(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
-  return new Promise(function (ok, fail) {
+  var p = new Promise(function (ok, fail) {
     var run = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) {
       var err = e instanceof Error ? e : new Error(String(e && e.message || e));
       if (err.message === 'SESSION_EXPIRED') { forgetSession(); showLogin(); }
@@ -87,7 +87,113 @@ function call(fn) {
     });
     run[fn].apply(run, args);
   });
+  // Vừa lưu, xoá, gửi gì đó: bỏ hết dữ liệu đã nhớ (cả lúc bắt đầu lẫn lúc xong), kẻo hiện số cũ của chính mình.
+  if (!READS[fn]) { forgetMemo(); p.then(forgetMemo, function () {}); }
+  return p;
 }
+
+/* ---------- Nhớ dữ liệu đã tải: trang mở lại hiện ngay, app tự tải dần các trang khác ---------- */
+// Các hàm chỉ đọc. Gọi bất kỳ hàm nào khác (lưu, xoá, gửi...) thì quên hết dữ liệu đã nhớ rồi tải lại dần.
+var READS = {};
+('accountAdmin auditLog birthdayPage bulkSources checkBulk clubNotify clubRules composeSetup contactBook dataTabs driveFileInfo eventPlan ' +
+  'feedbackPage homeData logBoard logFiles loginBackground mailAttachment mailDraft mailDrafts mailRequest mailReview mailThread mailbox ' +
+  'memberDetail membersPage myFanpages myKpi myMailRequests myNotifications myNotify myRanking openApp pointsPage previewLabelSheet ' +
+  'previewRoster previewSeeding readSendSheet recipientsFromSheet rosterPage seedingPage signatureSettings signupFor summaryView systemPage ' +
+  'taskBoard taskHistory taskReminderSettings teamLog teamReminders logout').split(' ').forEach(function (f) { READS[f] = true; });
+var MEMO = {}, MEMO_GEN = 0, MEMO_BUSY = {}, memoSaveTimer = null;
+var MEMO_RECHECK = 30e3;   // trang mở lại sau chừng này thì hỏi lại máy chủ (vẫn hiện bản cũ trong lúc chờ)
+var MEMO_FRESH = 120e3;    // hộp (pop up) dùng bản đã nhớ nếu chưa quá chừng này, quá thì chờ bản mới
+function memoKey(fn, args) { return fn + JSON.stringify(args.slice(1)); } // bỏ mã phiên ở đầu
+function memoPut(key, data) { MEMO[key] = { at: Date.now(), data: data }; memoSave(); }
+/** Lưu vào máy để lần mở app sau hiện ngay. Chỉ dùng cho đúng phiên này; đăng xuất là xoá. */
+function memoSave() {
+  clearTimeout(memoSaveTimer);
+  memoSaveTimer = setTimeout(function () {
+    try { localStorage.setItem('eco-memo', JSON.stringify({ owner: TOKEN, items: MEMO })); } catch (e) { try { localStorage.removeItem('eco-memo'); } catch (e2) {} }
+  }, 800);
+}
+function memoRestore(t) {
+  MEMO = {};
+  try { var m = JSON.parse(localStorage.getItem('eco-memo') || 'null'); if (m && t && m.owner === t) MEMO = m.items || {}; } catch (e) {}
+}
+function forgetMemo() {
+  // Giữ thông tin người dùng để lần mở app sau vẫn vào ngay; máy chủ trả lời thì app tự sửa nếu có khác.
+  var me = MEMO['openApp[]'];
+  MEMO_GEN++; MEMO = {}; MEMO_BUSY = {};
+  if (me) memoPut('openApp[]', me.data); else { try { localStorage.removeItem('eco-memo'); } catch (e) {} }
+  if (USER) warmUp(4000);
+}
+/** Hỏi máy chủ một hàm đọc, ghi nhớ kết quả. Hai chỗ cùng hỏi một thứ thì chỉ gọi một lần. */
+function memoFetch(fn, args) {
+  var key = memoKey(fn, args), gen = MEMO_GEN;
+  if (!MEMO_BUSY[key]) {
+    MEMO_BUSY[key] = call.apply(null, [fn].concat(args)).then(function (d) {
+      if (gen === MEMO_GEN) { memoPut(key, d); delete MEMO_BUSY[key]; } // giữa chừng có ai lưu gì thì bỏ bản này
+      return d;
+    }, function (err) { if (gen === MEMO_GEN) delete MEMO_BUSY[key]; throw err; });
+  }
+  return MEMO_BUSY[key];
+}
+/** Người dùng đang gõ, chọn trong trang thì không vẽ lại dưới tay họ. */
+function userBusy() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest('#main, #drawer')); }
+function syncNote(on) { var n = $('syncNote'); if (n) n.hidden = !on; }
+/**
+ * Dùng cho trang: giống call(fn, TOKEN, ...) nhưng có bản đã nhớ thì đưa ngay, rồi hỏi lại máy chủ nếu bản đó đã cũ;
+ * bản mới khác bản cũ thì gọi lại hàm .then một lần nữa để trang tự vẽ lại.
+ */
+function load(fn) {
+  var args = Array.prototype.slice.call(arguments, 1), key = memoKey(fn, args), hit = MEMO[key], ok = null, bad = null;
+  var api = {
+    // Đưa bản đã nhớ ngay sau khi hàm vẽ trang chạy xong (trước khi màn hình kịp vẽ khung chờ), như một lần trả lời rất nhanh.
+    then: function (f) { ok = f; if (hit) Promise.resolve().then(function () { give(hit.data); }); return api; },
+    catch: function (f) { bad = f; return api; }
+  };
+  function give(d) { try { ok(d); } catch (e) { if (bad) bad(e); else setTimeout(function () { throw e; }); } }
+  if (!hit || Date.now() - hit.at > MEMO_RECHECK) {
+    if (hit) syncNote(true);
+    memoFetch(fn, args).then(function (d) {
+      syncNote(false);
+      if (!ok || (hit && (JSON.stringify(d) === JSON.stringify(hit.data) || userBusy()))) return;
+      give(d);
+    }, function (err) { syncNote(false); if (!hit && bad) bad(err); });
+  }
+  return api;
+}
+/** Dùng cho hộp: bản đã nhớ còn mới thì dùng ngay, không thì chờ máy chủ như thường. Trả về Promise. */
+function loadFresh(fn) {
+  var args = Array.prototype.slice.call(arguments, 1), hit = MEMO[memoKey(fn, args)];
+  return hit && Date.now() - hit.at < MEMO_FRESH ? Promise.resolve(hit.data) : memoFetch(fn, args);
+}
+
+/* Tải dần: vào app xong, lần lượt tải các trang người này xem được (theo thứ tự trên thanh bên), rồi dữ liệu các hộp hay mở.
+   Mỗi lúc một việc cho khỏi nghẽn; chỉ chạy khi app đang hiện trên màn hình; vài phút làm mới một lần. */
+var WARM_PAGES = { home: [['homeData']], task: [['taskBoard']], 'my-team': [['teamReminders'], ['taskBoard']], points: [['pointsPage']],
+  'my-kpi': [['myKpi']], ranking: [['myRanking', '']], members: [['membersPage']], log: [['logBoard', '']], mail: [['mailReview']],
+  mailbox: [['myMailRequests']], birthdays: [['birthdayPage']], feedback: [['feedbackPage']], seeding: [['seedingPage']], notifications: [['myNotifications']] };
+var WARM_BOD_BOXES = [['clubNotify'], ['accountAdmin'], ['clubRules'], ['eventPlan'], ['contactBook'], ['taskReminderSettings']];
+var warmTimer = null, warmRun = 0;
+function warmList() {
+  var list = [];
+  navItems().concat(Object.keys(EXTRA_PAGES).filter(pageAllowed).map(function (k) { return [k]; })).forEach(function (x) { (WARM_PAGES[x[0]] || []).forEach(function (w) { list.push(w); }); });
+  list.push(['myNotify']);
+  if (USER.isBod) list = list.concat(WARM_BOD_BOXES);
+  return list;
+}
+function warmUp(delay) { clearTimeout(warmTimer); warmRun++; warmTimer = setTimeout(runWarm, delay || 0); } // lượt đang chạy (nếu có) dừng lại
+function runWarm() {
+  if (!USER || !TOKEN) return;
+  if (document.visibilityState === 'hidden') return; // quay lại app thì chạy tiếp (xem visibilitychange)
+  var run = warmRun, list = warmList(), seen = {}, i = 0;
+  (function next() {
+    if (run !== warmRun || !USER) return;
+    if (i >= list.length) { warmUp(300e3); return; }
+    var w = list[i++], args = [TOKEN].concat(w.slice(1)), key = memoKey(w[0], args), hit = MEMO[key];
+    if (seen[key] || (hit && Date.now() - hit.at < MEMO_FRESH)) return next();
+    seen[key] = true;
+    memoFetch(w[0], args).then(function () { setTimeout(next, 300); }, function () { setTimeout(next, 300); });
+  })();
+}
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && USER) warmUp(1500); });
 
 /* ---------- Trang vỏ (app cài trên điện thoại, máy tính): ghi nhớ đăng nhập, đăng nhập Google, màu thanh trên ---------- */
 var wrapper = null, wrapperOrigin = '', WRAPPER_PUSH = '';
@@ -132,16 +238,32 @@ function saveSession(t) {
   try { if (t) localStorage.setItem('eco-session', t); else localStorage.removeItem('eco-session'); } catch (e) {}
   toWrapper({ eco: 'phien', phien: t || '' });
 }
-function forgetSession() { saveSession(null); USER = null; }
+function forgetSession() {
+  saveSession(null); USER = null;
+  MEMO_GEN++; MEMO = {}; MEMO_BUSY = {}; clearTimeout(warmTimer); warmRun++;
+  try { localStorage.removeItem('eco-memo'); } catch (e) {}
+}
+/** Máy đã nhớ phiên: có bản lần trước thì vào app ngay, máy chủ trả lời sau thì chỉ cập nhật (hoặc về màn đăng nhập nếu phiên hết hạn). */
 function openSession(t) {
   TOKEN = t;
+  memoRestore(t);
+  var before = MEMO['openApp[]'];
+  if (before && !USER) enterApp(before.data.user);
   call('openApp', t).then(function (r) {
     if (TOKEN !== t) return;
     if (!r) { forgetSession(); showLogin(); return; }
-    saveSession(t); enterApp(r.user);
+    saveSession(t);
+    memoPut('openApp[]', { user: r.user });
+    if (r.home) memoPut('homeData[]', r.home);
+    if (!USER || JSON.stringify(r.user) !== JSON.stringify(USER)) enterApp(r.user);
   }).catch(function () { if (TOKEN === t && !USER) { TOKEN = null; showLogin(); } });
 }
-function loggedIn(r) { saveSession(r.token); enterApp(r.user); }
+function loggedIn(r) {
+  saveSession(r.token); MEMO = {};
+  memoPut('openApp[]', { user: r.user });
+  if (r.home) memoPut('homeData[]', r.home);
+  enterApp(r.user);
+}
 function enterApp(u) {
   USER = u;
   var local = u.theme === 'system' ? 'auto' : u.theme;
@@ -151,6 +273,7 @@ function enterApp(u) {
   if (!pageAllowed(page)) page = 'home';
   if (START_PATH) { var p = START_PATH; START_PATH = ''; openPath(p, true); } else renderPage();
   if (u.firstLogin) startOnboarding();
+  warmUp(1500);
 }
 function logOut() {
   closeMenu(); closeSettings(); closeModal();

@@ -19,7 +19,7 @@ function mbFlash(kind, text) { setMsg('mbMsg', kind, text); }
 /** Yêu cầu cần UCV để ý: BOD trả lại sửa, hoặc Gmail lỗi. */
 function mbAttention() { return (MB.reqs || []).filter(function (r) { return r.status === 'needs_changes' || r.status === 'error'; }).length; }
 function loadMyRequests() {
-  return call('myMailRequests', TOKEN).then(function (list) {
+  return load('myMailRequests', TOKEN).then(function (list) {
     MB.reqs = list;
     var n = mbAttention();
     if ((BADGES.mailbox || 0) !== n) { BADGES.mailbox = n; renderNav(); }

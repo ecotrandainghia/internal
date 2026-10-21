@@ -8,7 +8,7 @@ PAGES.seeding = function (main) {
   SD.data = null; SD.flash = null;
   main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Seeding</h1><p class="lead">Thấy bài mới thì đặt nhắc hẹn. Đến giờ, copy toàn bộ react và comment của bài rồi dán vào đây, app tự dò tên và cộng điểm.</p></div></div>' +
     '<div id="sdBody">' + loadingHtml() + '</div></div>';
-  call('seedingPage', TOKEN).then(setSeeding).catch(function (err) { pageError('sdBody', err); });
+  load('seedingPage', TOKEN).then(setSeeding).catch(function (err) { pageError('sdBody', err); });
 };
 
 function setSeeding(d, flash) {

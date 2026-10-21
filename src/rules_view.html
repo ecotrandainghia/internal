@@ -6,7 +6,7 @@ var RULES = { data: null };
 function loadRules(draw, title) {
   if (RULES.data) return draw(RULES.data);
   openModal('<h2 id="boxTitle">' + esc(title) + '</h2>' + loadingHtml());
-  call('clubRules', TOKEN).then(function (d) { RULES.data = d; draw(d); }).catch(function (err) { failBox(title, err); });
+  loadFresh('clubRules', TOKEN).then(function (d) { RULES.data = d; draw(d); }).catch(function (err) { failBox(title, err); });
 }
 
 function rulesCall(btn, msgId, fn, args, redraw, okText) {

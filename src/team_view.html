@@ -26,12 +26,12 @@ function drawTeamTab() {
   if (TEAM.tab === 'task') { if (TB.data) renderBoard(); else $('tbBody').innerHTML = loadingHtml(); return; }
   $('tbBody').innerHTML = loadingHtml();
   if (TEAM.tab === 'remind') loadTeamReminders();
-  else call('teamLog', TOKEN).then(function (d) { if (currentPage() === 'my-team' && TEAM.tab === 'log') drawTeamLog(d); })
+  else load('teamLog', TOKEN).then(function (d) { if (currentPage() === 'my-team' && TEAM.tab === 'log') drawTeamLog(d); })
     .catch(function (err) { pageError('tbBody', err); });
 }
 
 function loadTeamReminders() {
-  call('teamReminders', TOKEN).then(function (d) {
+  load('teamReminders', TOKEN).then(function (d) {
     TEAM.remind = d;
     if (currentPage() !== 'my-team' || TEAM.tab !== 'remind') return;
     drawTeamTabs();
@@ -103,7 +103,7 @@ var REMIND_DAYS = [[-3, '3 ngày trước hạn'], [-2, '2 ngày trước hạn'
 
 function openReminderBox() {
   openModal('<h2 id="boxTitle">Lịch nhắc task</h2>' + loadingHtml());
-  call('taskReminderSettings', TOKEN).then(function (d) { drawReminderBox(d); }).catch(function (err) { failBox('Lịch nhắc task', err); });
+  loadFresh('taskReminderSettings', TOKEN).then(function (d) { drawReminderBox(d); }).catch(function (err) { failBox('Lịch nhắc task', err); });
 }
 
 function drawReminderBox(d, flash) {
