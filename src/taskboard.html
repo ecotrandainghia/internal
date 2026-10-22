@@ -36,8 +36,7 @@ function renderBoard() {
     if (TB.dept && t.dept !== TB.dept) return false;
     if (TB.event && t.eventId !== TB.event) return false;
     if (!TB.q) return true;
-    var hay = (t.name + ' ' + t.event + ' ' + t.people.map(function (p) { return p.name; }).join(' ')).toLowerCase();
-    return hay.indexOf(TB.q.toLowerCase()) >= 0;
+    return matches(t.name + ' ' + t.event + ' ' + t.people.map(function (p) { return p.name; }).join(' '), TB.q);
   });
   var chips = TB_TABS.filter(function (x) { return x[0] !== 'waiting' || d.canGrade; }).map(function (x) {
     var n = filtered.filter(function (t) { return tbInTab(t, x[0]); }).length;
@@ -188,10 +187,10 @@ function renderForm(t) {
   var chosen = {};
   picked.forEach(function (id) { chosen[id] = true; });
   var drawPeople = function () {
-    var dep = $('tfDept').value, q = $('tfFind').value.trim().toLowerCase();
+    var dep = $('tfDept').value, q = $('tfFind').value;
     var list = d.members.filter(function (m) { return m.dept === dep; });
     Object.keys(chosen).forEach(function (id) { if (!list.some(function (m) { return m.id === id; })) delete chosen[id]; });
-    var shown = list.filter(function (m) { return !q || m.name.toLowerCase().indexOf(q) >= 0 || chosen[m.id]; });
+    var shown = list.filter(function (m) { return matches(m.name, q) || chosen[m.id]; });
     $('tfPeople').innerHTML = !dep ? '<p class="hint">Chọn ban trước.</p>' : !list.length ? '<p class="hint">Ban này chưa có ai.</p>' : shown.map(function (m) {
       var lock = locked.indexOf(m.id) >= 0;
       return '<label class="check"><input type="checkbox" value="' + esc(m.id) + '"' + (chosen[m.id] ? ' checked' : '') + (lock ? ' disabled' : '') + '><span>' + esc(m.name) +
@@ -203,7 +202,7 @@ function renderForm(t) {
   $('tfDept').onchange = drawPeople;
   $('tfFind').oninput = drawPeople;
   $('tfPeople').onchange = function (e) { if (e.target.checked) chosen[e.target.value] = true; else delete chosen[e.target.value]; drawPeople(); };
-  $('tfName').focus();
+  focusOnDesk($('tfName'));
   $('taskForm').onsubmit = function (e) {
     e.preventDefault();
     var f = { taskId: t ? t.id : '', eventId: $('tfEvent').value, deptCode: $('tfDept').value, name: $('tfName').value,
@@ -223,7 +222,7 @@ function openDeadlineBox(t) {
     '<form id="dlForm" style="display:flex;flex-direction:column;gap:12px"><label class="field">Hạn chót mới<input type="datetime-local" id="dlValue" required value="' + toLocalInput(t.deadline || defaultDeadline()) + '"></label>' +
     '<p class="hint">Mỗi lần sửa hạn đều được ghi vào Nhật ký của task.</p><span class="msg" id="dlMsg" role="status"></span>' +
     '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="dlBtn">Lưu hạn mới</button></div></form>');
-  $('dlValue').focus();
+  focusOnDesk($('dlValue'));
   $('dlForm').onsubmit = function (e) {
     e.preventDefault();
     $('dlBtn').disabled = true; setMsg('dlMsg', '', 'Đang lưu…');

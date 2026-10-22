@@ -331,6 +331,6 @@ function openComposer(v, done) {
     if (!confirm('Xoá thư này?')) return;
     call('deleteMailRequest', TOKEN, S.id).then(function () { finish('Đã xoá thư.'); }).catch(function (err) { setMsg('cMsg', 'bad', err.message); });
   };
-  setTimeout(function () { if (R.to && !R.to.list().length) $('in-to').focus(); else ed.focus(); }, 60);
+  setTimeout(function () { focusOnDesk(R.to && !R.to.list().length ? $('in-to') : ed); }, 60);
 }
 </script>

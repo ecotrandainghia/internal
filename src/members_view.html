@@ -171,13 +171,13 @@ function rowPoints(p) {
 }
 
 function renderMemberTable() {
-  var d = MV.data, q = MV.q.trim().toLowerCase(), th = d.rules.threshold;
+  var d = MV.data, q = MV.q, th = d.rules.threshold;
   var rows = d.people.filter(function (p) {
     if (MV.dept && p.dept !== MV.dept) return false;
     if (MV.grade && p.grade !== MV.grade) return false;
     if (MV.group && (MV.group === 'supplementary') !== p.supplementary) return false;
     if (MV.tab === 'points' && !rowPoints(p).rank) return false;
-    return !q || p.name.toLowerCase().indexOf(q) >= 0;
+    return matches(p.name, q);
   }).map(function (p) { return { p: p, k: rowKpi(p), s: rowPoints(p) }; });
   var low = function (x) { return x === null ? Infinity : x; };
   if (MV.tab === 'points') rows.sort(function (a, b) { return a.s.rank.rank - b.s.rank.rank || a.p.name.localeCompare(b.p.name, 'vi'); });
