@@ -2,7 +2,7 @@
 /* Giao diện theo mùa và ngày lễ (BOD chọn trong Cài đặt). Không đổi màu app, chỉ thêm hình trang trí
    trong khung chào ở trang chủ và ở màn đăng nhập. */
 .ss-snow { color: var(--ss-snow, #a9c9e8); }
-.ss-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; font-size: 10px; overflow: hidden; }
+.ss-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; font-size: 10px; overflow: hidden; contain: paint; } /* contain: Safari mới chịu cắt hình đang bay ra ngoài khung */
 .ss-decor > * { position: absolute; }
 .ss-decor svg { width: 100%; height: 100%; display: block; }
 .ss-hang { top: -2px; transform-origin: 50% 0; animation: ss-swing 3.4s ease-in-out infinite alternate; }

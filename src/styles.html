@@ -27,6 +27,8 @@
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Trang không bao giờ kéo ngang được: thứ gì lỡ rộng hơn màn hình thì cắt đi, không làm cả trang lắc qua lại. */
+html, body { overflow-x: hidden; overflow-x: clip; overscroll-behavior-x: none; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.5 "Be Vietnam Pro", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
 b, strong, th, h1, h2, h3, h4 { font-weight: 500; }
 input, select, textarea { font: inherit; color: inherit; }
@@ -587,6 +589,7 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .menu-scrim { background: rgb(28 27 23 / .32); backdrop-filter: blur(4px); }
   /* Hộp nhỏ thành trang đầy màn hình: tên và nút quay lại ghim trên cùng, nút Lưu, Đóng ở cuối trang. */
   .overlay.small { padding: 0; place-items: stretch; background: var(--surface); }
+  .main, .overlay.small .box, .drawer, .set-body, .set-nav { overflow-x: hidden; overscroll-behavior-x: none; }
   .overlay.small .box, .overlay.small .box.wide, .overlay.small .box.composer { width: 100%; height: 100%; max-height: none; border-radius: 0; box-shadow: none; padding: calc(16px + var(--sat)) calc(16px + var(--sar)) calc(24px + var(--sab)) calc(16px + var(--sal)); }
   .overlay.small .box > h2:first-child { position: sticky; top: calc(-16px - var(--sat)); z-index: 2; display: flex; align-items: center; gap: 4px; min-height: 52px; margin: calc(-16px - var(--sat)) calc(-16px - var(--sar)) 0 calc(-16px - var(--sal)); padding: calc(6px + var(--sat)) calc(16px + var(--sar)) 6px calc(16px + var(--sal)); background: var(--surface); font-size: 17px; }
   .overlay.small .box > h2:first-child:has(.box-back) { padding-left: calc(4px + var(--sal)); }
