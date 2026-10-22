@@ -64,7 +64,7 @@ function openResetPassword() { loadAdmin(drawResetPassword, 'Đặt lại mật 
 
 function drawResetPassword(d, flash) {
   var row = function (p) {
-    return '<div class="fp-row" data-rp-name="' + esc((p.name + ' ' + p.email + ' ' + p.dept).toLowerCase()) + '"><div><b>' + esc(p.name) + '</b><small>' +
+    return '<div class="fp-row" data-rp-name="' + esc(fold(p.name + ' ' + p.email + ' ' + p.dept)) + '"><div><b>' + esc(p.name) + '</b><small>' +
       esc([p.dept, p.email || 'chưa có email', p.ownPassword ? 'mật khẩu riêng' : 'đang dùng mật khẩu chung', p.lastLogin ? 'vào app ' + fmtDay(p.lastLogin) : 'chưa vào app lần nào'].join(' · ')) + '</small></div>' +
       (p.id === d.me ? '' : p.ownPassword ? '<button type="button" class="btn ghost sm" data-rp="' + esc(p.id) + '">Đặt lại</button>' : '') + '</div>';
   };
@@ -79,7 +79,7 @@ function drawResetPassword(d, flash) {
     '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button></div>');
   if (flash) setMsg('rpMsg', 'ok', flash);
   $('rpFind').oninput = function () {
-    var q = this.value.trim().toLowerCase();
+    var q = fold(this.value).trim();
     document.querySelectorAll('[data-rp-name]').forEach(function (r) { r.hidden = q && r.dataset.rpName.indexOf(q) < 0; });
   };
   document.querySelectorAll('[data-rp]').forEach(function (btn) {

@@ -183,8 +183,7 @@ function openLogFiles() {
 }
 
 function lgShown() {
-  var q = LG.q.trim().toLowerCase();
-  return LG.data.event.members.filter(function (m) { return (!LG.dept || m.dept === LG.dept) && (!q || m.name.toLowerCase().indexOf(q) >= 0); });
+  return LG.data.event.members.filter(function (m) { return (!LG.dept || m.dept === LG.dept) && matches(m.name, LG.q); });
 }
 
 function renderLgPeople() {
@@ -220,7 +219,7 @@ function openSessionBox(s) {
       return '<button type="button" data-ss-dur="' + m + '" aria-pressed="' + (dur === m) + '">' + m + ' phút</button>';
     }).join('') + '</span></div>' +
     '<span class="msg" id="ssMsg" role="status"></span><div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="ssBtn">' + (s ? 'Lưu' : 'Tạo buổi') + '</button></div></form>');
-  $('ssName').focus();
+  focusOnDesk($('ssName'));
   $('modal').querySelectorAll('[data-ss-dur]').forEach(function (b) {
     b.onclick = function () { dur = Number(b.dataset.ssDur); $('modal').querySelectorAll('[data-ss-dur]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
   });

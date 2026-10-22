@@ -49,8 +49,7 @@ function renderPoints() {
 }
 
 function shownPeople() {
-  var q = PT.q.trim().toLowerCase();
-  return PT.data.members.filter(function (m) { return (!PT.dept || m.dept === PT.dept) && (!q || m.name.toLowerCase().indexOf(q) >= 0); });
+  return PT.data.members.filter(function (m) { return (!PT.dept || m.dept === PT.dept) && matches(m.name, PT.q); });
 }
 
 function renderPeople() {

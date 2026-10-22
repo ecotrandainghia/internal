@@ -116,7 +116,7 @@ function askThreadAction(act) {
       $('mbAsk').innerHTML = ''; mbFlash('ok', 'Đã gửi BOD duyệt: ' + MAIL_ACTIONS[act] + '.'); loadMyRequests();
     }).catch(function (err) { b.disabled = false; setMsg('mbAskMsg', 'bad', err.message); });
   };
-  if ($('mbLabel')) $('mbLabel').focus();
+  focusOnDesk($('mbLabel'));
 }
 
 function composerDone(text) {

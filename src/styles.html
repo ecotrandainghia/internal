@@ -122,6 +122,12 @@ input[type="search"]::-webkit-search-decoration, input[type="search"]::-webkit-s
 .set-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 0; border-radius: var(--r-in); background: none; text-align: left; cursor: pointer; color: var(--ink-2); font-size: 15px; }
 .set-item:hover { background: var(--hover); color: var(--ink); }
 .set-item[aria-current="true"] { background: var(--accent); color: var(--on-accent); }
+/* Kết quả tìm trong Cài đặt: tên dòng, dưới là Nhóm › Mục */
+.set-hit > span { display: flex; flex-direction: column; min-width: 0; }
+.set-hit b { font-weight: 500; color: var(--ink); }
+.set-hit small { font-size: 12px; color: var(--ink-3); }
+.set-hit[aria-current="true"] b, .set-hit[aria-current="true"] small { color: inherit; }
+.row.hl { background: var(--accent-soft); box-shadow: -8px 0 0 var(--accent-soft), 8px 0 0 var(--accent-soft); transition: background .3s; }
 .set-body { flex: 1; min-width: 0; padding: 28px 40px; overflow: auto; }
 .set-body h2 { margin: 0 0 4px; font-size: 22px; font-weight: 500; }
 .row { display: flex; align-items: center; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -258,6 +264,7 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
 .search input { border: 0; outline: 0; background: none; font: inherit; color: var(--ink); width: 100%; min-width: 0; }
 .pick { padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--r-in); background: var(--paper); font: inherit; font-size: 15px; color: var(--ink); max-width: 220px; }
 .tlist { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.toolbar + .tlist { margin-top: 12px; } /* ô lọc không dính vào đường kẻ của danh sách */
 .trow { display: grid; grid-template-columns: minmax(0, 1fr) 210px 130px 110px 90px; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .trow:hover .link-btn { text-decoration: underline; text-underline-offset: 3px; }
 .trow .t { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -564,18 +571,19 @@ a.item:hover b { text-decoration: underline; text-underline-offset: 3px; }
   .side { position: fixed; left: 0; top: 0; bottom: 0; height: auto; z-index: 30; width: min(300px, 84vw); transform: translateX(-100%); transition: transform .2s ease, visibility .2s; box-shadow: none; visibility: hidden; padding: calc(14px + var(--sat)) 12px max(12px, var(--sab)) calc(12px + var(--sal)); }
   .side.open { visibility: visible; transform: none; box-shadow: 8px 0 32px rgb(28 27 23 / .18); }
   .main { padding: 20px calc(16px + var(--sar)) calc(40px + var(--sab)) calc(16px + var(--sal)); }
-  .overlay { padding: calc(12px + var(--sat)) 0 0; place-items: end stretch; }
-  .dialog { width: 100%; height: 100%; border-radius: var(--r-card) var(--r-card) 0 0; flex-direction: column; }
+  /* Cài đặt phủ hết màn hình như các trang con, không còn hở phía trên; tự chừa tai thỏ. */
+  .overlay { padding: 0; place-items: stretch; }
+  .dialog { width: 100%; height: 100%; border-radius: 0; box-shadow: none; flex-direction: column; }
   .set-nav { width: auto; border-right: 0; }
   .dialog.in-section .set-nav { display: none; }
   .dialog:not(.in-section) .set-body { display: none; }
   /* Danh sách mục phủ hết khung (nền liền tới đáy); nút đóng nằm ngang hàng ô tìm, không đè lên ô. */
   .dialog:not(.in-section) .set-nav { flex: 1; }
-  .dialog .close { top: 14px; right: 8px; }
+  .dialog .close { top: calc(14px + var(--sat)); right: calc(8px + var(--sar)); }
   .set-search { margin-right: 52px; }
   /* Chừa thanh vuốt trong từng phần (không chừa ở khung) để nền danh sách liền tới đáy. */
-  .set-body { padding: 20px 16px calc(20px + var(--sab)); }
-  .set-nav { padding-bottom: calc(16px + var(--sab)); }
+  .set-body { padding: calc(20px + var(--sat)) calc(16px + var(--sar)) calc(20px + var(--sab)) calc(16px + var(--sal)); }
+  .set-nav { padding: calc(16px + var(--sat)) calc(10px + var(--sar)) calc(16px + var(--sab)) calc(10px + var(--sal)); }
   .menu-scrim { background: rgb(28 27 23 / .32); backdrop-filter: blur(4px); }
   /* Hộp nhỏ thành trang đầy màn hình: tên và nút quay lại ghim trên cùng, nút Lưu, Đóng ở cuối trang. */
   .overlay.small { padding: 0; place-items: stretch; background: var(--surface); }

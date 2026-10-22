@@ -46,6 +46,11 @@ var ICONS = {
 function icon(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS[name] + '"/></svg>'; }
 function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function $(id) { return document.getElementById(id); }
+/** Bỏ dấu, chữ thường: tìm "nguyen van an" vẫn ra "Nguyễn Văn An". */
+function fold(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase(); }
+function matches(text, q) { q = fold(q).trim(); return !q || fold(text).indexOf(q) >= 0; }
+/** Đặt con trỏ vào ô nhập, chỉ trên máy có chuột. Điện thoại thì để người dùng tự bấm, khỏi bật bàn phím khi chưa cần. */
+function focusOnDesk(el) { if (el && window.matchMedia('(pointer: fine)').matches) el.focus(); }
 
 /* Cách chia trang. Cài đặt không còn trên thanh bên. [mã trang, tên, biểu tượng, bước làm] */
 var NAV_BOD = [['home', 'Trang chủ', 'home', 4], ['task', 'Quản lý task', 'task', 5], ['log', 'Quản lý log', 'log', 5], ['points', 'Cộng điểm', 'star', 5],
@@ -335,7 +340,7 @@ function openPasswordBox() {
     '<label class="field">Nhập lại mật khẩu mới<input type="password" id="pw2" autocomplete="new-password" required></label>' +
     '<span class="msg" id="pwMsg" role="status"></span>' +
     '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="pwBtn">Đổi mật khẩu</button></div></form>');
-  $('pw0').focus();
+  focusOnDesk($('pw0'));
   $('pwForm').onsubmit = function (e) {
     e.preventDefault();
     if ($('pw1').value !== $('pw2').value) return setMsg('pwMsg', 'bad', 'Hai lần nhập mật khẩu mới không khớp.');
@@ -565,13 +570,11 @@ function settingControl(r) {
   return '<button class="btn-outline" type="button"' + (r[3] ? ' data-act="' + r[3] + '"' : ' data-act="todo"') + '>' + esc(r[2]) + '</button>';
 }
 function renderSettings(query) {
-  var groups = visibleGroups(), q = (query || '').trim().toLowerCase();
+  var groups = visibleGroups(), q = (query || '').trim();
   var all = [].concat.apply([], groups.map(function (g) { return g[2]; }));
   var sec = all.filter(function (s) { return s[0] === openSection; })[0] || all[0];
-  var nav = groups.map(function (g) {
-    var items = g[2].filter(function (s) { return !q || (s[1] + ' ' + s[4].map(function (r) { return r[0] + ' ' + rowText(r); }).join(' ')).toLowerCase().indexOf(q) >= 0; });
-    if (!items.length) return '';
-    return '<div class="set-group">' + esc(g[0]) + '</div>' + items.map(function (s) {
+  var nav = q ? settingHits(groups, q, sec) : groups.map(function (g) {
+    return '<div class="set-group">' + esc(g[0]) + '</div>' + g[2].map(function (s) {
       return '<button class="set-item" type="button" data-sec="' + s[0] + '"' + (s === sec ? ' aria-current="true"' : '') + '>' + icon(s[2]) + '<span>' + esc(s[1]) + '</span></button>';
     }).join('');
   }).join('');
@@ -596,7 +599,30 @@ function renderSettings(query) {
   if (sec[0] === 'my-notify') loadMyNotify();
   reportPath();
 }
-function openSettings() { if (!USER) return; closeMenu(); closeSide(); openSection = null; $('settings').hidden = false; renderSettings(''); $('setQuery').focus(); }
+/** Tìm trong Cài đặt như Cài đặt của iPhone: ra cả mục lẫn từng dòng bên trong, kèm đường dẫn Nhóm › Mục. Không cần gõ dấu. */
+function settingHits(groups, q, sec) {
+  var hits = [];
+  groups.forEach(function (g) {
+    g[2].forEach(function (s) {
+      if (matches(s[1] + ' ' + g[0], q)) hits.push('<button class="set-item set-hit" type="button" data-sec="' + s[0] + '"' + (s === sec && openSection ? ' aria-current="true"' : '') + '>' + icon(s[2]) +
+        '<span><b>' + esc(s[1]) + '</b><small>' + esc(g[0]) + '</small></span></button>');
+      s[4].forEach(function (r, i) {
+        if (matches(r[0] + ' ' + rowText(r), q)) hits.push('<button class="set-item set-hit" type="button" data-sec="' + s[0] + '" data-hl="' + i + '">' + icon(s[2]) +
+          '<span><b>' + esc(r[0]) + '</b><small>' + esc(g[0] + ' › ' + s[1]) + '</small></span></button>');
+      });
+    });
+  });
+  return hits.length ? '<div class="set-group">Kết quả</div>' + hits.join('') : '';
+}
+/** Mở từ kết quả tìm: tô sáng dòng đó một lúc cho dễ thấy. */
+function flashSettingRow(i) {
+  var row = document.querySelectorAll('#setBody > .row')[i];
+  if (!row) return;
+  row.classList.add('hl');
+  row.scrollIntoView({ block: 'center' });
+  setTimeout(function () { row.classList.remove('hl'); }, 1600);
+}
+function openSettings() { if (!USER) return; closeMenu(); closeSide(); openSection = null; $('settings').hidden = false; renderSettings(''); focusOnDesk($('setQuery')); }
 function closeSettings() { if ($('settings').hidden) return; $('settings').hidden = true; reportPath(); }
 
 /* ---------- Sự kiện ---------- */
@@ -612,7 +638,7 @@ document.addEventListener('click', function (e) {
   }
   if (t.dataset.page) { e.preventDefault(); page = t.dataset.page; return renderPage(); }
   if (t.dataset.themeSet) return setTheme(t.dataset.themeSet);
-  if (t.dataset.sec) { openSection = t.dataset.sec; return renderSettings($('setQuery').value); }
+  if (t.dataset.sec) { openSection = t.dataset.sec; renderSettings($('setQuery').value); if (t.dataset.hl) flashSettingRow(+t.dataset.hl); return; }
   var act = t.dataset.act;
   if (act === 'settings') openSettings();
   else if (act === 'close-settings') closeSettings();
