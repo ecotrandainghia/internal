@@ -127,7 +127,7 @@ function ensureSchema_(force) {
   var props = PropertiesService.getScriptProperties();
   // Đổi cấu trúc tab hoặc thêm dòng mặc định mới thì chạy lại
   var signature = JSON.stringify([TABLES.map(function (t) { return [t.name, t.columns]; }),
-    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; })]);
+    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; }), 'don-dong-trong-1']);
   if (!force && props.getProperty(SCHEMA_PROP) === signature) return;
 
   withLock_(function () {
@@ -156,12 +156,32 @@ function ensureTab_(ss, def, index) {
     missing.forEach(function (c, j) { formatColumn_(sh, start + j, c.type); });
     sh.getRange(1, 1, 1, start + missing.length - 1).setFontWeight('bold');
   }
+  if (!isNew) compactTab_(sh, def);
   if (isNew) {
     sh.setFrozenRows(1);
     var group = GROUPS.filter(function (g) { return g.id === def.group; })[0];
     if (group) sh.setTabColor(group.color);
     if (!def.handEditable) protectTab_(sh);
   }
+}
+
+/**
+ * Dồn các dòng có dữ liệu lên sát dòng tên cột nếu giữa chừng có dòng trống (bản cũ ghi dữ liệu bắt đầu từ dòng 1001
+ * vì ô tick trống tới cuối sheet bị tính là có dữ liệu). Thứ tự dòng giữ nguyên; app không dựa vào số dòng nên an toàn.
+ */
+function compactTab_(sh, def) {
+  var last = sh.getLastRow();
+  if (last < 3) return;
+  var values = sh.getRange(1, 1, last, Math.max(1, sh.getLastColumn())).getValues();
+  // Chỉ coi là trống khi mọi ô đều rỗng hoặc FALSE (dòng có chữ nhưng thiếu mã vẫn giữ, không xoá gì).
+  var empty = function (row) { return row.every(function (v) { return v === '' || v === null || v === false; }); };
+  var keep = values.slice(1).filter(function (row) { return !empty(row); });
+  var lastReal = 0;
+  values.forEach(function (row, i) { if (i > 0 && !empty(row)) lastReal = i; });
+  if (!keep.length || keep.length === lastReal) return; // không có dòng trống xen giữa
+  var blank = values[0].map(function () { return ''; });
+  while (keep.length < values.length - 1) keep.push(blank.slice());
+  sh.getRange(2, 1, keep.length, values[0].length).setValues(keep);
 }
 
 /** Định dạng cả cột (trừ dòng tên cột) theo kiểu: chữ, số, ngày, hay ô tick. */
