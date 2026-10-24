@@ -8,7 +8,6 @@
 var SIGNUP_TAB = 'Đăng ký';
 var OLD_TOOL_TAB = 'Đăng ký log';
 var SIGNUP_PLAN_TAB = 'Kế hoạch';
-var SIGNUP_FOLDER = '[APP] Đăng ký log';
 var SIGNUP_PLAN_STATUS = ['Chưa có kế hoạch', 'Chưa làm', 'Dang dở', 'Hoàn thành', 'Đã hủy'];
 var SIGNUP_HEADERS = {
   name: ['hovaten', 'hoten', 'ten', 'tenthanhvien'], dept: ['ban'], className: ['lop'],
@@ -219,8 +218,7 @@ function signupFolder_() {
   if (url) {
     try { return DriveApp.getFolderById(idFromUrl_(url)); } catch (e) { throw new Error('Không mở được thư mục lưu sheet đăng ký. Kiểm tra lại link ở Cài đặt > Hoạt động CLB.'); }
   }
-  var it = DriveApp.getFoldersByName(SIGNUP_FOLDER);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(SIGNUP_FOLDER);
+  return appFolder_('signup');
 }
 
 /** Kẻ bảng đăng ký và tab Kế hoạch vào file mới. */

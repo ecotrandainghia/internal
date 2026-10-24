@@ -63,7 +63,7 @@ test('ảnh đại diện: lưu lên Drive, ai có link xem được, ảnh cũ 
   const url = app.saveAvatar(binh, jpg);
   assert.match(url, /^https:\/\/drive\.google\.com\/thumbnail\?id=[\w-]{20,}&sz=w256$/);
   const first = app.DriveApp.getFileById(app.avatarFileId_(url));
-  assert.equal(first.__blob.folder, 'Ảnh đại diện');
+  assert.equal(first.__blob.folder, '[APP] Ảnh đại diện');
   assert.equal(first.__blob.sharing, 'anyone_with_link:view');
   assert.equal(app.findRecord_('accounts', 'M1').avatar_url, url);
   const url2 = app.saveAvatar(binh, jpg);

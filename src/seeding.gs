@@ -6,7 +6,6 @@
  * thì hiện ra để người nhập tick xác nhận. Đoạn đã dán được chép nguyên văn sang file bằng chứng của nhiệm kỳ.
  */
 
-var SEEDING_FOLDER = 'Bằng chứng seeding';
 var SEEDING_FILE = '[APP] Bằng chứng seeding ';
 var SEEDING_FILE_PROP = 'SEEDING_EVIDENCE_';
 var SEEDING_REMIND_HANDLER = 'runSeedingReminders';
@@ -226,8 +225,7 @@ function evidenceFile_(termId) {
   var props = PropertiesService.getScriptProperties(), id = props.getProperty(SEEDING_FILE_PROP + termId);
   if (id) { try { return SpreadsheetApp.openById(id); } catch (e) { /* file bị xoá thì tạo lại */ } }
   var ss = SpreadsheetApp.create(SEEDING_FILE + termId);
-  var it = DriveApp.getFoldersByName(SEEDING_FOLDER), folder = it.hasNext() ? it.next() : DriveApp.createFolder(SEEDING_FOLDER);
-  DriveApp.getFileById(ss.getId()).moveTo(folder);
+  DriveApp.getFileById(ss.getId()).moveTo(appFolder_('seeding'));
   var first = ss.getSheets()[0].setName('phase_1');
   [first, ss.insertSheet('phase_2')].forEach(function (sh) { sh.getRange(1, 1, 1, 3).setValues([['post_id', 'reacts', 'comments']]); sh.setFrozenRows(1); });
   props.setProperty(SEEDING_FILE_PROP + termId, ss.getId());

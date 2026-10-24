@@ -38,6 +38,61 @@ function dataFile_() {
   return dataFileCache_;
 }
 
+/* ===================== Thư mục Drive của app ===================== */
+
+var FOLDER_PROP = 'APP_FOLDER_';
+var FOLDERS_DONE_PROP = 'APP_FOLDERS_DONE';
+// Tên đầu là tên app đặt khi tạo mới; các tên sau là tên cũ, gặp thì dùng luôn thư mục đó.
+var APP_FOLDERS = {
+  attach: ['[APP] Đính kèm mail'],
+  roster: ['[APP] Bản sao sheet đã tải', 'Bản sao sheet đã tải'],
+  avatar: ['[APP] Ảnh đại diện', 'Ảnh đại diện'],
+  login_bg: ['[APP] Ảnh nền đăng nhập', 'Ảnh nền đăng nhập'],
+  seeding: ['[APP] Bằng chứng seeding', 'Bằng chứng seeding'],
+  signup: ['[APP] Đăng ký log'],
+  backup: ['[APP] Sao lưu', 'Sao lưu'],
+  archive: ['[APP] Lưu trữ', 'Lưu trữ']
+};
+
+/** Thư mục tạo mới nằm cạnh file dữ liệu cho dễ thấy; không biết file dữ liệu ở đâu thì nằm ở gốc Drive. */
+function appFolderParent_() {
+  try {
+    var it = DriveApp.getFileById(dataFile_().getId()).getParents();
+    if (it.hasNext()) return it.next();
+  } catch (e) { /* dùng gốc Drive */ }
+  return DriveApp.getRootFolder();
+}
+
+/**
+ * Thư mục Drive của app theo khoá (xem APP_FOLDERS). App nhớ mã thư mục nên Van đổi tên hay chuyển chỗ thì vẫn tìm ra;
+ * thư mục bị xoá thì tìm theo tên, không có thì tạo lại.
+ */
+function appFolder_(key) {
+  var props = PropertiesService.getScriptProperties(), id = props.getProperty(FOLDER_PROP + key), names = APP_FOLDERS[key], folder = null;
+  if (!names) throw new Error('Thư mục không có trong danh sách: ' + key);
+  if (id) {
+    try { var f = DriveApp.getFolderById(id); if (!(f.isTrashed && f.isTrashed())) return f; } catch (e) { /* bị xoá thì tìm lại */ }
+  }
+  names.forEach(function (n) { if (!folder) { var it = DriveApp.getFoldersByName(n); if (it.hasNext()) folder = it.next(); } });
+  if (!folder) folder = appFolderParent_().createFolder(names[0]);
+  props.setProperty(FOLDER_PROP + key, folder.getId());
+  return folder;
+}
+
+/** Tạo đủ mọi thư mục một lần (lúc cài đặt, lần mở app đầu sau khi cập nhật, và mỗi đêm) để Drive có đủ thư mục ngay từ đầu. */
+function ensureAppFolders_() {
+  Object.keys(APP_FOLDERS).forEach(appFolder_);
+  PropertiesService.getScriptProperties().setProperty(FOLDERS_DONE_PROP, Object.keys(APP_FOLDERS).sort().join(','));
+}
+
+/** Chưa tạo đủ thì tạo; lỗi thì bỏ qua (không làm hỏng việc đang làm, lần sau thử lại). */
+function ensureAppFoldersOnce_() {
+  try {
+    if (PropertiesService.getScriptProperties().getProperty(FOLDERS_DONE_PROP) === Object.keys(APP_FOLDERS).sort().join(',')) return;
+    withLock_(ensureAppFolders_);
+  } catch (e) { /* thử lại lần sau */ }
+}
+
 /** Dùng một file dữ liệu khác (lúc cài đặt, hoặc khôi phục từ bản sao lưu). */
 function useDataFile_(id) {
   var props = PropertiesService.getScriptProperties();

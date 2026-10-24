@@ -6,7 +6,6 @@
  * trong sheet thành Đã rời. Bản sheet được chép sang Drive, kèm tab _undo ghi trạng thái trước khi tải để hoàn tác.
  */
 
-var ROSTER_FOLDER = 'Bản sao sheet đã tải';
 var ROSTER_UNDO_DAYS = 7;
 var ROSTER_BATCH = { oday: 'OD', batch_1: 'D1', batch_2: 'D2' };
 var ROSTER_HEADERS = {
@@ -330,8 +329,7 @@ function previewRoster(token, req) {
 
 /** Thư mục chép sheet đã tải. */
 function rosterFolder_() {
-  var it = DriveApp.getFoldersByName(ROSTER_FOLDER);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(ROSTER_FOLDER);
+  return appFolder_('roster');
 }
 
 /** Bản ghi thành chữ (ngày giữ được) và ngược lại, để cất trạng thái trước khi tải vào tab _undo. */

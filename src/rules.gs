@@ -4,7 +4,6 @@
  * Mọi lần sửa đều ghi Nhật ký (change_setting).
  */
 
-var AVATAR_FOLDER = 'Ảnh đại diện';
 var AVATAR_MAX = 200000;
 var PINNED_MAX = 8;
 
@@ -134,8 +133,7 @@ function savePinnedLinks(token, links) {
 /* ---------- Ảnh đại diện ---------- */
 
 function avatarFolder_() {
-  var it = DriveApp.getFoldersByName(AVATAR_FOLDER);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(AVATAR_FOLDER);
+  return appFolder_('avatar');
 }
 
 /** Mã file Drive trong link ảnh đại diện app đã lưu. */
