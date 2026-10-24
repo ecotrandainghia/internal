@@ -92,6 +92,7 @@ function setupApp(req) {
   setDefaultPassword_(req.clubPassword);
   ensureNightlyTrigger_();
   ensureViewTrigger_();
+  ensureAppFolders_();
   dropOldAppLeftovers_();
   CacheService.getScriptCache().remove('setup_code');
   return ScriptApp.getService().getUrl();

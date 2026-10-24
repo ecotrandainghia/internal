@@ -204,6 +204,7 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
           getId: () => id,
           getName: () => ss.name,
           setName: (n) => { ss.name = n; },
+          getParents: () => ({ hasNext: () => true, next: () => ctx.DriveApp.getRootFolder() }),
           setTrashed: (t) => { ss.trashed = !!t; },
           setSharing: (a, p) => { ss.sharing = a + ':' + p; },
           moveTo: (folder) => { ss.folder = folder.name; },
@@ -216,11 +217,11 @@ function loadApp(files = ['schema.gs', 'records.gs', 'db.gs']) {
           }
         };
       },
-      getRootFolder: () => ({ id: 'root', name: '' }),
+      getRootFolder: () => ({ id: 'root', name: '', getId: () => 'root', createFolder: (n) => ctx.DriveApp.createFolder(n) }),
       getFolderById: (id) => { const f = folders.find((x) => x.id === id); if (!f) throw new Error('not found'); return f; },
       getFoldersByName: (name) => { const list = folders.filter((x) => x.name === name); return { hasNext: () => list.length > 0, next: () => list.shift() }; },
       createFolder: (name) => {
-        const f = { id: 'folder' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name, getName: () => name,
+        const f = { id: 'folder' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx', name, getName: () => name, getId() { return this.id; }, isTrashed() { return !!this.trashed; }, setName(n) { this.name = n; },
           createFile: (blob) => { const id = 'blob' + nextId++ + 'xxxxxxxxxxxxxxxxxxxx'; blobs[id] = { name: blob.getName(), type: blob.getContentType(), bytes: blob.getBytes(), folder: name }; return ctx.DriveApp.getFileById(id); } };
         folders.push(f);
         return f;

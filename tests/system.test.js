@@ -33,7 +33,7 @@ test('việc ban đêm: cài lúc cài đặt, chỉ lịch của dự án gọi
   assert.match(r.text, /Lưu trữ nhiệm kỳ 2024-2025/);
   assert.equal(app.backups_().length, 1);
   const copy = app.__files[app.backups_()[0].id];
-  assert.equal(copy.folder, 'Sao lưu');
+  assert.equal(copy.folder, '[APP] Sao lưu');
 
   assert.ok(!app.readTable_('events').some((e) => e.event_id === ev), 'sự kiện 2425 rời file chính');
   assert.ok(app.readTable_('events').some((e) => e.term_id === '2526'), 'nhiệm kỳ 2526 chưa đủ một năm thì giữ');
@@ -48,7 +48,7 @@ test('việc ban đêm: cài lúc cài đặt, chỉ lịch của dự án gọi
   assert.ok(t.archive_file_id && t.archived_at);
   const arch = app.__files[t.archive_file_id];
   assert.equal(arch.name, '[APP] Lưu trữ nhiệm kỳ 2425');
-  assert.equal(arch.folder, 'Lưu trữ');
+  assert.equal(arch.folder, '[APP] Lưu trữ');
   assert.deepEqual(arch.getSheets().map((s) => s.getName()).sort(), ['audit_log', 'events', 'point_entries', 'task_assignments', 'tasks']);
   assert.equal(arch.getSheetByName('tasks').getDataRange().getValues()[1][0], task);
 
@@ -121,4 +121,40 @@ test('cài đặt lần đầu dọn lịch chạy và thuộc tính còn sót c
   ['IdFileDuLieu', 'CauTrucBang', 'phien_abc', 'bimat_zalo', 'baoloi_dem'].forEach((k) => assert.ok(!(k in app.__props), k));
   assert.equal(app.__props.GIU_LAI, 'z');
   assert.ok(app.__props.DATA_FILE_ID);
+});
+
+test('thư mục Drive: cài đặt tạo đủ một lần, đổi tên hay chuyển chỗ vẫn tìm ra, xoá thì tạo lại, thư mục tên cũ thì dùng luôn', () => {
+  const { app } = setUp();
+  const keys = Object.keys(app.APP_FOLDERS);
+  assert.equal(app.__folders.length, keys.length, 'cài đặt tạo đủ mọi thư mục');
+  assert.deepEqual(app.__folders.map((f) => f.name).sort(), keys.map((k) => app.APP_FOLDERS[k][0]).sort());
+  app.ensureAppFolders_();
+  assert.equal(app.__folders.length, keys.length, 'chạy lại không tạo thêm');
+  // đổi tên: vẫn ra đúng thư mục nhờ mã đã nhớ
+  const att = app.appFolder_('attach');
+  att.setName('Thư mục tôi tự đặt');
+  assert.equal(app.appFolder_('attach').getId(), att.getId());
+  assert.equal(app.__folders.length, keys.length);
+  // bị xoá (vào thùng rác): tạo lại
+  att.trashed = true;
+  const again = app.appFolder_('attach');
+  assert.notEqual(again.getId(), att.getId());
+  assert.equal(again.getName(), '[APP] Đính kèm mail');
+});
+
+test('thư mục Drive: gặp thư mục tên cũ thì dùng luôn, không tạo trùng; lần mở app đầu tạo đủ rồi thôi', () => {
+  const { app } = setUp();
+  Object.keys(app.APP_FOLDERS).forEach((k) => { delete app.__props[app.FOLDER_PROP + k]; });
+  delete app.__props[app.FOLDERS_DONE_PROP];
+  app.__folders.length = 0;
+  const old = app.DriveApp.createFolder('Ảnh đại diện');
+  assert.equal(app.appFolder_('avatar').getId(), old.getId(), 'dùng thư mục tên cũ');
+  assert.equal(app.__folders.length, 1);
+  const token = asBod(app);
+  app.openApp(token);
+  assert.equal(app.__folders.length, Object.keys(app.APP_FOLDERS).length, 'mở app tạo đủ, avatar không tạo thêm');
+  const n = app.__folders.length;
+  app.openApp(token);
+  assert.equal(app.__folders.length, n);
+  assert.equal(app.openApp('khong-co-phien'), null);
 });

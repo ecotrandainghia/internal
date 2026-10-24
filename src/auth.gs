@@ -162,6 +162,7 @@ function homeFor_(token) {
 function openApp(token) {
   var me;
   try { me = requireUser_(token); } catch (e) { if (e.message === 'SESSION_EXPIRED') return null; throw e; }
+  ensureAppFoldersOnce_();
   var now = Date.now();
   if (sessionNeedsRenew_(me.session, now)) {
     me.session.exp = now + SESSION_DAYS * 864e5;

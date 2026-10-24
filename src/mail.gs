@@ -17,7 +17,6 @@ var MAIL_PAGE_SIZE = 30;
 var MAIL_FILE_MB = 10;
 var MAIL_TOTAL_MB = 20;
 var MAIL_IMAGE_MB = 2;
-var MAIL_ATTACH_FOLDER = '[APP] Đính kèm mail';
 var MAIL_SEND_ACTIONS = ['compose', 'reply', 'reply_all', 'forward'];
 var MAIL_THREAD_ACTIONS = ['archive', 'move_to_inbox', 'trash', 'report_spam', 'add_label', 'remove_label'];
 var MAIL_EDITABLE = ['draft', 'needs_changes'];
@@ -136,8 +135,7 @@ function gmailLink_(suffix) {
 
 /** Thư mục Drive giữ tệp UCV tải lên (chưa có thì tạo). */
 function mailAttachFolder_() {
-  var it = DriveApp.getFoldersByName(MAIL_ATTACH_FOLDER);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(MAIL_ATTACH_FOLDER);
+  return appFolder_('attach');
 }
 
 /** Chữ ký mặc định trong cài đặt Gmail CLB: { html, error }. Nhớ tạm 6 tiếng khi đọc được. */

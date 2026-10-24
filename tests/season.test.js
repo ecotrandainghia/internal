@@ -39,7 +39,7 @@ test('ảnh nền đăng nhập: chỉ nhận JPEG, máy đã có bản mới th
   const v2 = app.saveLoginBackground(token, JPEG);
   assert.notEqual(app.getSetting_('login_bg_file_id'), first);
   assert.equal(app.DriveApp.getFileById(first).__blob.trashed, true);
-  assert.equal(app.DriveApp.getFileById(app.getSetting_('login_bg_file_id')).__blob.folder, 'Ảnh nền đăng nhập');
+  assert.equal(app.DriveApp.getFileById(app.getSetting_('login_bg_file_id')).__blob.folder, '[APP] Ảnh nền đăng nhập');
   assert.equal(app.loginBackground(v1).version, v2);
 
   assert.equal(app.saveLoginBackground(token, ''), '');

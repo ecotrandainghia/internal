@@ -1,11 +1,10 @@
 /**
  * Cài đặt > Giao diện theo mùa: chủ đề trang trí (trang chủ và màn đăng nhập) và ảnh nền đăng nhập, đổi cho cả CLB.
- * Chủ đề lưu ở Cài đặt season_theme (trống là không trang trí). Ảnh nền là JPEG trong thư mục Drive LOGIN_BG_FOLDER;
+ * Chủ đề lưu ở Cài đặt season_theme (trống là không trang trí). Ảnh nền là JPEG trong thư mục Drive "[APP] Ảnh nền đăng nhập" (appFolder_('login_bg'));
  * Cài đặt login_bg_file_id trỏ tới ảnh, login_bg_version đổi mỗi lần thay ảnh để máy biết lấy ảnh mới.
  */
 
 var SEASONS = ['spring', 'summer', 'autumn', 'winter', 'tet', 'womens_day', 'earth', 'national_day', 'mid_autumn', 'halloween', 'teachers_day', 'christmas'];
-var LOGIN_BG_FOLDER = 'Ảnh nền đăng nhập';
 var LOGIN_BG_MAX = 2500000; // số ký tự base64, khoảng 1,8 MB ảnh
 
 /** Chủ đề đang dùng ('' là không trang trí). */
@@ -36,7 +35,7 @@ function saveLoginBackground(token, dataUrl) {
   return withLock_(function () {
     var oldId = String(getSetting_('login_bg_file_id', '') || ''), fileId = '', version = '';
     if (b64) {
-      var it = DriveApp.getFoldersByName(LOGIN_BG_FOLDER), folder = it.hasNext() ? it.next() : DriveApp.createFolder(LOGIN_BG_FOLDER);
+      var folder = appFolder_('login_bg');
       version = String(Date.now());
       fileId = folder.createFile(Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', 'nen-dang-nhap-' + version + '.jpg')).getId();
     }

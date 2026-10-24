@@ -11,8 +11,6 @@ var NIGHTLY_HOUR = 2;
 var JOB_STATUS_PROP = 'JOB_STATUS';
 var BACKUP_LIST_PROP = 'BACKUP_LIST';
 var SIZE_ALERT_PROP = 'SIZE_ALERT_AT';
-var BACKUP_FOLDER = 'Sao lưu';
-var ARCHIVE_FOLDER = 'Lưu trữ';
 var BACKUP_KEEP = 30;
 var ARCHIVE_AFTER_DAYS = 365;
 var SHEET_CELL_LIMIT = 10000000;
@@ -113,6 +111,7 @@ function nightlyWork_() {
   var step = function (name, fn) {
     try { var r = fn(); if (r) done.push(r); } catch (x) { errors.push(name + ': ' + (x && x.message || x)); }
   };
+  step('Thư mục Drive', function () { ensureAppFolders_(); return ''; });
   step('Sao lưu', function () { return 'Sao lưu ' + backupNow_().name; });
   step('Lưu trữ', function () { var t = archiveOldTerms_(new Date()); return t.length ? 'Lưu trữ nhiệm kỳ ' + t.map(termLabel_).join(', ') : ''; });
   step('Tab xem', function () { refreshViews_(true); return ''; });
@@ -124,11 +123,6 @@ function nightlyWork_() {
 
 /* ===================== Sao lưu ===================== */
 
-function appFolder_(name) {
-  var it = DriveApp.getFoldersByName(name);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(name);
-}
-
 /** Các bản sao lưu, mới nhất trước: [{ id, name, at }]. */
 function backups_() {
   try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(BACKUP_LIST_PROP) || '[]'); } catch (e) { return []; }
@@ -138,7 +132,7 @@ function backups_() {
 function backupNow_() {
   var now = new Date();
   var name = '[APP] Sao lưu ' + Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH.mm');
-  var copy = DriveApp.getFileById(dataFile_().getId()).makeCopy(name, appFolder_(BACKUP_FOLDER));
+  var copy = DriveApp.getFileById(dataFile_().getId()).makeCopy(name, appFolder_('backup'));
   var list = [{ id: copy.getId(), name: name, at: now.getTime() }].concat(backups_());
   list.slice(BACKUP_KEEP).forEach(function (b) { try { DriveApp.getFileById(b.id).setTrashed(true); } catch (x) { /* đã bị xoá tay */ } });
   PropertiesService.getScriptProperties().setProperty(BACKUP_LIST_PROP, JSON.stringify(list.slice(0, BACKUP_KEEP)));
@@ -192,7 +186,7 @@ function archiveOldTerms_(now) {
 function archiveTerm_(termId) {
   withLock_(function () {
     var ends = termEnds_(readTable_('terms')), ss = SpreadsheetApp.create('[APP] Lưu trữ nhiệm kỳ ' + termId);
-    DriveApp.getFileById(ss.getId()).moveTo(appFolder_(ARCHIVE_FOLDER));
+    DriveApp.getFileById(ss.getId()).moveTo(appFolder_('archive'));
     var first = ss.getSheets()[0], plans = [];
     ARCHIVE_TABLES.forEach(function (t) {
       var name = t[0], def = tableDef_(name), values = sheet_(name).getDataRange().getValues(), header = values[0], move = [], keep = [];
