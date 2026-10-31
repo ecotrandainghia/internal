@@ -200,3 +200,18 @@ test('đăng nhập Google: phải bật trong Cài đặt, hỏi lại Google, 
   app.__fetch = () => ({ getResponseCode: () => 400, getContentText: () => '{}' });
   assert.throws(() => app.loginWithGoogle('x'), /Không xác nhận/);
 });
+
+test('mất dòng Tài khoản: mật khẩu chung vẫn vào được và app tạo lại dòng; sai mật khẩu hay người đã nghỉ thì không', () => {
+  const { app } = require('./sample').setUp();
+  app.deleteRecord_('accounts', 'M1');
+  assert.throws(() => app.login('binh@gmail.com', 'saibet'), /không đúng/);
+  assert.equal(app.findRecord_('accounts', 'M1'), null);
+  assert.ok(app.login('binh@gmail.com', 'chungCLB').token);
+  assert.equal(app.findRecord_('accounts', 'M1').theme, 'system');
+  assert.ok(app.login('binh@gmail.com', 'chungCLB').token, 'lần sau vẫn vào được, không tạo trùng');
+  assert.equal(app.readTable_('accounts').filter((a) => a.member_id === 'M1').length, 1);
+  const term = app.readTable_('member_terms').find((t) => t.member_id === 'M2');
+  app.updateRecord_('member_terms', { member_id: term.member_id, term_id: term.term_id }, { status: 'left' });
+  app.deleteRecord_('accounts', 'M2');
+  assert.throws(() => app.login('chi@gmail.com', 'chungCLB'), /không đúng|chưa có tài khoản|ngừng/);
+});

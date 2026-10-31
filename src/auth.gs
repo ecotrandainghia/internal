@@ -112,8 +112,10 @@ function requireUser_(token, need) {
 function login(email, password) {
   var data = peopleData_();
   var id = memberIdByEmail_(data.members, email);
-  var account = data.accounts.filter(function (a) { return a.member_id === id; })[0];
   var member = data.members.filter(function (m) { return m.member_id === id; })[0];
+  var account = data.accounts.filter(function (a) { return a.member_id === id; })[0];
+  // Mất dòng Tài khoản (ví dụ lỡ xoá trong sheet) thì coi như chưa đổi mật khẩu: so với mật khẩu chung, đúng thì tạo lại dòng
+  if (!account && member && passwordMatches_({}, password)) account = restoreAccount_(id, data);
   if (!account || !passwordMatches_(account, password)) throw new Error('Email hoặc mật khẩu không đúng.');
   var block = loginBlock_(member, account, latestTermRow_(data.member_terms, id));
   if (block) throw new Error(block);
@@ -137,9 +139,21 @@ function loginWithGoogle(idToken) {
   var id = memberIdByEmail_(data.members, info.email);
   var member = data.members.filter(function (m) { return m.member_id === id; })[0];
   var account = data.accounts.filter(function (a) { return a.member_id === id; })[0];
+  if (!account && member) account = restoreAccount_(id, data);
   var block = loginBlock_(member, account, latestTermRow_(data.member_terms, id));
   if (block) throw new Error(block.replace('Email này', 'Email ' + info.email));
   return startSession_(id, data);
+}
+
+/** Tạo lại dòng Tài khoản mặc định cho thành viên đang hoạt động bị mất dòng. Người đã nghỉ thì không tạo. */
+function restoreAccount_(id, data) {
+  var term = latestTermRow_(data.member_terms, id);
+  if (!term || term.status !== 'active') return null;
+  var row = withLock_(function () {
+    return findRecord_('accounts', id) || insertRecords_('accounts', [{ member_id: id, theme: 'system', notify_zalo: true, notify_app: false, self_remind: false }])[0];
+  });
+  data.accounts.push(row);
+  return row;
 }
 
 /** Tạo phiên, ghi Lần đăng nhập cuối. user.firstLogin tính trước khi ghi, để trang web biết có hiện ba bước đầu không. */
