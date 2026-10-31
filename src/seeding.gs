@@ -1,6 +1,6 @@
 /**
  * Seeding (DIEM-01), người phụ trách seeding làm; BOD vào từ Cài đặt khi chưa có ai phụ trách.
- * (1) Dán link bài đăng, chọn lúc nhắc, bấm Đặt nhắc hẹn. (2) Đến giờ, app nhắc người đặt qua Zalo hoặc app.
+ * (1) Dán link bài đăng, chọn lúc nhắc, bấm Đặt nhắc hẹn (hoặc bấm Điền ngay để dán luôn, không nhắc). (2) Đến giờ, app nhắc người đặt qua Zalo hoặc app.
  * (3) Dán nguyên đoạn copy react và comment. (4) App dò tên Facebook của thành viên và fanpage họ đăng ký (HS-04),
  * cộng +1 cho react, +2 cho comment (theo thang điểm), mỗi người một lần mỗi bài. (5) Tên nằm trong tên khác hoặc trùng tên
  * thì hiện ra để người nhập tick xác nhận. Đoạn đã dán được chép nguyên văn sang file bằng chứng của nhiệm kỳ.
@@ -142,23 +142,34 @@ function seedingPage(token) {
 
 /* ---------- Đặt nhắc hẹn ---------- */
 
-/** Dán link bài và chọn lúc nhắc (NS seeding tự chọn, không có mức mặc định). remindAt: mili giây. */
+/**
+ * Dán link bài và chọn lúc nhắc (NS seeding tự chọn, không có mức mặc định). remindAt: mili giây.
+ * f.now: điền ngay, không đặt nhắc (người nhập tự nhớ, dán react và comment luôn). Trả về trang kèm added là mã bài mới.
+ */
 function addSeedingPost(token, f) {
   var me = requireSeeder_(token);
   f = f || {};
-  var url = String(f.url || '').trim(), at = new Date(Number(f.remindAt));
+  var url = String(f.url || '').trim(), now = !!f.now, at = now ? '' : new Date(Number(f.remindAt));
   if (!postUrlValid_(url)) throw new Error('Bạn dán link bài đăng Facebook (bắt đầu bằng https://).');
-  if (isNaN(at.getTime())) throw new Error('Bạn chọn lúc nhắc nhé.');
-  if (at.getTime() < Date.now() - 60e3) throw new Error('Lúc nhắc đã qua rồi. Chọn một lúc sau bây giờ.');
-  if (at.getTime() > Date.now() + 14 * 864e5) throw new Error('Lúc nhắc chỉ trong vòng 14 ngày tới.');
-  withLock_(function () {
+  if (!now) {
+    if (isNaN(at.getTime())) throw new Error('Bạn chọn lúc nhắc nhé.');
+    if (at.getTime() < Date.now() - 60e3) throw new Error('Lúc nhắc đã qua rồi. Chọn một lúc sau bây giờ.');
+    if (at.getTime() > Date.now() + 14 * 864e5) throw new Error('Lúc nhắc chỉ trong vòng 14 ngày tới.');
+  }
+  var added = withLock_(function () {
     var term = requireTerm_(), key = postKey_(url);
+    if (now) {
+      var phase = phaseAt_(term, new Date());
+      if (phase !== 'phase_1' && phase !== 'phase_2') throw new Error('Đang ở giai đoạn giao thoa nên chưa cộng điểm được. Bạn đặt nhắc hẹn nhé.');
+    }
     var same = readTable_('seeding_posts').filter(function (p) { return postKey_(p.post_url) === key; })[0];
-    if (same) throw new Error('Bài này đã được đặt nhắc (' + same.post_id + ').');
-    insertRecords_('seeding_posts', [{ post_url: url, created_by: me.memberId, created_at: new Date(), remind_at: at, status: 'waiting' }], { termId: term.term_id });
+    if (same) throw new Error('Bài này đã có trong danh sách (' + same.post_id + ').');
+    return insertRecords_('seeding_posts', [{ post_url: url, created_by: me.memberId, created_at: new Date(), remind_at: at, status: 'waiting' }], { termId: term.term_id })[0];
   });
-  ensureSeedingTrigger_();
-  return seedingPageFor_(me);
+  if (!now) ensureSeedingTrigger_();
+  var page = seedingPageFor_(me);
+  page.added = added.post_id;
+  return page;
 }
 
 /** Đổi lúc nhắc của bài đang chờ. */

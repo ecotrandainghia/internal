@@ -50,7 +50,7 @@ test('đặt nhắc hẹn: chỉ NS seeding hoặc BOD, link Facebook, lúc nh�
   assert.match(d.waiting[0].id, /^S-\d{4}-0001$/);
   assert.equal(d.waiting[0].mine, true);
   assert.ok(app.__triggers.includes('runSeedingReminders'), 'cài việc tự chạy nhắc hẹn');
-  assert.throws(() => addPost(app, asBod(app), 'https://m.facebook.com/eco/posts/1/'), /đã được đặt nhắc/);
+  assert.throws(() => addPost(app, asBod(app), 'https://m.facebook.com/eco/posts/1/'), /đã có trong danh sách/);
   const later = Date.now() + 48 * HOUR;
   assert.equal(plain(app.setSeedingRemind(chi, d.waiting[0].id, later)).waiting[0].remindAt, later);
   assert.equal(plain(app.deleteSeedingPost(chi, d.waiting[0].id)).waiting.length, 0);
@@ -146,4 +146,19 @@ test('fanpage để seeding: tên không trùng page khác hay tên Facebook ng�
   const id = addPost(app, chi, 'https://www.facebook.com/eco/posts/9').waiting[0].id;
   assert.deepEqual(plain(app.previewSeeding(chi, id, 'Shop Xanh', '')).react.sure.map((s) => [s.id, s.via]), [['M1', 'Shop Xanh']]);
   assert.deepEqual(plain(app.removeFanpage(binh, 'Shop Xanh')).pages, []);
+});
+
+test('điền ngay: không đặt nhắc, dán và ghi nhận luôn; không có trong tin nhắc; giao thoa thì không điền ngay được', () => {
+  const { app, term } = seedingSetUp();
+  const chi = asChi(app);
+  assert.throws(() => app.addSeedingPost(asBinh(app), { url: 'https://www.facebook.com/eco/posts/9', now: true }), /seeding/);
+  const d = plain(app.addSeedingPost(chi, { url: 'https://www.facebook.com/eco/posts/9', now: true }));
+  const post = d.waiting.find((p) => p.id === d.added);
+  assert.equal(post.remindAt, null);
+  assert.equal(app.seedingReminderMessages_(0, Date.now() + 365 * 24 * HOUR).length, 0);
+  assert.throws(() => app.addSeedingPost(asBod(app), { url: 'https://facebook.com/eco/posts/9', now: true }), /đã có trong danh sách/);
+  app.recordSeeding(chi, d.added, 'Bình Trần', '', { react: ['M1'] });
+  assert.equal(app.findRecord_('seeding_posts', d.added).status, 'recorded');
+  app.updateRecord_('terms', term, { phase1_start_at: new Date(Date.now() + 24 * HOUR) });
+  assert.throws(() => app.addSeedingPost(chi, { url: 'https://www.facebook.com/eco/posts/10', now: true }), /giao thoa/);
 });

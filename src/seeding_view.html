@@ -6,7 +6,7 @@ var SD = { data: null, flash: null, paste: null };
 
 PAGES.seeding = function (main) {
   SD.data = null; SD.flash = null;
-  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Seeding</h1><p class="lead">Thấy bài mới thì đặt nhắc hẹn. Đến giờ, copy toàn bộ react và comment của bài rồi dán vào đây, app tự dò tên và cộng điểm.</p></div></div>' +
+  main.innerHTML = '<div class="page"><div class="page-head"><div><h1>Seeding</h1><p class="lead">Thấy bài mới thì đặt nhắc hẹn, hoặc điền ngay nếu bạn tự nhớ. Đến lúc dán, copy toàn bộ react và comment của bài rồi dán vào đây, app tự dò tên và cộng điểm.</p></div></div>' +
     '<div id="sdBody">' + loadingHtml() + '</div></div>';
   load('seedingPage', TOKEN).then(setSeeding).catch(function (err) { pageError('sdBody', err); });
 };
@@ -25,12 +25,14 @@ function drawSeeding() {
   if (!d.canRecord) warn.push('Đang ở giai đoạn giao thoa (hoặc chưa có nhiệm kỳ) nên chưa cộng điểm được. Vẫn đặt nhắc hẹn được.');
   if (d.noFacebook) warn.push(d.noFacebook + ' thành viên chưa có tên Facebook trong danh sách. Với họ, app dò theo họ và tên.');
   $('sdBody').innerHTML = warn.map(function (w) { return '<p class="hint sd-warn">' + icon('help') + esc(w) + '</p>'; }).join('') +
-    '<form class="sec sd-form" id="sdForm"><h2>Đặt nhắc hẹn</h2>' +
+    '<form class="sec sd-form" id="sdForm"><h2>Thêm bài</h2>' +
     '<label class="field">Link bài đăng<input type="url" id="sdUrl" required placeholder="https://www.facebook.com/..."></label>' +
-    '<div class="sd-when"><label class="field">Nhắc tôi lúc<input type="datetime-local" id="sdAt" required></label>' +
+    '<div class="sd-when"><label class="field">Nhắc tôi lúc<input type="datetime-local" id="sdAt"></label>' +
     '<span class="chips"><button type="button" class="chip" data-sd-quick="24">Sau 24 giờ</button><button type="button" class="chip" data-sd-quick="48">Sau 48 giờ</button></span></div>' +
-    '<p class="hint">Bạn tự chọn lúc nhắc. Ví dụ bài đã lên được 24 giờ thì chỉ cần hẹn thêm 24 giờ. Tin nhắc đi theo cách nhận thông báo bạn chọn ở Cài đặt.</p>' +
-    '<div class="actions sd-go"><button class="btn" id="sdAdd">' + icon('bell') + 'Đặt nhắc hẹn</button><span class="msg" id="sdMsg" role="status"></span></div></form>' +
+    '<p class="hint">Bạn tự chọn lúc nhắc. Ví dụ bài đã lên được 24 giờ thì chỉ cần hẹn thêm 24 giờ. Tin nhắc đi theo cách nhận thông báo bạn chọn ở Cài đặt. ' +
+    'Bạn tự nhớ được thì bấm Điền ngay để dán react, comment luôn, không cần chọn lúc nhắc.</p>' +
+    '<div class="actions sd-go"><button class="btn" id="sdAdd">' + icon('bell') + 'Đặt nhắc hẹn</button>' +
+    '<button type="button" class="btn ghost" id="sdNow"' + (d.canRecord ? '' : ' disabled title="Đang ở giai đoạn giao thoa nên chưa cộng điểm được"') + '>Điền ngay</button><span class="msg" id="sdMsg" role="status"></span></div></form>' +
     '<section class="sec"><h2>Chờ dán (' + d.waiting.length + ')</h2>' + (d.waiting.length ? '<div class="list">' + d.waiting.map(waitingRow).join('') + '</div>' : '<div class="empty">Không có bài nào đang chờ.</div>') + '</section>' +
     '<section class="sec"><h2>Đã ghi nhận gần đây</h2>' + (d.recorded.length ? '<div class="list">' + d.recorded.map(recordedRow).join('') + '</div>' : '<div class="empty">Chưa ghi nhận bài nào.</div>') + '</section>';
   if (SD.flash) { setMsg('sdMsg', SD.flash[0], SD.flash[1]); SD.flash = null; }
@@ -43,16 +45,23 @@ function drawSeeding() {
       .then(function (x) { setSeeding(x, ['ok', 'Đã đặt nhắc. Đến giờ app nhắc bạn.']); })
       .catch(function (err) { $('sdAdd').disabled = false; setMsg('sdMsg', 'bad', err.message); });
   };
+  $('sdNow').onclick = function () {
+    if (!$('sdUrl').reportValidity()) return;
+    $('sdNow').disabled = true; setMsg('sdMsg', '', 'Đang lưu…');
+    call('addSeedingPost', TOKEN, { url: $('sdUrl').value.trim(), now: true })
+      .then(function (x) { setSeeding(x); openPaste(x.added); })
+      .catch(function (err) { $('sdNow').disabled = false; setMsg('sdMsg', 'bad', err.message); });
+  };
 }
 
 function postLink(p) { return '<a class="sd-link" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.url.replace(/^https:\/\/(www\.)?/, '')) + '</a>'; }
 
 function waitingRow(p) {
   var due = p.remindAt && p.remindAt <= SD.data.now;
-  return '<div class="sd-row"><div class="sd-main">' + postLink(p) + '<small>' + (SD.data.isBod || !p.mine ? esc(p.by) + ' · ' : '') + 'Nhắc lúc ' + esc(fmtTime(p.remindAt) + ' ' + fmtDay(p.remindAt)) + '</small></div>' +
-    (due ? pill('Đến giờ dán', 'warn') : pill('Đang chờ', '')) +
+  return '<div class="sd-row"><div class="sd-main">' + postLink(p) + '<small>' + (SD.data.isBod || !p.mine ? esc(p.by) + ' · ' : '') + (p.remindAt ? 'Nhắc lúc ' + esc(fmtTime(p.remindAt) + ' ' + fmtDay(p.remindAt)) : 'Điền ngay, không nhắc') + '</small></div>' +
+    (due || !p.remindAt ? pill('Chờ dán', 'warn') : pill('Đang chờ', '')) +
     '<span class="acts"><button type="button" class="btn sm" data-sd="paste" data-id="' + esc(p.id) + '"' + (SD.data.canRecord ? '' : ' disabled') + '>Dán react, comment</button>' +
-    '<button type="button" class="btn ghost sm" data-sd="remind" data-id="' + esc(p.id) + '">Đổi giờ nhắc</button>' +
+    '<button type="button" class="btn ghost sm" data-sd="remind" data-id="' + esc(p.id) + '">' + (p.remindAt ? 'Đổi giờ nhắc' : 'Đặt nhắc') + '</button>' +
     '<button type="button" class="icon-btn" data-sd="delete" data-id="' + esc(p.id) + '" aria-label="Xoá bài này">' + icon('trash') + '</button></span></div>';
 }
 
