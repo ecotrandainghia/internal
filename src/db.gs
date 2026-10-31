@@ -127,7 +127,7 @@ function ensureSchema_(force) {
   var props = PropertiesService.getScriptProperties();
   // Đổi cấu trúc tab hoặc thêm dòng mặc định mới thì chạy lại
   var signature = JSON.stringify([TABLES.map(function (t) { return [t.name, t.columns]; }),
-    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; })]);
+    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; }), 'auto-link']);
   if (!force && props.getProperty(SCHEMA_PROP) === signature) return;
 
   withLock_(function () {
@@ -188,12 +188,30 @@ function seedDefaults_() {
   var have = readTable_('settings').map(function (s) { return s.key; });
   var add = DEFAULT_SETTINGS.filter(function (s) { return have.indexOf(s.key) < 0; });
   if (add.length) insertRecords_('settings', add);
-  if (readTable_('activities').length) return;
-  var added = insertRecords_('activities', DEFAULT_ACTIVITIES.map(function (a) {
-    return { name: a.name, points: a.points, limit_note: a.limit_note, added_date: new Date(), is_active: true };
-  }));
-  DEFAULT_ACTIVITIES.forEach(function (a, i) {
-    if (a.auto && !getSetting_(a.auto + '_activity_id')) updateRecord_('settings', a.auto + '_activity_id', { value: added[i].activity_id });
+  if (!readTable_('activities').length) {
+    var added = insertRecords_('activities', DEFAULT_ACTIVITIES.map(function (a) {
+      return { name: a.name, points: a.points, limit_note: a.limit_note, added_date: new Date(), is_active: true };
+    }));
+    DEFAULT_ACTIVITIES.forEach(function (a, i) {
+      if (a.auto && !getSetting_(a.auto + '_activity_id')) updateRecord_('settings', a.auto + '_activity_id', { value: added[i].activity_id });
+    });
+  }
+  linkAutoActivities_();
+}
+
+/**
+ * Hoạt động app tự cộng (react, comment, góp ý, log vượt) phải có trong thang điểm. File dữ liệu đã có thang điểm từ trước
+ * thì Cài đặt chưa ghi mã: tìm hoạt động đang dùng có tên chứa chữ tương ứng (không cần dấu), không có thì thêm hoạt động mặc định.
+ */
+function linkAutoActivities_() {
+  DEFAULT_ACTIVITIES.forEach(function (d) {
+    if (!d.auto) return;
+    var key = d.auto + '_activity_id', acts = readTable_('activities');
+    var id = String(getSetting_(key, ''));
+    if (id && acts.some(function (a) { return String(a.activity_id) === id; })) return;
+    var found = acts.filter(function (a) { return a.is_active && foldText_(a.name).indexOf(d.match) >= 0; })[0];
+    if (!found) found = insertRecords_('activities', [{ name: d.name, points: d.points, limit_note: d.limit_note, added_date: new Date(), is_active: true }])[0];
+    updateRecord_('settings', key, { value: found.activity_id });
   });
 }
 
