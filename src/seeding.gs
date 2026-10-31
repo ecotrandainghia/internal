@@ -129,7 +129,8 @@ function seedingPageFor_(me) {
   return {
     now: now.getTime(), isBod: me.user.isBod, canRecord: phase === 'phase_1' || phase === 'phase_2',
     react: seedingActivity_('react'), comment: seedingActivity_('comment'),
-    noFacebook: Object.keys(people).filter(function (id) { return !nameKey_(people[id].facebook); }).length,
+    noFacebook: Object.keys(people).filter(function (id) { return !nameKey_(people[id].facebook); })
+      .map(function (id) { return people[id].name; }).sort(function (a, b) { return a.localeCompare(b, 'vi'); }),
     waiting: posts.filter(function (p) { return p.status !== 'recorded'; }).map(view),
     recorded: posts.filter(function (p) { return p.status === 'recorded'; }).slice(0, SEEDING_RECENT).map(view)
   };

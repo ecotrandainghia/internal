@@ -23,7 +23,8 @@ function drawSeeding() {
   var d = SD.data, warn = [];
   if (!d.react || !d.comment) warn.push('Thang điểm chưa có hoạt động dùng cho ' + (!d.react && !d.comment ? 'react và comment' : !d.react ? 'react' : 'comment') + ', nên chưa ghi nhận được. BOD kiểm tra Cài đặt, Quy tắc CLB, Thang điểm.');
   if (!d.canRecord) warn.push('Đang ở giai đoạn giao thoa (hoặc chưa có nhiệm kỳ) nên chưa cộng điểm được. Vẫn đặt nhắc hẹn được.');
-  if (d.noFacebook) warn.push(d.noFacebook + ' thành viên chưa có tên Facebook trong danh sách. Với họ, app dò theo họ và tên.');
+  if (d.noFacebook.length) warn.push('Chưa có tên Facebook: ' + d.noFacebook.join(', ') + '. Với ' + (d.noFacebook.length > 1 ? 'những bạn này' : 'bạn này') +
+    ', app dò theo họ và tên nên có thể sót. Muốn dò chính xác thì điền cột Tên Facebook trong danh sách thành viên rồi tải lên lại ở Cài đặt, Tải danh sách thành viên.');
   $('sdBody').innerHTML = warn.map(function (w) { return '<p class="hint sd-warn">' + icon('help') + esc(w) + '</p>'; }).join('') +
     '<form class="sec sd-form" id="sdForm"><h2>Thêm bài</h2>' +
     '<label class="field">Link bài đăng<input type="url" id="sdUrl" required placeholder="https://www.facebook.com/..."></label>' +
