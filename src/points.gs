@@ -6,6 +6,12 @@
  */
 
 var AUTO_ACTIVITIES = ['react', 'comment', 'feedback', 'log_extra'];
+var AUTO_LABELS = {
+  react: ['React bài đăng', 'Seeding, mỗi bài một lần'],
+  comment: ['Comment bài đăng', 'Seeding, mỗi bài một lần'],
+  feedback: ['Góp ý được áp dụng', 'Khi BOD áp dụng góp ý'],
+  log_extra: ['Mỗi buổi log vượt', 'Khi chốt sự kiện, buổi 90 phút']
+};
 var POINT_SOURCES = { manual: 'Cộng tay', seeding: 'Seeding', log_extra: 'Log vượt', feedback: 'Góp ý' };
 
 /** Mã các hoạt động app tự cộng. */
@@ -59,8 +65,12 @@ function pointsPageFor_(me) {
     now: now.getTime(),
     term: term ? { label: termLabel_(termId), phase: phase, phaseLabel: PHASE_LABELS[phase] || '' } : null,
     canAdd: phase === 'phase_1' || phase === 'phase_2',
-    activities: activities.filter(function (a) { return a.is_active; }).map(function (a) {
-      return { id: a.activity_id, name: a.name, points: Number(a.points) || 0, limit: a.limit_note || '', auto: auto.indexOf(a.activity_id) >= 0 };
+    activities: activities.filter(function (a) { return a.is_active && auto.indexOf(a.activity_id) < 0; }).map(function (a) {
+      return { id: a.activity_id, name: a.name, points: Number(a.points) || 0, limit: a.limit_note || '' };
+    }),
+    autoActivities: AUTO_ACTIVITIES.map(function (k) {
+      var a = c.activities[String(getSetting_(k + '_activity_id', ''))];
+      return { key: k, name: AUTO_LABELS[k][0], hint: AUTO_LABELS[k][1], points: a ? Number(a.points) || 0 : 0 };
     }),
     events: events.map(function (e) { return { id: e.event_id, name: e.name }; }),
     depts: order.filter(function (d) { return depts[d]; }),
@@ -148,6 +158,18 @@ function addActivity(token, f) {
     var same = readTable_('activities').filter(function (a) { return a.is_active && a.name.trim().toLowerCase() === name.toLowerCase(); });
     if (same.length) throw new Error('Thang điểm đã có hoạt động này.');
     insertRecords_('activities', [{ name: name, points: pts, limit_note: String(f.limitNote || '').trim(), added_date: new Date(), is_active: true }]);
+  });
+  return pointsPageFor_(me);
+}
+
+/** Sửa số điểm của hoạt động app tự cộng (react, comment, góp ý, log vượt). Điểm đã cộng trước đó giữ nguyên. */
+function setAutoPoints(token, key, points) {
+  var me = requireUser_(token, 'bod'), pts = Number(points);
+  if (AUTO_ACTIVITIES.indexOf(key) < 0) throw new Error('Không có mục điểm này.');
+  if (!(pts > 0) || Math.round(pts) !== pts) throw new Error('Số điểm phải là số nguyên lớn hơn 0.');
+  withLock_(function () {
+    linkAutoActivities_();
+    updateRecord_('activities', String(getSetting_(key + '_activity_id', '')), { points: pts }, { actorId: me.memberId, action: 'set_auto_points' });
   });
   return pointsPageFor_(me);
 }
