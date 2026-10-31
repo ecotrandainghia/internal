@@ -127,7 +127,7 @@ function ensureSchema_(force) {
   var props = PropertiesService.getScriptProperties();
   // Đổi cấu trúc tab hoặc thêm dòng mặc định mới thì chạy lại
   var signature = JSON.stringify([TABLES.map(function (t) { return [t.name, t.columns]; }),
-    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; }), 'auto-link']);
+    DEFAULT_SETTINGS.map(function (s) { return s.key; }), DEFAULT_ACTIVITIES.map(function (a) { return a.name; }), 'auto-link-2']);
   if (!force && props.getProperty(SCHEMA_PROP) === signature) return;
 
   withLock_(function () {
@@ -200,18 +200,16 @@ function seedDefaults_() {
 }
 
 /**
- * Hoạt động app tự cộng (react, comment, góp ý, log vượt) phải có trong thang điểm. File dữ liệu đã có thang điểm từ trước
- * thì Cài đặt chưa ghi mã: tìm hoạt động đang dùng có tên chứa chữ tương ứng (không cần dấu), không có thì thêm hoạt động mặc định.
+ * Hoạt động app tự cộng (react, comment, góp ý, log vượt) luôn có một dòng riêng trong thang điểm, mã ghi ở Cài đặt.
+ * Chưa có (file dữ liệu có thang điểm từ trước) thì app thêm dòng mặc định theo quy chế. BOD chỉ sửa số điểm, không cần đặt tên.
  */
 function linkAutoActivities_() {
   DEFAULT_ACTIVITIES.forEach(function (d) {
     if (!d.auto) return;
-    var key = d.auto + '_activity_id', acts = readTable_('activities');
-    var id = String(getSetting_(key, ''));
-    if (id && acts.some(function (a) { return String(a.activity_id) === id; })) return;
-    var found = acts.filter(function (a) { return a.is_active && foldText_(a.name).indexOf(d.match) >= 0; })[0];
-    if (!found) found = insertRecords_('activities', [{ name: d.name, points: d.points, limit_note: d.limit_note, added_date: new Date(), is_active: true }])[0];
-    updateRecord_('settings', key, { value: found.activity_id });
+    var key = d.auto + '_activity_id', id = String(getSetting_(key, ''));
+    if (id && findRecord_('activities', id)) return;
+    var added = insertRecords_('activities', [{ name: d.name, points: d.points, limit_note: d.limit_note, added_date: new Date(), is_active: true }])[0];
+    updateRecord_('settings', key, { value: added.activity_id });
   });
 }
 

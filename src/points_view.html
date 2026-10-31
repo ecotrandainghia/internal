@@ -10,7 +10,7 @@ PAGES.points = function (main) {
     .catch(function (err) { if ($('ptBody')) $('ptBody').innerHTML = '<p class="msg bad">' + esc(err.message) + '</p>'; });
 };
 
-function manualActs() { return PT.data.activities.filter(function (a) { return !a.auto; }); }
+function manualActs() { return PT.data.activities; }
 function chosenAct() { return manualActs().filter(function (a) { return a.id === PT.act; })[0] || null; }
 function chosenIds() { return Object.keys(PT.sel).filter(function (id) { return PT.sel[id]; }); }
 
@@ -112,9 +112,17 @@ function ptCall(btn, fn, args, done) {
 function renderScale() {
   var list = PT.data.activities;
   openModal('<h2 id="boxTitle">Thang điểm</h2><p class="hint" style="font-size:14px">Theo quy chế. Hoạt động mới phải công bố mức điểm trước khi diễn ra.</p>' +
+    '<b style="font-weight:500">App tự cộng</b><p class="hint">Không cộng tay ở trang Cộng điểm. Đổi số điểm thì chỉ tính cho lần cộng sau.</p>' +
+    '<div class="list" id="autoList">' + PT.data.autoActivities.map(function (a) {
+      return '<div class="item"><div class="t"><b>' + esc(a.name) + '</b><small>' + esc(a.hint) + '</small></div>' +
+        '<form class="auto-pts" data-pt-auto="' + esc(a.key) + '" style="display:flex;gap:8px;align-items:center">' +
+        '<input type="number" min="1" step="1" inputmode="numeric" value="' + (a.points || '') + '" aria-label="Điểm ' + esc(a.name) + '" required style="width:72px">' +
+        '<button class="btn ghost sm">Lưu</button></form></div>';
+    }).join('') + '</div>' +
+    '<b style="font-weight:500">BOD cộng tay</b>' +
     '<div class="list" id="scaleList">' + list.map(function (a) {
-      return item(a.name, [a.limit, a.auto ? 'App tự cộng' : ''].filter(String).join(' · '), pill('+' + a.points, 'good') +
-        (a.auto ? '' : '<button type="button" class="btn ghost sm" data-pt-hide="' + esc(a.id) + '">Ẩn</button>'));
+      return item(a.name, a.limit, pill('+' + a.points, 'good') +
+        '<button type="button" class="btn ghost sm" data-pt-hide="' + esc(a.id) + '">Ẩn</button>');
     }).join('') + '</div>' +
     '<form id="scForm" style="display:flex;flex-direction:column;gap:10px"><b style="font-weight:500">Thêm hoạt động</b>' +
     '<label class="field">Tên hoạt động<input id="scName" required maxlength="150"></label>' +
@@ -122,6 +130,12 @@ function renderScale() {
     '<label class="field">Giới hạn (không bắt buộc)<input id="scLimit" maxlength="100" placeholder="Ví dụ: 2 lần mỗi giai đoạn"></label></div>' +
     '<span class="msg" id="scMsg" role="status"></span>' +
     '<div class="actions"><button type="button" class="btn ghost" data-act="close-modal">Đóng</button><button class="btn" id="scBtn">Thêm</button></div></form>');
+  document.querySelectorAll('[data-pt-auto]').forEach(function (f) {
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      ptCall(f.querySelector('button'), 'setAutoPoints', [f.dataset.ptAuto, Number(f.querySelector('input').value)]);
+    };
+  });
   $('scForm').onsubmit = function (e) {
     e.preventDefault();
     ptCall($('scBtn'), 'addActivity', [{ name: $('scName').value, points: Number($('scPts').value), limitNote: $('scLimit').value }]);

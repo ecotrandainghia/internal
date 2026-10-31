@@ -18,20 +18,29 @@ test('file dữ liệu mới có sẵn thang điểm theo quy chế, hoạt đ�
   assert.ok(acts.every((a) => a.is_active && a.added_date));
 });
 
-test('thang điểm có từ trước mà Cài đặt chưa ghi mã: app tự nối hoạt động theo tên, thiếu thì thêm', () => {
+test('thang điểm có từ trước mà Cài đặt chưa ghi mã: app thêm dòng riêng, không đoán theo tên', () => {
   const { app } = setUp();
   const acts = app.readTable_('activities');
-  ['react', 'comment', 'feedback', 'log_extra'].forEach((k) => app.updateRecord_('settings', k + '_activity_id', { value: '' }));
-  app.updateRecord_('activities', acts[0].activity_id, { name: 'Thả REACT bài fanpage' });
-  app.updateRecord_('activities', acts[1].activity_id, { is_active: false });
+  ['react', 'comment'].forEach((k) => app.updateRecord_('settings', k + '_activity_id', { value: '' }));
   app.linkAutoActivities_();
-  assert.equal(app.getSetting_('react_activity_id'), acts[0].activity_id);
+  const react = app.findRecord_('activities', app.getSetting_('react_activity_id'));
+  assert.notEqual(react.activity_id, acts[0].activity_id);
+  assert.deepEqual([react.name, react.points], ['React bài đăng trong vòng 48 giờ', 1]);
   assert.equal(app.getSetting_('feedback_activity_id'), acts[4].activity_id);
-  const comment = app.findRecord_('activities', app.getSetting_('comment_activity_id'));
-  assert.notEqual(comment.activity_id, acts[1].activity_id);
-  assert.deepEqual([comment.name, comment.points, comment.is_active], ['Comment bài đăng trong vòng 48 giờ', 2, true]);
   app.linkAutoActivities_();
-  assert.equal(app.readTable_('activities').length, 10);
+  assert.equal(app.readTable_('activities').length, 11);
+});
+
+test('BOD sửa điểm react, comment ở mục riêng; chỉ số nguyên dương; ghi Nhật ký', () => {
+  const { app } = setUp();
+  const tok = asBod(app);
+  assert.throws(() => app.setAutoPoints(login(app, 'binh@gmail.com', 'chungCLB'), 'react', 3), /Chỉ BOD/);
+  assert.throws(() => app.setAutoPoints(tok, 'staff', 3), /Không có mục/);
+  assert.throws(() => app.setAutoPoints(tok, 'react', 0), /số nguyên/);
+  const d = plain(app.setAutoPoints(tok, 'comment', 3));
+  assert.equal(d.autoActivities.find((a) => a.key === 'comment').points, 3);
+  assert.equal(app.findRecord_('activities', app.getSetting_('comment_activity_id')).points, 3);
+  assert.equal(app.readTable_('audit_log').filter((r) => r.action === 'set_auto_points').length, 1);
 });
 
 test('trang Cộng điểm: chỉ BOD, người không phải BOD kèm điểm giai đoạn này, hoạt động tự cộng có đánh dấu', () => {
@@ -42,7 +51,8 @@ test('trang Cộng điểm: chỉ BOD, người không phải BOD kèm điểm g
   assert.equal(d.term.phaseLabel, 'GD1');
   assert.deepEqual(d.members.map((m) => [m.id, m.points]), [['M2', 50], ['M1', 40]]);
   assert.deepEqual(d.depts, ['PR', 'AD']);
-  assert.deepEqual(d.activities.filter((a) => a.auto).map((a) => a.points), [1, 2, 10, 20]);
+  assert.equal(d.activities.length, 5);
+  assert.deepEqual(d.autoActivities.map((a) => [a.key, a.points]), [['react', 1], ['comment', 2], ['feedback', 10], ['log_extra', 20]]);
   assert.equal(d.recent.length, 2);
 });
 

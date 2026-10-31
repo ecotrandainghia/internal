@@ -265,7 +265,7 @@ function recordSeeding(token, postId, reacts, comments, chosen) {
       (chosen[kind] || []).forEach(function (id) { id = String(id); if (allowed[id] && ids.indexOf(id) < 0) ids.push(id); });
       if (!ids.length) return;
       var act = seedingActivity_(kind);
-      if (!act) throw new Error('Chưa có hoạt động dùng cho ' + kind + ' trong thang điểm. BOD kiểm tra Cài đặt, Quy tắc CLB, Thang điểm.');
+      if (!act) throw new Error('Chưa có điểm cho ' + kind + '. BOD đặt ở Cài đặt, Quy tắc CLB, Thang điểm.');
       ids.forEach(function (id) {
         rows.push({ member_id: id, activity_id: act.id, points: act.points, event_id: '', source: 'seeding', source_id: p.post_id,
           awarded_at: now, awarded_by: me.memberId, is_cancelled: false });
