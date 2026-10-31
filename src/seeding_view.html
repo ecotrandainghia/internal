@@ -141,7 +141,7 @@ function drawPreview(m) {
 }
 
 /** Giống nameKey_ ở máy chủ, chỉ để biết tên Facebook có khác họ tên không. */
-function nameKey(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function nameKey(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
 
 /* ---------- Đổi giờ nhắc, xoá, huỷ ---------- */
 function openRemindChange(id) {

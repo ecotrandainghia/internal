@@ -16,9 +16,9 @@ var SEEDING_RECENT = 30;
 
 /* ---------- Dò tên (không đụng tới Google) ---------- */
 
-/** Tên để so: bỏ dấu, viết thường, chỉ giữ chữ và số, gộp khoảng trắng. */
+/** Tên để so: bỏ dấu, viết thường, chỉ giữ chữ và số (mọi thứ tiếng: tiếng Trung, Hàn, Thái... vẫn giữ), gộp khoảng trắng. */
 function nameKey_(s) {
-  return foldText_(s).replace(/[^a-z0-9]+/g, ' ').trim();
+  return foldText_(s).replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
 /** Link bài để so trùng: bỏ giao thức, www/m/web, dấu / cuối, phần # và tham số (trừ link .php cần tham số). */
