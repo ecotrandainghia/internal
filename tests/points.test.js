@@ -18,6 +18,22 @@ test('file dữ liệu mới có sẵn thang điểm theo quy chế, hoạt đ�
   assert.ok(acts.every((a) => a.is_active && a.added_date));
 });
 
+test('thang điểm có từ trước mà Cài đặt chưa ghi mã: app tự nối hoạt động theo tên, thiếu thì thêm', () => {
+  const { app } = setUp();
+  const acts = app.readTable_('activities');
+  ['react', 'comment', 'feedback', 'log_extra'].forEach((k) => app.updateRecord_('settings', k + '_activity_id', { value: '' }));
+  app.updateRecord_('activities', acts[0].activity_id, { name: 'Thả REACT bài fanpage' });
+  app.updateRecord_('activities', acts[1].activity_id, { is_active: false });
+  app.linkAutoActivities_();
+  assert.equal(app.getSetting_('react_activity_id'), acts[0].activity_id);
+  assert.equal(app.getSetting_('feedback_activity_id'), acts[4].activity_id);
+  const comment = app.findRecord_('activities', app.getSetting_('comment_activity_id'));
+  assert.notEqual(comment.activity_id, acts[1].activity_id);
+  assert.deepEqual([comment.name, comment.points, comment.is_active], ['Comment bài đăng trong vòng 48 giờ', 2, true]);
+  app.linkAutoActivities_();
+  assert.equal(app.readTable_('activities').length, 10);
+});
+
 test('trang Cộng điểm: chỉ BOD, người không phải BOD kèm điểm giai đoạn này, hoạt động tự cộng có đánh dấu', () => {
   const { app } = setUp();
   assert.throws(() => app.pointsPage(login(app, 'binh@gmail.com', 'chungCLB')), /Chỉ BOD/);

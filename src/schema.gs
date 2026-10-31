@@ -172,12 +172,12 @@ var DEFAULT_SETTINGS = [
  * và trang Cộng điểm không cho chọn tay để khỏi cộng hai lần. Log vượt tính theo buổi 90 phút: buổi 180 phút là 2 buổi, +40.
  */
 var DEFAULT_ACTIVITIES = [
-  { name: 'React bài đăng trong vòng 48 giờ', points: 1, limit_note: 'Mỗi bài một lần', auto: 'react' },
-  { name: 'Comment bài đăng trong vòng 48 giờ', points: 2, limit_note: 'Mỗi bài một lần', auto: 'comment' },
+  { name: 'React bài đăng trong vòng 48 giờ', points: 1, limit_note: 'Mỗi bài một lần', auto: 'react', match: 'react' },
+  { name: 'Comment bài đăng trong vòng 48 giờ', points: 2, limit_note: 'Mỗi bài một lần', auto: 'comment', match: 'comment' },
   { name: 'Làm staff ca ngắn (giờ ra chơi)', points: 3, limit_note: '' },
   { name: 'Tham gia bonding', points: 5, limit_note: '' },
-  { name: 'Góp ý được đưa vào sử dụng', points: 10, limit_note: 'Tối đa 2 lần mỗi giai đoạn', auto: 'feedback' },
-  { name: 'Làm log vượt số buổi được giao cuối (mỗi buổi 90 phút)', points: 20, limit_note: 'Buổi 180 phút tính là 2 buổi', auto: 'log_extra' },
+  { name: 'Góp ý được đưa vào sử dụng', points: 10, limit_note: 'Tối đa 2 lần mỗi giai đoạn', auto: 'feedback', match: 'gop y' },
+  { name: 'Làm log vượt số buổi được giao cuối (mỗi buổi 90 phút)', points: 20, limit_note: 'Buổi 180 phút tính là 2 buổi', auto: 'log_extra', match: 'log vuot' },
   { name: 'Đại diện CLB tham gia cuộc thi', points: 40, limit_note: '' },
   { name: 'Tham dự sự kiện của CLB hoặc của đối tác', points: 40, limit_note: '' },
   { name: 'Làm staff 1 buổi (sự kiện lớn)', points: 50, limit_note: '' }
