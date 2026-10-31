@@ -106,3 +106,18 @@ test('xác nhận giúp thì thành viên không tự huỷ được', () => {
   assert.throws(() => app.undoConfirmTask(login(app, 'binh@gmail.com', 'chungCLB'), ids.soon), /xác nhận giúp/);
   assert.ok(bod);
 });
+
+test('dữ liệu gửi về trang web không có Date (Date làm google.script.run trả về null, app báo lỗi "reading token")', () => {
+  const { app } = require('./sample').setUp();
+  const dates = (o, p, out) => {
+    if (o instanceof Date) out.push(p);
+    else if (o && typeof o === 'object') Object.keys(o).forEach((k) => dates(o[k], p + '.' + k, out));
+    return out;
+  };
+  for (const [email, pw] of [['binh@gmail.com', 'chungCLB'], ['chi@gmail.com', 'chungCLB'], ['an@gmail.com', 'matkhauAn']]) {
+    const r = app.login(email, pw);
+    assert.deepEqual(dates(r, 'login', []), [], email);
+    assert.deepEqual(dates(app.openApp(r.token), 'openApp', []), [], email);
+    assert.deepEqual(dates(app.homeData(r.token), 'homeData', []), [], email);
+  }
+});
