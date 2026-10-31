@@ -34,6 +34,9 @@ test('dò tên: tên dài che tên ngắn nằm trong nó, trùng tên phải ti
   assert.deepEqual(m.unsure.map((u) => [u.label, u.why, u.ids]), [['Minh Anh', 'inside', ['A']], ['Hà Vy', 'same_name', ['D', 'E']]]);
   assert.deepEqual(m.unsure[0].inside, ['Đỗ Minh Anh Lê']);
   assert.deepEqual(plain(app.matchSeeding_('Lan', names)).sure.map((s) => s.id), ['C'], 'tên một chữ đứng riêng một dòng');
+  const cn = app.seedingNames_({ G: { facebook: '王小明 Wang', name: 'Vương Tiểu Minh' }, H: { facebook: '김민지', name: 'Kim Min Ji' } }, []);
+  assert.deepEqual(plain(cn.map((n) => n.key.normalize('NFC')).sort()), ['王小明 wang', '김민지'], 'tên tiếng Trung, Hàn vẫn giữ chữ để dò');
+  assert.deepEqual(plain(app.matchSeeding_('王小明 Wang\nTheo dõi\n김민지', cn)).sure.map((s) => s.id).sort(), ['G', 'H']);
   assert.deepEqual(plain(app.evidenceChunks_('abcde', 2)), ['ab', 'cd', 'e']);
   assert.deepEqual(plain(app.evidenceChunks_('', 2)), ['']);
 });
